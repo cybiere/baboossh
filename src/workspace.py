@@ -2,6 +2,9 @@ import os
 import re
 import configparser
 import sqlite3
+import ipaddress
+from src.host import Host
+from src.target import Target
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -81,7 +84,60 @@ class Workspace():
             print("Workspace "+name+" does not exist")
             raise ValueError
         self.name = name
+        dbPath = os.path.join(workspaceFolder,"workspace.db")
+        if not os.path.exists(dbPath):
+            print("Workspace database not found, the workspace must be corrupted !")
+            raise ValueError
         self.conn = sqlite3.connect(os.path.join(workspaceFolder,"workspace.db"))
+
+    #Checks if a host already exists with given name
+    def checkHostNameExists(self,name):
+        c = self.conn.cursor()
+        c.execute('SELECT id FROM hosts WHERE name=?',(name,))
+        res = c.fetchone()
+        c.close()
+        return res is not None
+
+    #Checks if a target already exists
+    def checkTargetExists(self,ip,port):
+        c = self.conn.cursor()
+        c.execute('SELECT id FROM targets WHERE ip=? AND port=?',(ip,port))
+        res = c.fetchone()
+        c.close()
+        return res is not None
+
+    #Checks if param is a valid IP (v4 or v6)
+    def checkIsIP(self,ip):
+        try:
+            ipaddress.ip_address(ip)
+        except ValueError:
+            return False
+        return True
+
+    #Manually add a host and its first target
+    def addHost_Manual(self,name,ip,port):
+        if self.checkHostNameExists(name):
+            print("A host already exists with the name "+name)
+            raise ValueError
+        if not self.checkIsIP(ip):
+            print("The address given isn't a valid IP")
+            raise ValueError
+        if not port.isdigit():
+            print("The port given isn't a positive integer")
+            raise ValueError
+        if self.checkTargetExists(ip,port):
+            print("The target "+ip+":"+port+" already exists")
+            raise ValueError
+
+        #Creates and saves host
+        newHost = Host(name,self.conn)
+        newHost.save()
+
+        #Creates and saves target associated to Host
+        newTarget = Target(ip,port,newHost,self.conn)
+        newTarget.save()
+        #TODO
+
 
     def getName(self):
         return self.name

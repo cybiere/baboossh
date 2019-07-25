@@ -19,11 +19,11 @@ class SshpreadShell(cmd.Cmd):
     def do_workspace(self, arg):
         '''WORKSPACE: Manage workspaces
 Available commands:
-    - workspace help        show this help
-    - workspace list        list existing workspaces
-    - workspace add <name>  create new workspace
-    - workspace use <name>  change current workspace
-    - workspace del <name>  delete workspace
+    - workspace help      show this help
+    - workspace list      list existing workspaces
+    - workspace add NAME  create new workspace
+    - workspace use NAME  change current workspace
+    - workspace del NAME  delete workspace
 '''
         command,sep,params = arg.partition(" ")
         if command == "list" or command == "":
@@ -84,11 +84,11 @@ Available commands:
 
     def workspace_help(self):
         print('''Available commands:
-    - workspace help        show this help
-    - workspace list        list existing workspaces
-    - workspace add <name>  create new workspace
-    - workspace use <name>  change current workspace
-    - workspace del <name>  delete workspace''')
+    - workspace help      show this help
+    - workspace list      list existing workspaces
+    - workspace add NAME  create new workspace
+    - workspace use NAME  change current workspace
+    - workspace del NAME  delete workspace''')
 
     def complete_workspace(self, text, line, begidx, endidx):
         matches = []
@@ -105,9 +105,9 @@ Available commands:
     def do_host(self, arg):
         '''HOST: Manage hosts
 Available commands:
-    - host help        show this help
-    - host list        list existing hosts
-    - host add <name>  create new host
+    - host help                 show this help
+    - host list                 list existing hosts
+    - host add NAME IP[:PORT]   create new host
 '''
         command,sep,params = arg.partition(" ")
         if command == "list" or command == "":
@@ -120,16 +120,35 @@ Available commands:
             self.host_help()
     
     def host_list(self):
+        #TODO
         print("Host list")
     
     def host_add(self,params):
-        print("Host add")
+        if params == "":
+            self.host_help()
+            return
+        params = params.split(' ')
+        if len(params) != 2:
+            self.host_help()
+            return
+        name = params[0]
+        if len(params[1].split(':')) == 2:
+            ip, port = params[1].split(':')
+        else:
+            ip = params[1]
+            port = 22
+        try:
+            self.workspace.addHost_Manual(name,ip,port)
+        except Exception as e:
+            print("Host addition failed: "+str(e))
+        else:
+            print("Host "+name+" added.")
 
     def host_help(self):
         print('''Available commands:
-    - host help        show this help
-    - host list        list existing hosts
-    - host add <name>  create new host''')
+    - host help                 show this help
+    - host list                 list existing hosts
+    - host add NAME IP[:PORT]   create new host''')
 
     def complete_host(self, text, line, begidx, endidx):
         matches = []
