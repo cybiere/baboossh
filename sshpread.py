@@ -141,7 +141,7 @@ Available commands:
             ip, port = params[1].split(':')
         else:
             ip = params[1]
-            port = 22
+            port = "22"
         try:
             self.workspace.addHost_Manual(name,ip,port)
         except Exception as e:

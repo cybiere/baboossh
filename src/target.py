@@ -38,7 +38,11 @@ class Target():
             c = self.conn.cursor()
             c.execute('SELECT id FROM targets WHERE ip=? AND port=?',(self.ip,self.port))
             self.id  = c.fetchone()[0]
+            self.host.registerTarget(self)
         c.close()
         self.conn.commit()
+
+    def __str__(self):
+        return self.ip+":"+self.port
 
 
