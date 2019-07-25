@@ -102,9 +102,42 @@ Available commands:
 ###################          TARGETS          ###################
 #################################################################
 
-    def do_target(self, arg):
-        'Set target'
-        print("Set target")
+    def do_host(self, arg):
+        '''HOST: Manage hosts
+Available commands:
+    - host help        show this help
+    - host list        list existing hosts
+    - host add <name>  create new host
+'''
+        command,sep,params = arg.partition(" ")
+        if command == "list" or command == "":
+            self.host_list()
+        elif command == "add":
+            self.host_add(params)
+        else:
+            if command != "help" and command != "?":
+                print("Unrecognized command.")
+            self.host_help()
+    
+    def host_list(self):
+        print("Host list")
+    
+    def host_add(self,params):
+        print("Host add")
+
+    def host_help(self):
+        print('''Available commands:
+    - host help        show this help
+    - host list        list existing hosts
+    - host add <name>  create new host''')
+
+    def complete_host(self, text, line, begidx, endidx):
+        matches = []
+        n = len(text)
+        for word in ['add','list','help']:
+            if word[:n] == text:
+                matches.append(word)
+        return matches
 
 #################################################################
 ###################           USERS           ###################
@@ -120,6 +153,7 @@ Available commands:
 
     def do_exit(self, arg):
         'Quit SSHpread'
+        self.workspace.close()
         return True
     
     def initPrompt(self):
@@ -148,4 +182,7 @@ if __name__ == '__main__':
         print("> First run ? Creating workspaces directory")
         os.makedirs(config['DEFAULT']['workspaces'])
 
+    #Create default workspace if not exists
+    if not os.path.exists(os.path.join(config['DEFAULT']['workspaces'],'default')):
+        Workspace.create('default')
     SshpreadShell().cmdloop()
