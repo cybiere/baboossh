@@ -38,4 +38,7 @@ class Host():
         c.close()
         self.conn.commit()
 
+    def toList(self):
+        print("<"+self.name+">")
+
 

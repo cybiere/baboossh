@@ -89,6 +89,13 @@ class Workspace():
             print("Workspace database not found, the workspace must be corrupted !")
             raise ValueError
         self.conn = sqlite3.connect(os.path.join(workspaceFolder,"workspace.db"))
+        
+        self.hosts = []
+        c = self.conn.cursor()
+        for row in c.execute('''SELECT name FROM hosts'''):
+            self.hosts.append(Host(row[0],self.conn))
+        c.close()
+
 
     #Checks if a host already exists with given name
     def checkHostNameExists(self,name):
@@ -132,6 +139,7 @@ class Workspace():
         #Creates and saves host
         newHost = Host(name,self.conn)
         newHost.save()
+        self.hosts.append(newHost)
 
         #Creates and saves target associated to Host
         newTarget = Target(ip,port,newHost,self.conn)
@@ -141,6 +149,9 @@ class Workspace():
 
     def getName(self):
         return self.name
+
+    def getHosts(self):
+        return self.hosts
 
     def close(self):
         self.conn.close()

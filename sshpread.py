@@ -120,8 +120,13 @@ Available commands:
             self.host_help()
     
     def host_list(self):
-        #TODO
-        print("Host list")
+        print("Current hosts in workspace:")
+        hosts = self.workspace.getHosts()
+        if not hosts:
+            print("No hosts in current workspace")
+            return
+        for host in hosts:
+            host.toList()
     
     def host_add(self,params):
         if params == "":
