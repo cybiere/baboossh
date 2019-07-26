@@ -18,7 +18,7 @@ class SpreadExt():
         if password == "":
             print("Password cannot be empty")
             raise ValueError()
-        return SpreadMod(password)
+        return cls(password)
 
     def __init__(self,creds):
         self.creds = creds
@@ -28,3 +28,6 @@ class SpreadExt():
 
     def run(self):
         print("##### Password authentication with "+self.creds)
+
+    def toList(self):
+        return self.creds

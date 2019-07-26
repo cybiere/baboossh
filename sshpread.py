@@ -253,8 +253,6 @@ Available commands:
             print("\t- "+credType)
     
     def creds_list(self):
-        print("Current creds in workspace:")
-        return
         creds = self.workspace.getCreds()
         if not creds:
             print("No creds in current workspace")

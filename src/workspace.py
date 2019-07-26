@@ -8,6 +8,7 @@ import importlib
 from src.host import Host
 from src.target import Target
 from src.user import User
+from src.creds import Creds
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -94,6 +95,13 @@ class Workspace():
             self.users.append(User(row[0],self.conn))
         c.close()
 
+    def loadCreds(self):
+        self.creds = []
+        c = self.conn.cursor()
+        for row in c.execute('''SELECT type,content FROM creds'''):
+            self.creds.append(Creds(self.auth_methods[row[0]](row[1]),self.conn))
+        c.close()
+
     def loadExtensions(self):
         nbExt = 0
         extensionsFolder = 'extensions'
@@ -152,6 +160,7 @@ class Workspace():
         
         self.loadHosts()
         self.loadUsers()
+        self.loadCreds()
 
 #################################################################
 ###################          TARGETS          ###################
@@ -233,7 +242,9 @@ class Workspace():
 #################################################################
 
     def addCreds_Manual(self,credsType):
-        print("Create creds !")
+        newCreds = Creds(self.auth_methods[credsType].build(),self.conn)
+        newCreds.save()
+        self.creds.append(newCreds)
 
 #################################################################
 ###################          GETTERS          ###################
@@ -247,6 +258,9 @@ class Workspace():
 
     def getUsers(self):
         return self.users
+
+    def getCreds(self):
+        return self.creds
 
     def getAuthTypes(self):
         return self.auth_methods.keys()

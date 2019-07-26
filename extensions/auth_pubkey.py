@@ -20,7 +20,7 @@ class SpreadExt():
             print("Key path cannot be empty")
             raise ValueError()
         passphrase = input("Private key passphrase (empty for none): ")
-        return SpreadMod(json.dumps({'passphrase':passphrase,'keypath':keypath}))
+        return cls(json.dumps({'passphrase':passphrase,'keypath':keypath}))
 
     def __init__(self,creds):
         data = json.loads(creds)
@@ -38,3 +38,5 @@ class SpreadExt():
     def run(self):
         print("%%%%% Key authentication with "+self.keypath+" and passphrase "+self.passphrase)
 
+    def toList(self):
+        return self.keypath
