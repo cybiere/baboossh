@@ -168,8 +168,60 @@ Available commands:
 #################################################################
 
     def do_user(self, arg):
-        'Set user'
-        print("Set user")
+        '''USER: Manage users
+Available commands:
+    - user help                 show this help
+    - user list                 list existing users
+    - user add USERNAME         create new user
+'''
+        command,sep,params = arg.partition(" ")
+        if command == "list" or command == "":
+            self.user_list()
+        elif command == "add":
+            self.user_add(params)
+        else:
+            if command != "help" and command != "?":
+                print("Unrecognized command.")
+            self.user_help()
+    
+    def user_list(self):
+        print("Current users in workspace:")
+        users = self.workspace.getUsers()
+        if not users:
+            print("No users in current workspace")
+            return
+        for user in users:
+            user.toList()
+    
+    def user_add(self,params):
+        if params == "":
+            self.user_help()
+            return
+        params = params.split(' ')
+        if len(params) != 1:
+            self.user_help()
+            return
+        name = params[0]
+        try:
+            self.workspace.addUser_Manual(name)
+        except Exception as e:
+            print("User addition failed: "+str(e))
+        else:
+            print("User "+name+" added.")
+
+    def user_help(self):
+        print('''Available commands:
+    - user help                 show this help
+    - user list                 list existing users
+    - user add USERNAME         create new user''')
+
+    def complete_user(self, text, line, begidx, endidx):
+        matches = []
+        n = len(text)
+        for word in ['add','list','help']:
+            if word[:n] == text:
+                matches.append(word)
+        return matches
 
 #################################################################
 ###################            CMD            ###################

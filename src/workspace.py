@@ -5,6 +5,7 @@ import sqlite3
 import ipaddress
 from src.host import Host
 from src.target import Target
+from src.user import User
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -14,6 +15,11 @@ if "DEFAULT" not in config or "workspaces" not in config['DEFAULT']:
 
 
 class Workspace():
+
+#################################################################
+###################           INIT            ###################
+#################################################################
+
     @classmethod
     def create(cls,name):
         if name == "":
@@ -90,12 +96,23 @@ class Workspace():
             raise ValueError
         self.conn = sqlite3.connect(os.path.join(workspaceFolder,"workspace.db"))
         
+        #Load hosts
         self.hosts = []
         c = self.conn.cursor()
         for row in c.execute('''SELECT name FROM hosts'''):
             self.hosts.append(Host(row[0],self.conn))
         c.close()
+        
+        #Load users
+        self.users = []
+        c = self.conn.cursor()
+        for row in c.execute('''SELECT username FROM users'''):
+            self.users.append(User(row[0],self.conn))
+        c.close()
 
+#################################################################
+###################          TARGETS          ###################
+#################################################################
 
     #Checks if a host already exists with given name
     def checkHostNameExists(self,name):
@@ -144,14 +161,42 @@ class Workspace():
         #Creates and saves target associated to Host
         newTarget = Target(ip,port,newHost,self.conn)
         newTarget.save()
-        #TODO
 
+#################################################################
+###################           USERS           ###################
+#################################################################
+
+    #Checks if a user already exists with given name
+    def checkUserNameExists(self,name):
+        c = self.conn.cursor()
+        c.execute('SELECT id FROM users WHERE username=?',(name,))
+        res = c.fetchone()
+        c.close()
+        return res is not None
+
+    #Manually add a user
+    def addUser_Manual(self,name):
+        if self.checkUserNameExists(name):
+            print("A user already exists with the name "+name)
+            raise ValueError
+
+        #Creates and saves user
+        newUser = User(name,self.conn)
+        newUser.save()
+        self.users.append(newUser)
+
+#################################################################
+###################          GETTERS          ###################
+#################################################################
 
     def getName(self):
         return self.name
 
     def getHosts(self):
         return self.hosts
+
+    def getUsers(self):
+        return self.users
 
     def close(self):
         self.conn.close()
