@@ -99,7 +99,7 @@ class Workspace():
         self.creds = []
         c = self.conn.cursor()
         for row in c.execute('''SELECT type,content FROM creds'''):
-            self.creds.append(Creds(self.auth_methods[row[0]](row[1]),self.conn))
+            self.creds.append(Creds(self.authMethods[row[0]](row[1]),self.conn))
         c.close()
 
     def loadExtensions(self):
@@ -122,9 +122,9 @@ class Workspace():
         
                     modType = data.getModType()
                     if modType == "auth":
-                        dico = self.auth_methods
-                    elif modType == "exec":
-                        dico = self.exec_methods
+                        dico = self.authMethods
+                    elif modType == "payload":
+                        dico = self.payloads
                     else:
                         print(mod+"> module Type Invalid")
                         continue
@@ -153,8 +153,8 @@ class Workspace():
             raise ValueError
         self.conn = sqlite3.connect(os.path.join(workspaceFolder,"workspace.db"))
 
-        self.auth_methods = {}
-        self.exec_methods = {}
+        self.authMethods = {}
+        self.payloads = {}
 
         self.loadExtensions()
         
@@ -242,7 +242,7 @@ class Workspace():
 #################################################################
 
     def addCreds_Manual(self,credsType):
-        newCreds = Creds(self.auth_methods[credsType].build(),self.conn)
+        newCreds = Creds(self.authMethods[credsType].build(),self.conn)
         newCreds.save()
         self.creds.append(newCreds)
 
@@ -263,8 +263,14 @@ class Workspace():
         return self.creds
 
     def getAuthTypes(self):
-        return self.auth_methods.keys()
+        return self.authMethods.keys()
+    
+    def getAuthMethods(self):
+        return self.authMethods.items()
 
+    def getPayloads(self):
+        return self.payloads.items()
+    
     def close(self):
         self.conn.close()
         print("Closing workspace "+self.name)

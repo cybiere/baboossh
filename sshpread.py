@@ -249,8 +249,8 @@ Available commands:
 
     def creds_types(self):
         print("Supported credential types:")
-        for credType in self.workspace.getAuthTypes():
-            print("\t- "+credType)
+        for key,credType in self.workspace.getAuthMethods():
+            print("    - "+credType.getKey()+": "+credType.descr())
     
     def creds_list(self):
         creds = self.workspace.getCreds()
@@ -288,6 +288,43 @@ Available commands:
             if word[:n] == text:
                 matches.append(word)
         #TODO autocomplete creds types on ADD
+        return matches
+
+
+#################################################################
+###################          PAYLOADS         ###################
+#################################################################
+
+    def do_payload(self, arg):
+        '''PAYLOAD: Manage payload
+Available commands:
+    - payload help                 show this help
+    - payload list                 list existing payload
+'''
+        command,sep,params = arg.partition(" ")
+        if command == "list" or command == "":
+            self.payload_list()
+        else:
+            if command != "help" and command != "?":
+                print("Unrecognized command.")
+            self.payload_help()
+
+    def payload_list(self):
+        print("Available payloads:")
+        for key,payload in self.workspace.getPayloads():
+            print("    - "+payload.getKey()+": "+payload.descr())
+    
+    def payload_help(self):
+        print('''Available commands:
+    - payload help                 show this help
+    - payload list                 list existing payload''')
+
+    def complete_payload(self, text, line, begidx, endidx):
+        matches = []
+        n = len(text)
+        for word in ['list','help']:
+            if word[:n] == text:
+                matches.append(word)
         return matches
 
 #################################################################
