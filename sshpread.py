@@ -328,6 +328,47 @@ Available commands:
         return matches
 
 #################################################################
+###################          OPTIONS          ###################
+#################################################################
+
+    def do_set(self,arg):
+        '''SET: Manage options
+Available commands:
+    - set help                 show this help
+    - set                      list current options' values
+    - set OPTION VALUE         change an option's value
+'''
+        command,sep,params = arg.partition(" ")
+        if command == "":
+            self.options_list()
+        elif command in self.workspace.getOptions():
+            self.workspace.setOption(command,params)
+        else:
+            if command != "help" and command != "?":
+                print("Unrecognized command.")
+            self.options_help()
+
+    def options_list(self):
+        print("Current options:")
+        for key,val in self.workspace.getOptionsValues():
+            print("    - "+key+": "+str(val))
+    
+    def options_help(self):
+        print('''Available commands:
+    - set help                 show this help
+    - set                      list current options' values
+    - set OPTION VALUE         change an option's value''')
+
+    def complete_set(self, text, line, begidx, endidx):
+        matches = []
+        n = len(text)
+        for word in ['','help']:
+            if word[:n] == text:
+                matches.append(word)
+        return matches
+
+
+#################################################################
 ###################            CMD            ###################
 #################################################################
 

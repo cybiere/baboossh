@@ -162,6 +162,13 @@ class Workspace():
         self.loadUsers()
         self.loadCreds()
 
+        self.options = {
+            "target":None,
+            "user":None,
+            "creds":None,
+            "payload":None,
+                }
+
 #################################################################
 ###################          TARGETS          ###################
 #################################################################
@@ -247,6 +254,17 @@ class Workspace():
         self.creds.append(newCreds)
 
 #################################################################
+###################          OPTIONS          ###################
+#################################################################
+
+    def setOption(self,option,value):
+        if not option in self.options.keys():
+            print(option+" isn't a valid option.")
+            raise ValueError
+        self.options[option] = value
+        print(option+" => "+self.options[option])
+
+#################################################################
 ###################          GETTERS          ###################
 #################################################################
 
@@ -270,6 +288,12 @@ class Workspace():
 
     def getPayloads(self):
         return self.payloads.items()
+
+    def getOptions(self):
+        return self.options.keys()
+
+    def getOptionsValues(self):
+        return self.options.items()
     
     def close(self):
         self.conn.close()
