@@ -224,6 +224,75 @@ Available commands:
         return matches
 
 #################################################################
+###################           CREDS           ###################
+#################################################################
+
+    def do_creds(self, arg):
+        '''CREDS: Manage creds
+Available commands:
+    - creds help                 show this help
+    - creds list                 list existing creds
+    - creds types                list available credential types
+    - creds add TYPE             create new cred
+'''
+        command,sep,params = arg.partition(" ")
+        if command == "list" or command == "":
+            self.creds_list()
+        elif command == "types":
+            self.creds_types()
+        elif command == "add":
+            self.creds_add(params)
+        else:
+            if command != "help" and command != "?":
+                print("Unrecognized command.")
+            self.creds_help()
+
+    def creds_types(self):
+        print("Supported credential types:")
+        for credType in self.workspace.getAuthTypes():
+            print("\t- "+credType)
+    
+    def creds_list(self):
+        print("Current creds in workspace:")
+        return
+        creds = self.workspace.getCreds()
+        if not creds:
+            print("No creds in current workspace")
+            return
+        for cred in creds:
+            cred.toList()
+    
+    def creds_add(self,params):
+        if params == "":
+            self.creds_help()
+            return
+        if params not in self.workspace.getAuthTypes():
+            print(params+" is not a valid credentials type.")
+            return
+        try:
+            self.workspace.addCreds_Manual(params)
+        except Exception as e:
+            print("Credentials addition failed: "+str(e))
+        else:
+            print("Credentials added.")
+
+    def creds_help(self):
+        print('''Available commands:
+    - creds help                 show this help
+    - creds list                 list existing creds
+    - creds types                list available credential types
+    - creds add TYPE             create new cred''')
+
+    def complete_creds(self, text, line, begidx, endidx):
+        matches = []
+        n = len(text)
+        for word in ['add','list','types','help']:
+            if word[:n] == text:
+                matches.append(word)
+        #TODO autocomplete creds types on ADD
+        return matches
+
+#################################################################
 ###################            CMD            ###################
 #################################################################
 

@@ -3,6 +3,8 @@ import re
 import configparser
 import sqlite3
 import ipaddress
+import inspect
+import importlib
 from src.host import Host
 from src.target import Target
 from src.user import User
@@ -78,6 +80,53 @@ class Workspace():
         c.close()
         return Workspace(name)
 
+    def loadHosts(self):
+        self.hosts = []
+        c = self.conn.cursor()
+        for row in c.execute('''SELECT name FROM hosts'''):
+            self.hosts.append(Host(row[0],self.conn))
+        c.close()
+        
+    def loadUsers(self):
+        self.users = []
+        c = self.conn.cursor()
+        for row in c.execute('''SELECT username FROM users'''):
+            self.users.append(User(row[0],self.conn))
+        c.close()
+
+    def loadExtensions(self):
+        nbExt = 0
+        extensionsFolder = 'extensions'
+        files = [f.split('.')[0] for f in os.listdir(extensionsFolder) if os.path.isfile(os.path.join(extensionsFolder,f)) and f[0] != '.']
+        for mod in files:
+            moduleName = extensionsFolder+"."+mod
+            try:
+                newMod = importlib.import_module(moduleName)
+            except Exception as e:
+                print("Couldn't load extension "+mod+" :"+str(e))
+                continue
+            else:
+                for name, data in inspect.getmembers(newMod):
+                    if not inspect.isclass(data):
+                        continue
+                    if name != "SpreadExt":
+                        continue
+        
+                    modType = data.getModType()
+                    if modType == "auth":
+                        dico = self.auth_methods
+                    elif modType == "exec":
+                        dico = self.exec_methods
+                    else:
+                        print(mod+"> module Type Invalid")
+                        continue
+                    if data.getKey() in dico.keys():
+                        print(mod+"> "+modType+' method "'+data.getKey()+'" already registered')
+                        continue
+                    dico[data.getKey()] = data
+                    nbExt = nbExt+1
+        print(str(nbExt)+" extensions loaded.")
+
     def __init__(self,name):
         if name == "":
             print("Cannot use workspace with empty name")
@@ -95,20 +144,14 @@ class Workspace():
             print("Workspace database not found, the workspace must be corrupted !")
             raise ValueError
         self.conn = sqlite3.connect(os.path.join(workspaceFolder,"workspace.db"))
+
+        self.auth_methods = {}
+        self.exec_methods = {}
+
+        self.loadExtensions()
         
-        #Load hosts
-        self.hosts = []
-        c = self.conn.cursor()
-        for row in c.execute('''SELECT name FROM hosts'''):
-            self.hosts.append(Host(row[0],self.conn))
-        c.close()
-        
-        #Load users
-        self.users = []
-        c = self.conn.cursor()
-        for row in c.execute('''SELECT username FROM users'''):
-            self.users.append(User(row[0],self.conn))
-        c.close()
+        self.loadHosts()
+        self.loadUsers()
 
 #################################################################
 ###################          TARGETS          ###################
@@ -186,6 +229,13 @@ class Workspace():
         self.users.append(newUser)
 
 #################################################################
+###################           CREDS           ###################
+#################################################################
+
+    def addCreds_Manual(self,credsType):
+        print("Create creds !")
+
+#################################################################
 ###################          GETTERS          ###################
 #################################################################
 
@@ -197,6 +247,9 @@ class Workspace():
 
     def getUsers(self):
         return self.users
+
+    def getAuthTypes(self):
+        return self.auth_methods.keys()
 
     def close(self):
         self.conn.close()
