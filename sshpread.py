@@ -7,6 +7,13 @@ import cmd, sys, os
 import sqlite3
 import re
 
+import signal
+
+def handler(signum, frame):
+    pass
+
+signal.signal(signal.SIGINT, handler)
+
 
 class SshpreadShell(cmd.Cmd):
     intro = '\nWelcome to SSHpread. Type help or ? to list commands.\n'
@@ -482,4 +489,6 @@ if __name__ == '__main__':
     #Create default workspace if not exists
     if not os.path.exists(os.path.join(config['DEFAULT']['workspaces'],'default')):
         Workspace.create('default')
+
     SshpreadShell().cmdloop()
+

@@ -297,12 +297,13 @@ class Workspace():
         kwargs = {} #Add default values here
         authArgs = cred.getKwargs()
         c = Connection(host=target.getIp(),port=target.getPort(),user=user.getName(),connect_kwargs={**kwargs, **authArgs})
-        c.run('id && hostname')
-        if c.is_connected:
-            print("Connection successful")
-        else:
-            print("Connection failed")
+        try:
+            c.open()
+        except Exception as e:
+            print("Connection failed : "+str(e))
+            return
         c.close()
+        print("Connection successful")
 
 #################################################################
 ###################          GETTERS          ###################
