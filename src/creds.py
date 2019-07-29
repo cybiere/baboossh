@@ -38,7 +38,12 @@ class Creds():
         c.close()
         self.conn.commit()
 
+    def getKwargs(self):
+        return self.obj.getKwargs()
+
     def toList(self):
         print(" #"+str(self.id)+" <"+self.obj.getKey()+"> "+self.obj.toList())
 
+    def __str__(self):
+        return "#"+str(self.id)
 

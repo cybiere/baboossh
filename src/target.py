@@ -18,6 +18,12 @@ class Target():
     def getId(self):
         return self.id
 
+    def getIp(self):
+        return self.ip
+
+    def getPort(self):
+        return int(self.port)
+
     def save(self):
         c = self.conn.cursor()
         if self.id is not None:

@@ -401,6 +401,34 @@ Available commands:
                 matches.append(word)
         return matches
 
+#################################################################
+###################          CONNECT          ###################
+#################################################################
+
+    def do_connect(self,arg):
+        user = self.workspace.getOption("user")
+        if user is None:
+            #TODO : enum avail users
+            raise NotImplementedError
+        else:
+            users = [user]
+        target = self.workspace.getOption("target")
+        if target is None:
+            #TODO : enum avail targets
+            raise NotImplementedError
+        else:
+            targets = [target]
+        cred = self.workspace.getOption("creds")
+        if cred is None:
+            #TODO : enum avail creds
+            raise NotImplementedError
+        else:
+            creds = [cred]
+
+        for target in targets:
+            for user in users:
+                for cred in creds:
+                    self.workspace.connect(target,user,cred)
 
 
 
@@ -418,15 +446,15 @@ Available commands:
         newPrompt = newPrompt+"["+self.workspace.getName()+"]"
         if self.workspace.getOption("target"):
             if self.workspace.getOption("user"):
-                newPrompt = newPrompt+self.workspace.getOption("user")
+                newPrompt = newPrompt+str(self.workspace.getOption("user"))
                 if self.workspace.getOption("creds"):
-                    newPrompt = newPrompt+":#"+self.workspace.getOption("creds")
+                    newPrompt = newPrompt+":"+str(self.workspace.getOption("creds"))
                 newPrompt = newPrompt+"@"
-            newPrompt = newPrompt+self.workspace.getOption("target")
+            newPrompt = newPrompt+str(self.workspace.getOption("target"))
         elif self.workspace.getOption("user"):
-            newPrompt = newPrompt+self.workspace.getOption("user")
+            newPrompt = newPrompt+str(self.workspace.getOption("user"))
             if self.workspace.getOption("creds"):
-                newPrompt = newPrompt+":#"+self.workspace.getOption("creds")
+                newPrompt = newPrompt+":"+str(self.workspace.getOption("creds"))
             newPrompt = newPrompt+"@..."
         self.prompt = newPrompt+"> "
 

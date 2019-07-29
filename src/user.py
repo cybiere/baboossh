@@ -16,6 +16,9 @@ class User():
     def getId(self):
         return self.id
 
+    def getName(self):
+        return self.name
+
     def save(self):
         c = self.conn.cursor()
         if self.id is not None:
@@ -40,4 +43,6 @@ class User():
     def toList(self):
         print("<"+self.name+">")
 
+    def __str__(self):
+        return self.name
 

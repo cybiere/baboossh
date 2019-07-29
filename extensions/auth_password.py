@@ -26,8 +26,8 @@ class SpreadExt():
     def serialize(self):
         return self.creds
 
-    def run(self):
-        print("##### Password authentication with "+self.creds)
+    def getKwargs(self):
+        return {"password":self.creds}
 
     def toList(self):
         return self.creds

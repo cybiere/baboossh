@@ -5,6 +5,7 @@ import sqlite3
 import ipaddress
 import inspect
 import importlib
+from fabric import Connection
 from src.host import Host
 from src.target import Target
 from src.user import User
@@ -263,21 +264,45 @@ class Workspace():
             raise ValueError
         value = value.strip()
         if option == "target":
-            if self.getTargetByIpPort(value) is None:
+            target = self.getTargetByIpPort(value)
+            if target is None:
                 raise ValueError
+            value = target
         elif option == "user":
-            if self.getUserByName(value) is None:
+            user = self.getUserByName(value)
+            if user is None:
                 raise ValueError
+            value = user
         elif option == "creds":
             if value[0] == '#':
                 credId = value[1:]
             else:
                 credId = value
-            if self.getCredsById(credId) is None:
+            creds = self.getCredsById(credId)
+            if creds is None:
                 raise ValueError
+            value = creds
 
         self.options[option] = value
-        print(option+" => "+self.options[option])
+        print(option+" => "+str(self.getOption(option)))
+
+#################################################################
+###################        CONNECTIONS        ###################
+#################################################################
+
+    def connect(self,target,user,cred):
+        #TODO: create connection if not exists
+        #TODO: this is just a POC
+        print("Establishing connection to "+str(target))
+        kwargs = {} #Add default values here
+        authArgs = cred.getKwargs()
+        c = Connection(host=target.getIp(),port=target.getPort(),user=user.getName(),connect_kwargs={**kwargs, **authArgs})
+        c.run('id && hostname')
+        if c.is_connected:
+            print("Connection successful")
+        else:
+            print("Connection failed")
+        c.close()
 
 #################################################################
 ###################          GETTERS          ###################
@@ -371,6 +396,8 @@ class Workspace():
     def getOption(self,key):
         if key not in self.options.keys():
             raise ValueError()
+        if self.options[key] == None:
+            return None
         return self.options[key]
 
     

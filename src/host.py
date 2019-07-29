@@ -57,5 +57,7 @@ class Host():
         print("<"+self.name+">")
         for target in self.targets:
             print("\t- "+str(target))
-
+    
+    def __str__(self):
+        return self.name
 

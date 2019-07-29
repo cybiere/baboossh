@@ -35,8 +35,8 @@ class SpreadExt():
     def serialize(self):
         return json.dumps({'passphrase':self.passphrase,'keypath':self.keypath})
 
-    def run(self):
-        print("%%%%% Key authentication with "+self.keypath+" and passphrase "+self.passphrase)
+    def getKwargs(self):
+        return {"key_filename":self.keypath,"passphrase":self.passphrase}
 
     def toList(self):
         return self.keypath
