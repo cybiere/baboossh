@@ -259,6 +259,11 @@ Available commands:
             return
         for cred in creds:
             cred.toList()
+
+    def creds_show(self,credId):
+        #TODO
+        pass
+
     
     def creds_add(self,params):
         if params == "":
@@ -341,8 +346,11 @@ Available commands:
         command,sep,params = arg.partition(" ")
         if command == "":
             self.options_list()
-        elif command in self.workspace.getOptions():
-            self.workspace.setOption(command,params)
+        elif command in self.workspace.getOptions() and params != "":
+            try:
+                self.workspace.setOption(command,params)
+            except ValueError:
+                print("Invalid value for "+command)
         else:
             if command != "help" and command != "?":
                 print("Unrecognized command.")
@@ -361,11 +369,39 @@ Available commands:
 
     def complete_set(self, text, line, begidx, endidx):
         matches = []
+        if len(line) != endidx:
+            #Complete only at the end of commands
+            return []
+        command = line.split()
+        if len(command) < 2 or len(command) == 2 and begidx != endidx:
+            compKey = "cmd"
+        elif text == "":
+            if command[-1] == "#":
+                compKey = command[-2]
+            else:
+                compKey = command[-1]
+
+        elif command[-2]:
+            compKey = command[-2]
+        else:
+            compKey = "none"
         n = len(text)
-        for word in ['','help']:
+        if compKey == "cmd":
+            comp = ['target','user','creds','payload']
+        elif compKey == "target":
+            comp = self.workspace.getTargetsList()
+        elif compKey == "user":
+            comp = self.workspace.getUsersList()
+        elif compKey == "creds":
+            comp = self.workspace.getCredsIdList()
+        else:
+            comp = []
+        for word in comp:
             if word[:n] == text:
                 matches.append(word)
         return matches
+
+
 
 
 #################################################################
@@ -380,6 +416,18 @@ Available commands:
     def initPrompt(self):
         newPrompt = ""
         newPrompt = newPrompt+"["+self.workspace.getName()+"]"
+        if self.workspace.getOption("target"):
+            if self.workspace.getOption("user"):
+                newPrompt = newPrompt+self.workspace.getOption("user")
+                if self.workspace.getOption("creds"):
+                    newPrompt = newPrompt+":#"+self.workspace.getOption("creds")
+                newPrompt = newPrompt+"@"
+            newPrompt = newPrompt+self.workspace.getOption("target")
+        elif self.workspace.getOption("user"):
+            newPrompt = newPrompt+self.workspace.getOption("user")
+            if self.workspace.getOption("creds"):
+                newPrompt = newPrompt+":#"+self.workspace.getOption("creds")
+            newPrompt = newPrompt+"@..."
         self.prompt = newPrompt+"> "
 
     def postcmd(self,stop,line):

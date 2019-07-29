@@ -39,6 +39,6 @@ class Creds():
         self.conn.commit()
 
     def toList(self):
-        print(" "+str(self.id)+" <"+self.obj.getKey()+"> "+self.obj.toList())
+        print(" #"+str(self.id)+" <"+self.obj.getKey()+"> "+self.obj.toList())
 
 

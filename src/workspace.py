@@ -87,7 +87,7 @@ class Workspace():
         for row in c.execute('''SELECT name FROM hosts'''):
             self.hosts.append(Host(row[0],self.conn))
         c.close()
-        
+
     def loadUsers(self):
         self.users = []
         c = self.conn.cursor()
@@ -261,6 +261,21 @@ class Workspace():
         if not option in self.options.keys():
             print(option+" isn't a valid option.")
             raise ValueError
+        value = value.strip()
+        if option == "target":
+            if self.getTargetByIpPort(value) is None:
+                raise ValueError
+        elif option == "user":
+            if self.getUserByName(value) is None:
+                raise ValueError
+        elif option == "creds":
+            if value[0] == '#':
+                credId = value[1:]
+            else:
+                credId = value
+            if self.getCredsById(credId) is None:
+                raise ValueError
+
         self.options[option] = value
         print(option+" => "+self.options[option])
 
@@ -274,11 +289,69 @@ class Workspace():
     def getHosts(self):
         return self.hosts
 
+    def getTargetsList(self):
+        targets = []
+        for host in self.hosts:
+            for target in host.targets:
+                targets.append(target.ip+":"+target.port)
+        return targets
+
+    def getUsersList(self):
+        users = []
+        for user in self.users:
+            users.append(user.name)
+        return users
+
+    def getCredsById(self,credId):
+        c = self.conn.cursor()
+        c.execute('''SELECT type,content FROM creds WHERE id=?''',(credId,))
+        row = c.fetchone()
+        c.close()
+        if row == None:
+            return None
+        return Creds(self.authMethods[row[0]](row[1]),self.conn)
+
+    def getUserByName(self,name):
+        c = self.conn.cursor()
+        c.execute('''SELECT username FROM users WHERE username=?''',(name,))
+        row = c.fetchone()
+        c.close()
+        if row == None:
+            return None
+        return User(name,self.conn)
+
+    def getHostById(self,hostId):
+        c = self.conn.cursor()
+        c.execute('''SELECT name FROM hosts WHERE id=?''',(hostId,))
+        row = c.fetchone()
+        c.close()
+        if row == None:
+            return None
+        return Host(row[0],self.conn)
+
+    def getTargetByIpPort(self,endpoint):
+        ip,sep,port = endpoint.partition(":")
+        if port == "":
+            raise ValueError
+        c = self.conn.cursor()
+        c.execute('''SELECT host FROM targets WHERE ip=? and port=?''',(ip,port))
+        row = c.fetchone()
+        c.close()
+        if row == None:
+            return None
+        return Target(ip,port,self.getHostById(row[0]),self.conn)
+
     def getUsers(self):
         return self.users
 
     def getCreds(self):
         return self.creds
+
+    def getCredsIdList(self):
+        idList = []
+        for cred in self.creds:
+            idList.append(str(cred.getId()))
+        return idList
 
     def getAuthTypes(self):
         return self.authMethods.keys()
@@ -294,6 +367,12 @@ class Workspace():
 
     def getOptionsValues(self):
         return self.options.items()
+
+    def getOption(self,key):
+        if key not in self.options.keys():
+            raise ValueError()
+        return self.options[key]
+
     
     def close(self):
         self.conn.close()
