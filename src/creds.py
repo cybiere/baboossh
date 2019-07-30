@@ -3,11 +3,10 @@ from src.params import dbConn,Extensions
 
 
 class Creds():
-    def __init__(self,credsType,credsContent,wspace):
+    def __init__(self,credsType,credsContent):
         self.credsType = credsType
         self.credsContent = credsContent
-        self.wspace = wspace
-        self.obj = Extensions.authMethods(credsType)(credsContent)
+        self.obj = Extensions.getAuthMethod(credsType)(credsContent)
         self.id = None
         c = dbConn.get().cursor()
         c.execute('SELECT id FROM creds WHERE type=? AND content=?',(self.credsType, self.credsContent))

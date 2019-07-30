@@ -2,12 +2,11 @@ import sqlite3
 from src.params import dbConn
 
 class Connection():
-    def __init__(self,host,target,user,cred,wspace):
+    def __init__(self,host,target,user,cred):
         self.host = host
         self.target = target
         self.user = user
         self.cred = cred
-        self.wspace = wspace
         self.id = None
         self.tested = False
         self.working = False

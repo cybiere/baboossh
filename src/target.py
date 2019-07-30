@@ -3,11 +3,10 @@ from src.params import dbConn
 from src.host import Host
 
 class Target():
-    def __init__(self,ip,port,host,wspace):
+    def __init__(self,ip,port,host):
         self.ip = ip
         self.port = port
         self.host = host
-        self.wspace = wspace
         self.id = None
         c = dbConn.get().cursor()
         c.execute('SELECT id FROM targets WHERE ip=? AND port=?',(self.ip,self.port))
@@ -39,19 +38,19 @@ class Target():
             return None
 
         c.execute('''SELECT name FROM hosts WHERE id=?''',(ret[1],))
-        host = Host(c.fetchone()[0],self.wspace)
+        host = Host(c.fetchone()[0])
 
         from src.user import User
         c.execute('''SELECT username FROM users WHERE id=?''',(ret[2],))
-        user = User(c.fetchone()[0],self.wspace)
+        user = User(c.fetchone()[0])
         from src.creds import Creds
         c.execute('''SELECT type,content FROM creds WHERE id=?''',(ret[3],))
         credRet = c.fetchone()
-        cred = Creds(credRet[0],credRet[1],self.wspace)
+        cred = Creds(credRet[0],credRet[1])
         c.close()
 
         from src.connection import Connection
-        return Connection(host,self,user,cred,self.wspace)
+        return Connection(host,self,user,cred)
 
     def save(self):
         c = dbConn.get().cursor()

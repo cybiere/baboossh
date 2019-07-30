@@ -253,8 +253,8 @@ Available commands:
 
     def creds_types(self):
         print("Supported credential types:")
-        for key in Extensions.authTypesAvail():
-            print("    - "+key+": "+Extensions.authMethods(key).descr())
+        for key in Extensions.authMethodsAvail():
+            print("    - "+key+": "+Extensions.getAuthMethod(key).descr())
     
     def creds_list(self):
         creds = self.workspace.getCreds()
@@ -273,7 +273,7 @@ Available commands:
         if params == "":
             self.creds_help()
             return
-        if params not in Extensions.authTypesAvail():
+        if params not in Extensions.authMethodsAvail():
             print(params+" is not a valid credentials type.")
             return
         try:
@@ -320,8 +320,8 @@ Available commands:
 
     def payload_list(self):
         print("Available payloads:")
-        for key,payload in self.workspace.getPayloads():
-            print("    - "+payload.getKey()+": "+payload.descr())
+        for key in Extensions.payloadsAvail():
+            print("    - "+key+": "+Extensions.getPayload(key).descr())
     
     def payload_help(self):
         print('''Available commands:

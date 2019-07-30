@@ -116,16 +116,23 @@ class Extensions():
         print(str(nbExt)+" extensions loaded.")
 
     @classmethod
-    def authMethods(cls,key=None):
-        if key is None:
-            return cls.auths
+    def getAuthMethod(cls,key):
         if key not in cls.auths.keys():
-            print(cls.auths.keys())
             raise IndexError("Extension "+key+" not found")
         return cls.auths[key]
 
     @classmethod
-    def authTypesAvail(cls):
+    def authMethodsAvail(cls):
         return cls.auths.keys()
+
+    @classmethod
+    def getPayload(cls,key):
+        if key not in cls.payloads.keys():
+            raise IndexError("Extension "+key+" not found")
+        return cls.payloads[key]
+
+    @classmethod
+    def payloadsAvail(cls):
+        return cls.payloads.keys()
 
 

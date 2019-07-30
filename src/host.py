@@ -3,10 +3,9 @@ from src.params import dbConn
 
 
 class Host():
-    def __init__(self,name,wspace):
+    def __init__(self,name):
         from src.target import Target
         self.name = name
-        self.wspace = wspace
         self.id = None
         self.identifier = ""
         self.targets = []
@@ -18,7 +17,7 @@ class Host():
             self.id, self.identifier = savedHost
             c = dbConn.get().cursor()
             for row in c.execute('''SELECT ip,port FROM targets WHERE host=?''',(self.id,)):
-                self.targets.append(Target(row[0],row[1],self,self.wspace))
+                self.targets.append(Target(row[0],row[1],self))
             c.close()
 
     def getId(self):
@@ -46,7 +45,7 @@ class Host():
             self.targets = []
             c = dbConn.get().cursor()
             for row in c.execute('''SELECT ip,port FROM targets WHERE host=?''',(self.id,)):
-                self.targets.append(Target(row[0],row[1],self,self.wspace))
+                self.targets.append(Target(row[0],row[1],self))
             c.close()
         c.close()
         dbConn.get().commit()

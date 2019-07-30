@@ -52,14 +52,14 @@ class Workspace():
         self.hosts = []
         c = dbConn.get().cursor()
         for row in c.execute('''SELECT name FROM hosts'''):
-            self.hosts.append(Host(row[0],self))
+            self.hosts.append(Host(row[0]))
         c.close()
 
     def loadCreds(self):
         self.creds = []
         c = dbConn.get().cursor()
         for row in c.execute('''SELECT type,content FROM creds'''):
-            self.creds.append(Creds(row[0],row[1],self))
+            self.creds.append(Creds(row[0],row[1]))
         c.close()
 
     def __init__(self,name):
@@ -129,12 +129,12 @@ class Workspace():
             raise ValueError
 
         #Creates and saves host
-        newHost = Host(name,self)
+        newHost = Host(name)
         newHost.save()
         self.hosts.append(newHost)
 
         #Creates and saves target associated to Host
-        newTarget = Target(ip,port,newHost,self)
+        newTarget = Target(ip,port,newHost)
         newTarget.save()
 
 #################################################################
@@ -164,8 +164,8 @@ class Workspace():
 #################################################################
 
     def addCreds_Manual(self,credsType):
-        credsContent = Extensions.authMethods(credsType).build()
-        newCreds = Creds(credsType,credsContent,self)
+        credsContent = Extensions.getAuthMethod(credsType).build()
+        newCreds = Creds(credsType,credsContent)
         newCreds.save()
         self.creds.append(newCreds)
 
@@ -266,7 +266,7 @@ class Workspace():
         c.close()
         if row == None:
             return None
-        return Creds(row[0],row[1],self)
+        return Creds(row[0],row[1])
 
     def getUserByName(self,name):
         c = dbConn.get().cursor()
@@ -284,7 +284,7 @@ class Workspace():
         c.close()
         if row == None:
             return None
-        return Host(row[0],self)
+        return Host(row[0])
 
     def getTargetByIpPort(self,endpoint):
         ip,sep,port = endpoint.partition(":")
@@ -296,7 +296,7 @@ class Workspace():
         c.close()
         if row == None:
             return None
-        return Target(ip,port,self.getHostById(row[0]),self)
+        return Target(ip,port,self.getHostById(row[0]))
 
     def getUsers(self):
         return User.findAll()
@@ -309,9 +309,6 @@ class Workspace():
         for cred in self.creds:
             idList.append(str(cred.getId()))
         return idList
-
-    def getPayloads(self):
-        return self.payloads.items()
 
     def getOptions(self):
         return self.options.keys()
