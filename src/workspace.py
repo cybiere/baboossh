@@ -6,11 +6,13 @@ import ipaddress
 import inspect
 import importlib
 from fabric import Connection as FabConnection
+from src.params import dbConn
 from src.host import Host
 from src.target import Target
 from src.user import User
 from src.creds import Creds
 from src.connection import Connection
+
 
 
 config = configparser.ConfigParser()
@@ -88,21 +90,14 @@ class Workspace():
 
     def loadHosts(self):
         self.hosts = []
-        c = self.conn.cursor()
+        c = dbConn.get().cursor()
         for row in c.execute('''SELECT name FROM hosts'''):
             self.hosts.append(Host(row[0],self))
         c.close()
 
-    def loadUsers(self):
-        self.users = []
-        c = self.conn.cursor()
-        for row in c.execute('''SELECT username FROM users'''):
-            self.users.append(User(row[0],self))
-        c.close()
-
     def loadCreds(self):
         self.creds = []
-        c = self.conn.cursor()
+        c = dbConn.get().cursor()
         for row in c.execute('''SELECT type,content FROM creds'''):
             self.creds.append(Creds(row[0],row[1],self))
         c.close()
@@ -151,12 +146,8 @@ class Workspace():
         if not os.path.exists(workspaceFolder):
             print("Workspace "+name+" does not exist")
             raise ValueError
+        dbConn.connect(name)
         self.name = name
-        dbPath = os.path.join(workspaceFolder,"workspace.db")
-        if not os.path.exists(dbPath):
-            print("Workspace database not found, the workspace must be corrupted !")
-            raise ValueError
-        self.conn = sqlite3.connect(os.path.join(workspaceFolder,"workspace.db"))
 
         self.authMethods = {}
         self.payloads = {}
@@ -164,7 +155,6 @@ class Workspace():
         self.loadExtensions()
         
         self.loadHosts()
-        self.loadUsers()
         self.loadCreds()
 
         self.options = {
@@ -180,7 +170,7 @@ class Workspace():
 
     #Checks if a host already exists with given name
     def checkHostNameExists(self,name):
-        c = self.conn.cursor()
+        c = dbConn.get().cursor()
         c.execute('SELECT id FROM hosts WHERE name=?',(name,))
         res = c.fetchone()
         c.close()
@@ -188,7 +178,7 @@ class Workspace():
 
     #Checks if a target already exists
     def checkTargetExists(self,ip,port):
-        c = self.conn.cursor()
+        c = dbConn.get().cursor()
         c.execute('SELECT id FROM targets WHERE ip=? AND port=?',(ip,port))
         res = c.fetchone()
         c.close()
@@ -232,7 +222,7 @@ class Workspace():
 
     #Checks if a user already exists with given name
     def checkUserNameExists(self,name):
-        c = self.conn.cursor()
+        c = dbConn.get().cursor()
         c.execute('SELECT id FROM users WHERE username=?',(name,))
         res = c.fetchone()
         c.close()
@@ -245,9 +235,8 @@ class Workspace():
             raise ValueError
 
         #Creates and saves user
-        newUser = User(name,self)
+        newUser = User(name)
         newUser.save()
-        self.users.append(newUser)
 
 #################################################################
 ###################           CREDS           ###################
@@ -345,12 +334,12 @@ class Workspace():
 
     def getUsersList(self):
         users = []
-        for user in self.users:
+        for user in User.findAll():
             users.append(user.name)
         return users
 
     def getCredsById(self,credId):
-        c = self.conn.cursor()
+        c = dbConn.get().cursor()
         c.execute('''SELECT type,content FROM creds WHERE id=?''',(credId,))
         row = c.fetchone()
         c.close()
@@ -359,16 +348,16 @@ class Workspace():
         return Creds(row[0],row[1],self)
 
     def getUserByName(self,name):
-        c = self.conn.cursor()
+        c = dbConn.get().cursor()
         c.execute('''SELECT username FROM users WHERE username=?''',(name,))
         row = c.fetchone()
         c.close()
         if row == None:
             return None
-        return User(name,self)
+        return User(name)
 
     def getHostById(self,hostId):
-        c = self.conn.cursor()
+        c = dbConn.get().cursor()
         c.execute('''SELECT name FROM hosts WHERE id=?''',(hostId,))
         row = c.fetchone()
         c.close()
@@ -380,7 +369,7 @@ class Workspace():
         ip,sep,port = endpoint.partition(":")
         if port == "":
             raise ValueError
-        c = self.conn.cursor()
+        c = dbConn.get().cursor()
         c.execute('''SELECT host FROM targets WHERE ip=? and port=?''',(ip,port))
         row = c.fetchone()
         c.close()
@@ -389,7 +378,7 @@ class Workspace():
         return Target(ip,port,self.getHostById(row[0]),self)
 
     def getUsers(self):
-        return self.users
+        return User.findAll()
 
     def getCreds(self):
         return self.creds
@@ -425,11 +414,8 @@ class Workspace():
             return None
         return self.options[key]
 
-    def getConn(self):
-        return self.conn
-
     def close(self):
-        self.conn.close()
+        dbConn.close()
         print("Closing workspace "+self.name)
 
 

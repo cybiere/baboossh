@@ -1,4 +1,5 @@
 import sqlite3
+from src.params import dbConn
 from src.host import Host
 
 class Target():
@@ -8,7 +9,7 @@ class Target():
         self.host = host
         self.wspace = wspace
         self.id = None
-        c = self.wspace.getConn().cursor()
+        c = dbConn.get().cursor()
         c.execute('SELECT id FROM targets WHERE ip=? AND port=?',(self.ip,self.port))
         savedTarget = c.fetchone()
         c.close()
@@ -28,7 +29,7 @@ class Target():
         return self.host
 
     def getConnection(self,working=True):
-        c = self.wspace.getConn().cursor()
+        c = dbConn.get().cursor()
         if working:
             c.execute('''SELECT id,host,user,cred FROM connections WHERE target=? AND working=? ORDER BY root DESC''',(self.getId(),1))
         else:
@@ -53,7 +54,7 @@ class Target():
         return Connection(host,self,user,cred,self.wspace)
 
     def save(self):
-        c = self.wspace.getConn().cursor()
+        c = dbConn.get().cursor()
         if self.id is not None:
             #If we have an ID, the target is already saved in the database : UPDATE
             c.execute('''UPDATE targets 
@@ -69,12 +70,12 @@ class Target():
                 VALUES (?,?,?) ''',
                 (self.ip,self.port,self.host.getId()))
             c.close()
-            c = self.wspace.getConn().cursor()
+            c = dbConn.get().cursor()
             c.execute('SELECT id FROM targets WHERE ip=? AND port=?',(self.ip,self.port))
             self.id  = c.fetchone()[0]
             self.host.registerTarget(self)
         c.close()
-        self.wspace.getConn().commit()
+        dbConn.get().commit()
 
     def toList(self):
         connection = self.getConnection()

@@ -1,4 +1,5 @@
 import sqlite3
+from src.params import dbConn
 
 
 class Creds():
@@ -8,7 +9,7 @@ class Creds():
         self.wspace = wspace
         self.obj = self.wspace.getAuthClasses()[credsType](credsContent)
         self.id = None
-        c = self.wspace.getConn().cursor()
+        c = dbConn.get().cursor()
         c.execute('SELECT id FROM creds WHERE type=? AND content=?',(self.credsType, self.credsContent))
         savedCreds = c.fetchone()
         c.close()
@@ -19,7 +20,7 @@ class Creds():
         return self.id
 
     def save(self):
-        c = self.wspace.getConn().cursor()
+        c = dbConn.get().cursor()
         if self.id is not None:
             #If we have an ID, the creds is already saved in the database : UPDATE
             c.execute('''UPDATE creds 
@@ -34,11 +35,11 @@ class Creds():
                 VALUES (?,?) ''',
                 (self.credsType, self.credsContent))
             c.close()
-            c = self.wspace.getConn().cursor()
+            c = dbConn.get().cursor()
             c.execute('SELECT id FROM creds WHERE type=? and content=?',(self.credsType,self.credsContent))
             self.id = c.fetchone()[0]
         c.close()
-        self.wspace.getConn().commit()
+        dbConn.get().commit()
 
     def getKwargs(self):
         return self.obj.getKwargs()

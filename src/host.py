@@ -1,4 +1,5 @@
 import sqlite3
+from src.params import dbConn
 
 
 class Host():
@@ -9,13 +10,13 @@ class Host():
         self.id = None
         self.identifier = ""
         self.targets = []
-        c = self.wspace.getConn().cursor()
+        c = dbConn.get().cursor()
         c.execute('SELECT id,identifier FROM hosts WHERE name=?',(self.name,))
         savedHost = c.fetchone()
         c.close()
         if savedHost is not None:
             self.id, self.identifier = savedHost
-            c = self.wspace.getConn().cursor()
+            c = dbConn.get().cursor()
             for row in c.execute('''SELECT ip,port FROM targets WHERE host=?''',(self.id,)):
                 self.targets.append(Target(row[0],row[1],self,self.wspace))
             c.close()
@@ -24,7 +25,7 @@ class Host():
         return self.id
 
     def save(self):
-        c = self.wspace.getConn().cursor()
+        c = dbConn.get().cursor()
         if self.id is not None:
             #If we have an ID, the host is already saved in the database : UPDATE
             c.execute('''UPDATE hosts 
@@ -39,16 +40,16 @@ class Host():
                 VALUES (?,?) ''',
                 (self.name,self.identifier))
             c.close()
-            c = self.wspace.getConn().cursor()
+            c = dbConn.get().cursor()
             c.execute('SELECT id,identifier FROM hosts WHERE name=?',(self.name,))
             self.id = c.fetchone()[0]
             self.targets = []
-            c = self.wspace.getConn().cursor()
+            c = dbConn.get().cursor()
             for row in c.execute('''SELECT ip,port FROM targets WHERE host=?''',(self.id,)):
                 self.targets.append(Target(row[0],row[1],self,self.wspace))
             c.close()
         c.close()
-        self.wspace.getConn().commit()
+        dbConn.get().commit()
 
     def registerTarget(self,target):
         self.targets.append(target)

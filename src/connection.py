@@ -1,4 +1,5 @@
 import sqlite3
+from src.params import dbConn
 
 class Connection():
     def __init__(self,host,target,user,cred,wspace):
@@ -11,7 +12,7 @@ class Connection():
         self.tested = False
         self.working = False
         self.root = False
-        c = self.wspace.getConn().cursor()
+        c = dbConn.get().cursor()
         c.execute('SELECT id,tested,working,root FROM connections WHERE host=? AND target=? AND user=? AND cred=?',(self.host.getId(),self.target.getId(),self.user.getId(),self.cred.getId()))
         savedTarget = c.fetchone()
         c.close()
@@ -37,7 +38,7 @@ class Connection():
         return self.working == True
 
     def save(self):
-        c = self.wspace.getConn().cursor()
+        c = dbConn.get().cursor()
         if self.id is not None:
             #If we have an ID, the target is already saved in the database : UPDATE
             c.execute('''UPDATE connections 
@@ -57,11 +58,11 @@ class Connection():
                 VALUES (?,?,?,?,?,?,?) ''',
                 (self.host.getId(), self.target.getId(), self.user.getId(), self.cred.getId(), 1 if self.tested else 0, 1 if self.working else 0, 1 if self.root else 0))
             c.close()
-            c = self.wspace.getConn().cursor()
+            c = dbConn.get().cursor()
             c.execute('SELECT id FROM connections WHERE host=? AND target=? AND user=? AND cred=?',(self.host.getId(),self.target.getId(),self.user.getId(),self.cred.getId()))
             self.id  = c.fetchone()[0]
         c.close()
-        self.wspace.getConn().commit()
+        dbConn.get().commit()
 
     def __str__(self):
         return str(self.user)+":"+str(self.cred)+"@"+str(self.target)
