@@ -460,21 +460,13 @@ Available commands:
 ###################          CONNECT          ###################
 #################################################################
 
-    def do_connect(self,arg):
-        if arg != "":
-            try:
-                self.workspace.connectEndpoint(arg)
-            except Exception as e:
-                print("Endpointed connect failed : "+str(e))
-            else:
-                return
-        
+    def parseOptionsTarget(self):
         user = self.workspace.getOption("user")
         if user is None:
             users = self.workspace.getUsers()
             if len(users) > 1:
                 if not yesNo("Try with all ("+str(len(users))+") users in scope ?",False):
-                    return
+                    raise ValueError
             users = self.workspace.getUsers()
         else:
             users = [user]
@@ -483,7 +475,7 @@ Available commands:
             endpoints = self.workspace.getEndpoints()
             if len(endpoints) > 1:
                 if not yesNo("Try with all ("+str(len(endpoints))+") endpoints in scope ?",False):
-                    return
+                    raise ValueError
             endpoints = self.workspace.getEndpoints()
         else:
             endpoints = [endpoint]
@@ -492,7 +484,7 @@ Available commands:
             creds = self.workspace.getCreds()
             if len(creds) > 1:
                 if not yesNo("Try with all ("+str(len(creds))+") credentials in scope ?",False):
-                    return
+                    raise ValueError
             creds = self.workspace.getCreds()
         else:
             creds = [cred]
@@ -500,14 +492,59 @@ Available commands:
         nbIter = len(endpoints)*len(users)*len(creds)
 
         if nbIter > 1:
-            if not yesNo("Will now attempt "+str(nbIter)+" connections. Proceed ?",False):
-                return
+            if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?",False):
+                raise ValueError
+        return (endpoints,users,creds)
+
+
+
+    def do_connect(self,arg):
+        if arg != "":
+            try:
+                self.workspace.connectTarget(arg)
+            except Exception as e:
+                print("Targeted connect failed : "+str(e))
+            return
         
+        try:
+            endpoints,users,creds = self.parseOptionsTarget()
+        except:
+            return
+
         for endpoint in endpoints:
             for user in users:
                 for cred in creds:
                     #TODO re-enable ^C to cancel
                     if self.workspace.connect(endpoint,user,cred):
+                        break;
+
+    def do_run(self,arg):
+        if arg != "":
+            if len(arg.split()) == 2:
+                target,payload = arg.split()
+                try:
+                    self.workspace.runTarget(target,payload)
+                except Exception as e:
+                    print("Run failed : "+str(e))
+            else:
+                #TODO print help
+                pass
+            return
+        
+        try:
+            endpoints,users,creds = self.parseOptionsTarget()
+        except:
+            return
+
+        payload = self.workspace.getOption("payload")
+        if payload is None:
+            raise ValueError("You must specify a payload")
+
+        for endpoint in endpoints:
+            for user in users:
+                for cred in creds:
+                    #TODO re-enable ^C to cancel
+                    if self.workspace.run(endpoint,user,cred,payload):
                         break;
 
 
@@ -536,6 +573,8 @@ Available commands:
             if self.workspace.getOption("creds"):
                 newPrompt = newPrompt+":"+str(self.workspace.getOption("creds"))
             newPrompt = newPrompt+"@..."
+        if self.workspace.getOption("payload"):
+            newPrompt = newPrompt+"("+str(self.workspace.getOption("payload"))+")"
         self.prompt = newPrompt+"> "
 
     def emptyline(self):

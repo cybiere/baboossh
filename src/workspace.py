@@ -70,22 +70,6 @@ class Workspace():
 ###################         ENDPOINTS         ###################
 #################################################################
 
-    #Checks if a host already exists with given name
-    def checkHostNameExists(self,name):
-        c = dbConn.get().cursor()
-        c.execute('SELECT id FROM hosts WHERE name=?',(name,))
-        res = c.fetchone()
-        c.close()
-        return res is not None
-
-    #Checks if a endpoint already exists
-    def checkEndpointExists(self,ip,port):
-        c = dbConn.get().cursor()
-        c.execute('SELECT id FROM endpoints WHERE ip=? AND port=?',(ip,port))
-        res = c.fetchone()
-        c.close()
-        return res is not None
-
     #Checks if param is a valid IP (v4 or v6)
     def checkIsIP(self,ip):
         try:
@@ -102,11 +86,7 @@ class Workspace():
         if not port.isdigit():
             print("The port given isn't a positive integer")
             raise ValueError
-        if self.checkEndpointExists(ip,port):
-            print("The endpoint "+ip+":"+port+" already exists")
-            raise ValueError
 
-        #Creates and saves endpoint associated to Host
         newEndpoint = Endpoint(ip,port)
         newEndpoint.save()
 
@@ -114,21 +94,8 @@ class Workspace():
 ###################           USERS           ###################
 #################################################################
 
-    #Checks if a user already exists with given name
-    def checkUserNameExists(self,name):
-        c = dbConn.get().cursor()
-        c.execute('SELECT id FROM users WHERE username=?',(name,))
-        res = c.fetchone()
-        c.close()
-        return res is not None
-
     #Manually add a user
     def addUser_Manual(self,name):
-        if self.checkUserNameExists(name):
-            print("A user already exists with the name "+name)
-            raise ValueError
-
-        #Creates and saves user
         newUser = User(name)
         newUser.save()
 
@@ -147,27 +114,14 @@ class Workspace():
 
     def setOption(self,option,value):
         if option == 'target' and '@' in value and ':' in value:
-            auth,sep,endpoint = value.partition('@')
-            endpoint  = Endpoint.findByIpPort(endpoint)
-            if endpoint is None:
-                raise ValueError("Supplied endpoint isn't in workspace")
-            user,sep,cred = auth.partition(":")
-            if sep == "":
-                raise ValueError("No credentials supplied")
-            user = User.findByUsername(user)
-            if user is None:
-                raise ValueError("Supplied user isn't in workspace")
-            if cred[0] == "#":
-                cred = cred[1:]
-            cred = Creds.find(cred)
-            if cred is None:
-                raise ValueError("Supplied credentials aren't in workspace")
+            endpoint,user,cred = self.parseTarget(value)
             self.options['endpoint'] = endpoint
             self.options['user'] = user
             self.options['creds'] = cred
             for option in ['endpoint','user','creds']:
                 print(option+" => "+str(self.getOption(option)))
             return 
+
         if not option in self.options.keys():
             raise ValueError(option+" isn't a valid option.")
         if value != "":
@@ -178,7 +132,7 @@ class Workspace():
                     raise ValueError
                 value = endpoint
             elif option == "user":
-                user = self.getUserByName(value)
+                user = User.findByUsername(value)
                 if user is None:
                     raise ValueError
                 value = user
@@ -187,10 +141,12 @@ class Workspace():
                     credId = value[1:]
                 else:
                     credId = value
-                creds = self.getCredsById(credId)
+                creds = Creds.find(credId)
                 if creds is None:
                     raise ValueError
                 value = creds
+            elif option == "payload":
+                value = Extensions.getPayload(value)
         else:
             self.options[option] = None
     
@@ -220,7 +176,31 @@ class Workspace():
         newConn.save()
         return newConn.isWorking()
 
-    def connectEndpoint(self,arg):
+    def run(self,endpoint,user,cred,payload):
+        newConn = Connection(endpoint,user,cred)
+        print("Establishing connection to "+str(user)+"@"+str(endpoint)+" (with creds "+str(cred)+")")
+        kwargs = {} #Add default values here
+        authArgs = cred.getKwargs()
+        c = FabConnection(host=endpoint.getIp(),port=endpoint.getPort(),user=user.getName(),connect_kwargs={**kwargs, **authArgs})
+        try:
+            c.open()
+        except Exception as e:
+            print("> "+str(e))
+            newConn.setWorking(False)
+            newConn.setTested(True)
+            newConn.save()
+            return False
+        print("> \033[1;31;40mConnected\033[0m")
+        newConn.setWorking(True)
+        newConn.setTested(True)
+        newConn.save()
+        
+        ret = payload.run(c)
+        
+        c.close()
+        return ret
+
+    def parseTarget(self,arg):
         if '@' in arg and ':' in arg:
             auth,sep,endpoint = arg.partition('@')
             endpoint  = Endpoint.findByIpPort(endpoint)
@@ -246,7 +226,15 @@ class Workspace():
                 raise ValueError("No working connection for supplied endpoint")
             user = connection.getUser()
             cred = connection.getCred()
+        return (endpoint,user,cred)
+
+    def connectTarget(self,arg):
+        endpoint,user,cred = parseTarget(arg)
         self.connect(endpoint,user,cred)
+
+    def runTarget(self,arg,payload):
+        endpoint,user,cred = parseTarget(arg)
+        self.run(endpoint,user,cred,payload)
 
 
 #################################################################
@@ -277,24 +265,6 @@ class Workspace():
         for user in User.findAll():
             users.append(user.name)
         return users
-
-    def getCredsById(self,credId):
-        c = dbConn.get().cursor()
-        c.execute('''SELECT type,content FROM creds WHERE id=?''',(credId,))
-        row = c.fetchone()
-        c.close()
-        if row == None:
-            return None
-        return Creds(row[0],row[1])
-
-    def getUserByName(self,name):
-        c = dbConn.get().cursor()
-        c.execute('''SELECT username FROM users WHERE username=?''',(name,))
-        row = c.fetchone()
-        c.close()
-        if row == None:
-            return None
-        return User(name)
 
     def getUsers(self):
         return User.findAll()
