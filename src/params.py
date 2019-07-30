@@ -97,7 +97,7 @@ class Extensions():
                 for name, data in inspect.getmembers(newMod):
                     if not inspect.isclass(data):
                         continue
-                    if name != "SpreadExt":
+                    if name != "BaboosshExt":
                         continue
         
                     modType = data.getModType()

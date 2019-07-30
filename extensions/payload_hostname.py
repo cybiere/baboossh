@@ -2,7 +2,7 @@ class ExtStr(type):
     def __str__(self):
         return self.getKey()
 
-class SpreadExt(object,metaclass=ExtStr):
+class BaboosshExt(object,metaclass=ExtStr):
     @classmethod
     def getModType(cls):
         return "payload"

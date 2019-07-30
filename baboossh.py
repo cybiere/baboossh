@@ -29,8 +29,8 @@ def yesNo(prompt,default=None):
 
 
 
-class SshpreadShell(cmd.Cmd):
-    intro = '\nWelcome to SSHpread. Type help or ? to list commands.\n'
+class BaboosshShell(cmd.Cmd):
+    intro = '\nWelcome to baboossh. Type help or ? to list commands.\n'
     prompt = '> '
 
 #################################################################
@@ -554,7 +554,7 @@ Available commands:
 #################################################################
 
     def do_exit(self, arg):
-        'Quit SSHpread'
+        'Quit Baboossh'
         self.workspace.close()
         return True
     
@@ -607,5 +607,5 @@ if __name__ == '__main__':
     if not os.path.exists(os.path.join(config['DEFAULT']['workspaces'],'default')):
         Workspace.create('default')
 
-    SshpreadShell().cmdloop()
+    BaboosshShell().cmdloop()
 

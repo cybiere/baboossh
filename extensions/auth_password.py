@@ -1,5 +1,4 @@
-
-class SpreadExt():
+class BaboosshExt():
     @classmethod
     def getModType(cls):
         return "auth"
