@@ -22,7 +22,7 @@ class dbConn():
         return cls.__conn
 
     @classmethod
-    def build(cls):
+    def build(cls,workspace):
         dbPath = join(config['DEFAULT']['workspaces'],workspace,"workspace.db")
         c = sqlite3.connect(dbPath)
         c.execute('''CREATE TABLE hosts (
@@ -32,7 +32,7 @@ class dbConn():
             )''')
         c.execute('''CREATE TABLE targets (
             id INTEGER PRIMARY KEY ASC,
-            host INTEGER NOT NULL,
+            host INTEGER,
             ip TEXT NOT NULL,
             port TEXT NOT NULL,
             FOREIGN KEY(host) REFERENCES hosts(id)
@@ -51,7 +51,7 @@ class dbConn():
             tested INTEGER NOT NULL,
             working INTEGER NOT NULL,
             root INTEGER NOT NULL,
-            host INTEGER NOT NULL,
+            host INTEGER,
             target INTEGER NOT NULL,
             user INTEGER NOT NULL,
             cred INTEGER NOT NULL,

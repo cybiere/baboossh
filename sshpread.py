@@ -118,7 +118,7 @@ Available commands:
         return matches
 
 #################################################################
-###################          TARGETS          ###################
+###################           HOSTS           ###################
 #################################################################
 
     def do_host(self, arg):
@@ -126,13 +126,10 @@ Available commands:
 Available commands:
     - host help                 show this help
     - host list                 list existing hosts
-    - host add NAME IP[:PORT]   create new host
 '''
         command,sep,params = arg.partition(" ")
         if command == "list" or command == "":
             self.host_list()
-        elif command == "add":
-            self.host_add(params)
         else:
             if command != "help" and command != "?":
                 print("Unrecognized command.")
@@ -146,35 +143,74 @@ Available commands:
             return
         for host in hosts:
             print(host.toList())
-    
-    def host_add(self,params):
-        if params == "":
-            self.host_help()
-            return
-        params = params.split(' ')
-        if len(params) != 2:
-            self.host_help()
-            return
-        name = params[0]
-        if len(params[1].split(':')) == 2:
-            ip, port = params[1].split(':')
-        else:
-            ip = params[1]
-            port = "22"
-        try:
-            self.workspace.addHost_Manual(name,ip,port)
-        except Exception as e:
-            print("Host addition failed: "+str(e))
-        else:
-            print("Host "+name+" added.")
 
     def host_help(self):
         print('''Available commands:
     - host help                 show this help
-    - host list                 list existing hosts
-    - host add NAME IP[:PORT]   create new host''')
+    - host list                 list existing hosts''')
 
     def complete_host(self, text, line, begidx, endidx):
+        matches = []
+        n = len(text)
+        for word in ['list','help']:
+            if word[:n] == text:
+                matches.append(word)
+        return matches
+
+
+#################################################################
+###################          TARGETS          ###################
+#################################################################
+
+    def do_target(self, arg):
+        '''TARGET: Manage targets
+Available commands:
+    - target help                 show this help
+    - target list                 list existing targets
+    - target add IP[:PORT]        add target
+'''
+        command,sep,params = arg.partition(" ")
+        if command == "list" or command == "":
+            self.target_list()
+        elif command == "add":
+            self.target_add(params)
+        else:
+            if command != "help" and command != "?":
+                print("Unrecognized command.")
+            self.target_help()
+    
+    def target_list(self):
+        print("Current targets in workspace:")
+        targets = self.workspace.getTargets()
+        if not targets:
+            print("No targets in current workspace")
+            return
+        for target in targets:
+            print(target.toList())
+    
+    def target_add(self,params):
+        if params == "":
+            self.target_help()
+            return
+        if len(params.split(':')) == 2:
+            ip, port = params.split(':')
+        else:
+            ip = params
+            port = "22"
+        try:
+            self.workspace.addTarget_Manual(ip,port)
+        except Exception as e:
+            print("Target addition failed: "+str(e))
+        else:
+            print("Target "+ip+":"+port+" added.")
+
+    def target_help(self):
+        print('''Available commands:
+    - target help                 show this help
+    - target list                 list existing targets
+    - target add IP[:PORT]   create new target''')
+
+    def complete_target(self, text, line, begidx, endidx):
         matches = []
         n = len(text)
         for word in ['add','list','help']:
@@ -436,24 +472,27 @@ Available commands:
         user = self.workspace.getOption("user")
         if user is None:
             users = self.workspace.getUsers()
-            if not yesNo("Try with all ("+str(len(users))+") users in scope ?",False):
-                return
+            if len(users) > 1:
+                if not yesNo("Try with all ("+str(len(users))+") users in scope ?",False):
+                    return
             users = self.workspace.getUsers()
         else:
             users = [user]
         target = self.workspace.getOption("target")
         if target is None:
             targets = self.workspace.getTargets()
-            if not yesNo("Try with all ("+str(len(targets))+") targets in scope ?",False):
-                return
+            if len(targets) > 1:
+                if not yesNo("Try with all ("+str(len(targets))+") targets in scope ?",False):
+                    return
             targets = self.workspace.getTargets()
         else:
             targets = [target]
         cred = self.workspace.getOption("creds")
         if cred is None:
             creds = self.workspace.getCreds()
-            if not yesNo("Try with all ("+str(len(creds))+") credentials in scope ?",False):
-                return
+            if len(creds) > 1:
+                if not yesNo("Try with all ("+str(len(creds))+") credentials in scope ?",False):
+                    return
             creds = self.workspace.getCreds()
         else:
             creds = [cred]

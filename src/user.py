@@ -58,6 +58,17 @@ class User():
             return None
         return User(row[0])
 
+    @classmethod
+    def findByUsername(cls,name):
+        c = dbConn.get().cursor()
+        c.execute('''SELECT username FROM users WHERE username=?''',(name,))
+        row = c.fetchone()
+        c.close()
+        if row == None:
+            return None
+        return User(row[0])
+
+
     def toList(self):
         return "<"+self.name+">"
 

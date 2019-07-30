@@ -15,10 +15,6 @@ class Host():
         c.close()
         if savedHost is not None:
             self.id, self.identifier = savedHost
-            c = dbConn.get().cursor()
-            for row in c.execute('''SELECT ip,port FROM targets WHERE host=?''',(self.id,)):
-                self.targets.append(Target(row[0],row[1],self))
-            c.close()
 
     def getId(self):
         return self.id
@@ -45,13 +41,10 @@ class Host():
             self.targets = []
             c = dbConn.get().cursor()
             for row in c.execute('''SELECT ip,port FROM targets WHERE host=?''',(self.id,)):
-                self.targets.append(Target(row[0],row[1],self))
+                self.targets.append(Target(row[0],row[1]))
             c.close()
         c.close()
         dbConn.get().commit()
-
-    def registerTarget(self,target):
-        self.targets.append(target)
 
     @classmethod
     def findAll(cls):

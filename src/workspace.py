@@ -94,11 +94,8 @@ class Workspace():
             return False
         return True
 
-    #Manually add a host and its first target
-    def addHost_Manual(self,name,ip,port):
-        if self.checkHostNameExists(name):
-            print("A host already exists with the name "+name)
-            raise ValueError
+    #Manually add a target
+    def addTarget_Manual(self,ip,port):
         if not self.checkIsIP(ip):
             print("The address given isn't a valid IP")
             raise ValueError
@@ -109,12 +106,8 @@ class Workspace():
             print("The target "+ip+":"+port+" already exists")
             raise ValueError
 
-        #Creates and saves host
-        newHost = Host(name)
-        newHost.save()
-
         #Creates and saves target associated to Host
-        newTarget = Target(ip,port,newHost)
+        newTarget = Target(ip,port)
         newTarget.save()
 
 #################################################################
@@ -188,9 +181,7 @@ class Workspace():
 #################################################################
 
     def connect(self,target,user,cred):
-        newConn = Connection(target.getHost(),target,user,cred)
-        #TODO: create connection if not exists
-        #TODO: this is just a POC
+        newConn = Connection(target,user,cred)
         print("Establishing connection to "+str(user)+"@"+str(target)+" (with creds "+str(cred)+")",end="...")
         kwargs = {} #Add default values here
         authArgs = cred.getKwargs()
@@ -209,13 +200,32 @@ class Workspace():
         return newConn.isWorking()
 
     def connectTarget(self,arg):
-        target = Target.findByIpPort(arg)
-        if target is None:
-            raise ValueError("Supplied target isn't in workspace")
-        connection = Connection.findWorkingByTarget(target)
-        if connection == None:
-            raise ValueError("No working connection for supplied target")
-        self.connect(target,connection.getUser(),connection.getCred())
+        if '@' in arg and ':' in arg:
+            auth,sep,target = arg.partition('@')
+            target  = Target.findByIpPort(target)
+            if target is None:
+                raise ValueError("Supplied target isn't in workspace")
+            user,sep,cred = auth.partition(":")
+            if sep == "":
+                raise ValueError("No credentials supplied")
+            user = User.findByUsername(user)
+            if user is None:
+                raise ValueError("Supplied user isn't in workspace")
+            if cred[0] == "#":
+                cred = cred[1:]
+            cred = Creds.find(cred)
+            if cred is None:
+                raise ValueError("Supplied credentials aren't in workspace")
+        else:    
+            target = Target.findByIpPort(arg)
+            if target is None:
+                raise ValueError("Supplied target isn't in workspace")
+            connection = target.getConnection()
+            if connection == None:
+                raise ValueError("No working connection for supplied target")
+            user = connection.getUser()
+            cred = connection.getCred()
+        self.connect(target,user,cred)
 
 
 #################################################################
@@ -230,9 +240,8 @@ class Workspace():
 
     def getTargets(self):
         targets = []
-        for host in Host.findAll():
-            for target in host.targets:
-                targets.append(target)
+        for target in Target.findAll():
+            targets.append(target)
         return targets
 
     def getTargetsList(self):
