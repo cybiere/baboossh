@@ -1,5 +1,5 @@
 import sqlite3
-from src.params import dbConn
+from src.params import dbConn,Extensions
 
 
 class Creds():
@@ -7,7 +7,7 @@ class Creds():
         self.credsType = credsType
         self.credsContent = credsContent
         self.wspace = wspace
-        self.obj = self.wspace.getAuthClasses()[credsType](credsContent)
+        self.obj = Extensions.authMethods(credsType)(credsContent)
         self.id = None
         c = dbConn.get().cursor()
         c.execute('SELECT id FROM creds WHERE type=? AND content=?',(self.credsType, self.credsContent))

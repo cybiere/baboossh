@@ -1,12 +1,9 @@
 import os
 import re
 import configparser
-import sqlite3
 import ipaddress
-import inspect
-import importlib
 from fabric import Connection as FabConnection
-from src.params import dbConn
+from src.params import dbConn,Extensions
 from src.host import Host
 from src.target import Target
 from src.user import User
@@ -65,39 +62,6 @@ class Workspace():
             self.creds.append(Creds(row[0],row[1],self))
         c.close()
 
-    def loadExtensions(self):
-        nbExt = 0
-        extensionsFolder = 'extensions'
-        files = [f.split('.')[0] for f in os.listdir(extensionsFolder) if os.path.isfile(os.path.join(extensionsFolder,f)) and f[0] != '.']
-        for mod in files:
-            moduleName = extensionsFolder+"."+mod
-            try:
-                newMod = importlib.import_module(moduleName)
-            except Exception as e:
-                print("Couldn't load extension "+mod+" :"+str(e))
-                continue
-            else:
-                for name, data in inspect.getmembers(newMod):
-                    if not inspect.isclass(data):
-                        continue
-                    if name != "SpreadExt":
-                        continue
-        
-                    modType = data.getModType()
-                    if modType == "auth":
-                        dico = self.authMethods
-                    elif modType == "payload":
-                        dico = self.payloads
-                    else:
-                        print(mod+"> module Type Invalid")
-                        continue
-                    if data.getKey() in dico.keys():
-                        print(mod+"> "+modType+' method "'+data.getKey()+'" already registered')
-                        continue
-                    dico[data.getKey()] = data
-                    nbExt = nbExt+1
-        print(str(nbExt)+" extensions loaded.")
-
     def __init__(self,name):
         if name == "":
             raise ValueError("Cannot use workspace with empty name")
@@ -110,13 +74,9 @@ class Workspace():
         dbConn.connect(name)
         self.name = name
 
-        self.authMethods = {}
-        self.payloads = {}
-
-        self.loadExtensions()
-        
         self.loadHosts()
         self.loadCreds()
+
 
         self.options = {
             "target":None,
@@ -204,7 +164,7 @@ class Workspace():
 #################################################################
 
     def addCreds_Manual(self,credsType):
-        credsContent = self.authMethods[credsType].build()
+        credsContent = Extensions.authMethods(credsType).build()
         newCreds = Creds(credsType,credsContent,self)
         newCreds.save()
         self.creds.append(newCreds)
@@ -349,15 +309,6 @@ class Workspace():
         for cred in self.creds:
             idList.append(str(cred.getId()))
         return idList
-
-    def getAuthTypes(self):
-        return self.authMethods.keys()
-    
-    def getAuthMethods(self):
-        return self.authMethods.items()
-
-    def getAuthClasses(self):
-        return self.authMethods
 
     def getPayloads(self):
         return self.payloads.items()

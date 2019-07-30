@@ -1,6 +1,9 @@
 import sqlite3
+import importlib
+import inspect
 import configparser
-from os.path import join,exists
+from os.path import join,exists,isfile
+from os import listdir
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -73,5 +76,56 @@ class dbConn():
     def close(cls):
         cls.__conn.close()
         cls.__conn = None
+
+class Extensions():
+    auths = {}
+    payloads = {}
+
+    @classmethod
+    def load(cls):
+        nbExt = 0
+        extensionsFolder = 'extensions'
+        files = [f.split('.')[0] for f in listdir(extensionsFolder) if isfile(join(extensionsFolder,f)) and f[0] != '.']
+        for mod in files:
+            moduleName = extensionsFolder+"."+mod
+            try:
+                newMod = importlib.import_module(moduleName)
+            except Exception as e:
+                print("Couldn't load extension "+mod+" :"+str(e))
+                continue
+            else:
+                for name, data in inspect.getmembers(newMod):
+                    if not inspect.isclass(data):
+                        continue
+                    if name != "SpreadExt":
+                        continue
+        
+                    modType = data.getModType()
+                    if modType == "auth":
+                        dico = cls.auths
+                    elif modType == "payload":
+                        dico = cls.payloads
+                    else:
+                        print(mod+"> module Type Invalid")
+                        continue
+                    if data.getKey() in dico.keys():
+                        print(mod+"> "+modType+' method "'+data.getKey()+'" already registered')
+                        continue
+                    dico[data.getKey()] = data
+                    nbExt = nbExt+1
+        print(str(nbExt)+" extensions loaded.")
+
+    @classmethod
+    def authMethods(cls,key=None):
+        if key is None:
+            return cls.auths
+        if key not in cls.auths.keys():
+            print(cls.auths.keys())
+            raise IndexError("Extension "+key+" not found")
+        return cls.auths[key]
+
+    @classmethod
+    def authTypesAvail(cls):
+        return cls.auths.keys()
 
 

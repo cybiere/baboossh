@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
+from src.params import Extensions
 from src.workspace import Workspace
-
 import configparser
 import cmd, sys, os
-import sqlite3
 import re
 
 import signal
@@ -254,8 +253,8 @@ Available commands:
 
     def creds_types(self):
         print("Supported credential types:")
-        for key,credType in self.workspace.getAuthMethods():
-            print("    - "+credType.getKey()+": "+credType.descr())
+        for key in Extensions.authTypesAvail():
+            print("    - "+key+": "+Extensions.authMethods(key).descr())
     
     def creds_list(self):
         creds = self.workspace.getCreds()
@@ -274,7 +273,7 @@ Available commands:
         if params == "":
             self.creds_help()
             return
-        if params not in self.workspace.getAuthTypes():
+        if params not in Extensions.authTypesAvail():
             print(params+" is not a valid credentials type.")
             return
         try:
@@ -515,6 +514,8 @@ if __name__ == '__main__':
     if "DEFAULT" not in config or "workspaces" not in config['DEFAULT']:
         print("Invalid config file")
         exit()
+
+    Extensions.load()
     
     if not os.path.exists(config['DEFAULT']['workspaces']):
         print("> First run ? Creating workspaces directory")
