@@ -79,9 +79,8 @@ class Target():
     def toList(self):
         connection = self.getConnection()
         if connection is None:
-            print(str(self.ip)+":"+str(self.port))
-        else:
-            print(str(self.ip)+":"+str(self.port)+"\tConnect with "+str(connection))
+            return str(self.ip)+":"+str(self.port)
+        return str(self.ip)+":"+str(self.port)+"\tConnect with "+str(connection)
 
 
     def __str__(self):

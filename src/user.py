@@ -49,7 +49,7 @@ class User():
         return ret
 
     def toList(self):
-        print("<"+self.name+">")
+        return "<"+self.name+">"
 
     def __str__(self):
         return self.name

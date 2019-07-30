@@ -43,8 +43,16 @@ class Creds():
     def getKwargs(self):
         return self.obj.getKwargs()
 
+    @classmethod
+    def findAll(cls):
+        ret = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT type,content FROM creds'):
+            ret.append(Creds(row[0],row[1]))
+        return ret
+
     def toList(self):
-        print(" #"+str(self.id)+" <"+self.obj.getKey()+"> "+self.obj.toList())
+        return " #"+str(self.id)+" <"+self.obj.getKey()+"> "+self.obj.toList()
 
     def __str__(self):
         return "#"+str(self.id)

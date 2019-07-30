@@ -13,6 +13,21 @@ def handler(signum, frame):
 
 signal.signal(signal.SIGINT, handler)
 
+def yesNo(prompt,default=None):
+    if default is None:
+        choices = "[y,n]"
+    elif default:
+        choices = "[Y,n]"
+    else:
+        choices = "[y,N]"
+    a = ""
+    while a not in ["y","n"]:
+        a = input(prompt+" "+choices+" ")
+        if a == "" and default is not None:
+            a = "y" if default else "n"
+    return a == "y"
+
+
 
 class SshpreadShell(cmd.Cmd):
     intro = '\nWelcome to SSHpread. Type help or ? to list commands.\n'
@@ -130,7 +145,7 @@ Available commands:
             print("No hosts in current workspace")
             return
         for host in hosts:
-            host.toList()
+            print(host.toList())
     
     def host_add(self,params):
         if params == "":
@@ -195,7 +210,7 @@ Available commands:
             print("No users in current workspace")
             return
         for user in users:
-            user.toList()
+            print(user.toList())
     
     def user_add(self,params):
         if params == "":
@@ -262,7 +277,7 @@ Available commands:
             print("No creds in current workspace")
             return
         for cred in creds:
-            cred.toList()
+            print(cred.toList())
 
     def creds_show(self,credId):
         #TODO
@@ -413,12 +428,7 @@ Available commands:
         user = self.workspace.getOption("user")
         if user is None:
             users = self.workspace.getUsers()
-            a = ""
-            while a not in ["y","n"]:
-                a = input("Try with all ("+str(len(users))+") users in scope ? [y/N]")
-                if a == "":
-                    a = "n"
-            if a == "n":
+            if not yesNo("Try with all ("+str(len(users))+") users in scope ?",False):
                 return
             users = self.workspace.getUsers()
         else:
@@ -426,12 +436,7 @@ Available commands:
         target = self.workspace.getOption("target")
         if target is None:
             targets = self.workspace.getTargets()
-            a = ""
-            while a not in ["y","n"]:
-                a = input("Try with all ("+str(len(targets))+") targets in scope ? [y/N]")
-                if a == "":
-                    a = "n"
-            if a == "n":
+            if not yesNo("Try with all ("+str(len(targets))+") targets in scope ?",False):
                 return
             targets = self.workspace.getTargets()
         else:
@@ -439,12 +444,7 @@ Available commands:
         cred = self.workspace.getOption("creds")
         if cred is None:
             creds = self.workspace.getCreds()
-            a = ""
-            while a not in ["y","n"]:
-                a = input("Try with all ("+str(len(creds))+") credentials in scope ? [y/N]")
-                if a == "":
-                    a = "n"
-            if a == "n":
+            if not yesNo("Try with all ("+str(len(creds))+") credentials in scope ?",False):
                 return
             creds = self.workspace.getCreds()
         else:
@@ -453,12 +453,7 @@ Available commands:
         nbIter = len(targets)*len(users)*len(creds)
 
         if nbIter > 1:
-            a = ""
-            while a not in ["y","n"]:
-                a = input("Will now attempt "+str(nbIter)+" connections. Proceed ? [y/N]")
-                if a == "":
-                    a = "n"
-            if a == "n":
+            if not yesNo("Will now attempt "+str(nbIter)+" connections. Proceed ?",False):
                 return
         
         for target in targets:

@@ -72,10 +72,10 @@ class Host():
         return Host(row[0])
 
     def toList(self):
-        print("<"+self.name+">")
+        listStr = "<"+self.name+">"
         for target in self.targets:
-            print("\t- ",end="")
-            target.toList()
+            listStr = listStr+"\n\t- "+target.toList()
+        return listStr
     
     def __str__(self):
         return self.name

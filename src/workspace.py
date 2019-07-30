@@ -48,13 +48,6 @@ class Workspace():
         dbConn.build(name)
         return Workspace(name)
 
-    def loadCreds(self):
-        self.creds = []
-        c = dbConn.get().cursor()
-        for row in c.execute('''SELECT type,content FROM creds'''):
-            self.creds.append(Creds(row[0],row[1]))
-        c.close()
-
     def __init__(self,name):
         if name == "":
             raise ValueError("Cannot use workspace with empty name")
@@ -66,10 +59,6 @@ class Workspace():
             raise ValueError("Workspace "+name+" does not exist")
         dbConn.connect(name)
         self.name = name
-
-        self.loadCreds()
-
-
         self.options = {
             "target":None,
             "user":None,
@@ -158,7 +147,6 @@ class Workspace():
         credsContent = Extensions.getAuthMethod(credsType).build()
         newCreds = Creds(credsType,credsContent)
         newCreds.save()
-        self.creds.append(newCreds)
 
 #################################################################
 ###################          OPTIONS          ###################
@@ -200,7 +188,7 @@ class Workspace():
 #################################################################
 
     def connect(self,target,user,cred):
-        newConn = Connection(target.getHost(),target,user,cred,self)
+        newConn = Connection(target.getHost(),target,user,cred)
         #TODO: create connection if not exists
         #TODO: this is just a POC
         print("Establishing connection to "+str(user)+"@"+str(target)+" (with creds "+str(cred)+")",end="...")
@@ -210,10 +198,10 @@ class Workspace():
         try:
             c.open()
         except Exception as e:
-            print("\t> Connection failed : "+str(e))
+            print("> "+str(e))
             newConn.setWorking(False)
         else:
-            print("\t> Connection successful")
+            print("> \033[1;31;40mPWND\033[0m")
             newConn.setWorking(True)
         c.close()
         newConn.setTested(True)
@@ -284,11 +272,11 @@ class Workspace():
         return User.findAll()
 
     def getCreds(self):
-        return self.creds
+        return Creds.findAll()
 
     def getCredsIdList(self):
         idList = []
-        for cred in self.creds:
+        for cred in Creds.findAll():
             idList.append(str(cred.getId()))
         return idList
 
