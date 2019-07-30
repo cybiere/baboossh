@@ -48,13 +48,6 @@ class Workspace():
         dbConn.build(name)
         return Workspace(name)
 
-    def loadHosts(self):
-        self.hosts = []
-        c = dbConn.get().cursor()
-        for row in c.execute('''SELECT name FROM hosts'''):
-            self.hosts.append(Host(row[0]))
-        c.close()
-
     def loadCreds(self):
         self.creds = []
         c = dbConn.get().cursor()
@@ -74,7 +67,6 @@ class Workspace():
         dbConn.connect(name)
         self.name = name
 
-        self.loadHosts()
         self.loadCreds()
 
 
@@ -131,7 +123,6 @@ class Workspace():
         #Creates and saves host
         newHost = Host(name)
         newHost.save()
-        self.hosts.append(newHost)
 
         #Creates and saves target associated to Host
         newTarget = Target(ip,port,newHost)
@@ -237,18 +228,18 @@ class Workspace():
         return self.name
 
     def getHosts(self):
-        return self.hosts
+        return Host.findAll()
 
     def getTargets(self):
         targets = []
-        for host in self.hosts:
+        for host in Host.findAll():
             for target in host.targets:
                 targets.append(target)
         return targets
 
     def getTargetsList(self):
         targets = []
-        for host in self.hosts:
+        for host in Host.findAll():
             for target in host.targets:
                 targets.append(target.ip+":"+target.port)
         return targets
@@ -277,15 +268,6 @@ class Workspace():
             return None
         return User(name)
 
-    def getHostById(self,hostId):
-        c = dbConn.get().cursor()
-        c.execute('''SELECT name FROM hosts WHERE id=?''',(hostId,))
-        row = c.fetchone()
-        c.close()
-        if row == None:
-            return None
-        return Host(row[0])
-
     def getTargetByIpPort(self,endpoint):
         ip,sep,port = endpoint.partition(":")
         if port == "":
@@ -296,7 +278,7 @@ class Workspace():
         c.close()
         if row == None:
             return None
-        return Target(ip,port,self.getHostById(row[0]))
+        return Target(ip,port,Host.find(row[0]))
 
     def getUsers(self):
         return User.findAll()

@@ -53,6 +53,24 @@ class Host():
     def registerTarget(self,target):
         self.targets.append(target)
 
+    @classmethod
+    def findAll(cls):
+        ret = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT name FROM hosts'):
+            ret.append(Host(row[0]))
+        return ret
+
+    @classmethod
+    def find(cls,hostId):
+        c = dbConn.get().cursor()
+        c.execute('''SELECT name FROM hosts WHERE id=?''',(hostId,))
+        row = c.fetchone()
+        c.close()
+        if row == None:
+            return None
+        return Host(row[0])
+
     def toList(self):
         print("<"+self.name+">")
         for target in self.targets:
