@@ -1,5 +1,9 @@
 import sqlite3
 from src.params import dbConn
+from src.host import Host
+from src.target import Target
+from src.user import User
+from src.creds import Creds
 
 class Connection():
     def __init__(self,host,target,user,cred):
@@ -23,6 +27,18 @@ class Connection():
 
     def getId(self):
         return self.id
+
+    def getUser(self):
+        return self.user
+
+    def getTarget(self):
+        return self.target
+
+    def getHost(self):
+        return self.host
+
+    def getCred(self):
+        return self.cred
 
     def setTested(self, tested):
         self.tested = tested == True
@@ -62,6 +78,17 @@ class Connection():
             self.id  = c.fetchone()[0]
         c.close()
         dbConn.get().commit()
+
+    @classmethod
+    def findWorkingByTarget(cls,target):
+        c = dbConn.get().cursor()
+        c.execute('''SELECT host,user,cred FROM connections WHERE target=? AND working=?''',(target.getId(),1))
+        row = c.fetchone()
+        c.close()
+        if row == None:
+            return None
+        return Connection(Host.find(row[0]),target,User.find(row[1]),Creds.find(row[2]))
+
 
     def __str__(self):
         return str(self.user)+":"+str(self.cred)+"@"+str(self.target)

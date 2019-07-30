@@ -159,7 +159,7 @@ class Workspace():
         if value != "":
             value = value.strip()
             if option == "target":
-                target = self.getTargetByIpPort(value)
+                target = Target.findByIpPort(value)
                 if target is None:
                     raise ValueError
                 value = target
@@ -208,6 +208,16 @@ class Workspace():
         newConn.save()
         return newConn.isWorking()
 
+    def connectTarget(self,arg):
+        target = Target.findByIpPort(arg)
+        if target is None:
+            raise ValueError("Supplied target isn't in workspace")
+        connection = Connection.findWorkingByTarget(target)
+        if connection == None:
+            raise ValueError("No working connection for supplied target")
+        self.connect(target,connection.getUser(),connection.getCred())
+
+
 #################################################################
 ###################          GETTERS          ###################
 #################################################################
@@ -255,18 +265,6 @@ class Workspace():
         if row == None:
             return None
         return User(name)
-
-    def getTargetByIpPort(self,endpoint):
-        ip,sep,port = endpoint.partition(":")
-        if port == "":
-            raise ValueError
-        c = dbConn.get().cursor()
-        c.execute('''SELECT host FROM targets WHERE ip=? and port=?''',(ip,port))
-        row = c.fetchone()
-        c.close()
-        if row == None:
-            return None
-        return Target(ip,port,Host.find(row[0]))
 
     def getUsers(self):
         return User.findAll()

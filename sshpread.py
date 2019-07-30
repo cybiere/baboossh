@@ -425,6 +425,14 @@ Available commands:
 #################################################################
 
     def do_connect(self,arg):
+        if arg != "":
+            try:
+                self.workspace.connectTarget(arg)
+            except Exception as e:
+                print("Targeted connect failed : "+str(e))
+            else:
+                return
+        
         user = self.workspace.getOption("user")
         if user is None:
             users = self.workspace.getUsers()

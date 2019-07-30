@@ -51,6 +51,16 @@ class Creds():
             ret.append(Creds(row[0],row[1]))
         return ret
 
+    @classmethod
+    def find(cls,credId):
+        c = dbConn.get().cursor()
+        c.execute('''SELECT type,content FROM creds WHERE id=?''',(credId,))
+        row = c.fetchone()
+        c.close()
+        if row == None:
+            return None
+        return Creds(row[0],row[1])
+
     def toList(self):
         return " #"+str(self.id)+" <"+self.obj.getKey()+"> "+self.obj.toList()
 

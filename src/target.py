@@ -82,6 +82,36 @@ class Target():
             return str(self.ip)+":"+str(self.port)
         return str(self.ip)+":"+str(self.port)+"\tConnect with "+str(connection)
 
+    @classmethod
+    def findAll(cls):
+        ret = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT ip,port,host FROM targets'):
+            ret.append(Target(row[0],row[1],Host.find(row[2])))
+        return ret
+
+    @classmethod
+    def findByIpPort(cls,endpoint):
+        ip,sep,port = endpoint.partition(":")
+        if port == "":
+            raise ValueError
+        c = dbConn.get().cursor()
+        c.execute('''SELECT host FROM targets WHERE ip=? and port=?''',(ip,port))
+        row = c.fetchone()
+        c.close()
+        if row == None:
+            return None
+        return Target(ip,port,Host.find(row[0]))
+
+    @classmethod
+    def find(cls,targetId):
+        c = dbConn.get().cursor()
+        c.execute('''SELECT ip,port,host FROM targets WHERE id=?''',(targetId,))
+        row = c.fetchone()
+        c.close()
+        if row == None:
+            return None
+        return Target(row[0],row[1],Host.find(row[2]))
 
     def __str__(self):
         return self.ip+":"+self.port

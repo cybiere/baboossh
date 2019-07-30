@@ -48,6 +48,16 @@ class User():
             ret.append(User(row[0]))
         return ret
 
+    @classmethod
+    def find(cls,userId):
+        c = dbConn.get().cursor()
+        c.execute('''SELECT username FROM users WHERE id=?''',(userId,))
+        row = c.fetchone()
+        c.close()
+        if row == None:
+            return None
+        return User(row[0])
+
     def toList(self):
         return "<"+self.name+">"
 
