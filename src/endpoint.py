@@ -2,19 +2,19 @@ import sqlite3
 from src.params import dbConn
 from src.host import Host
 
-class Target():
+class Endpoint():
     def __init__(self,ip,port):
         self.ip = ip
         self.port = port
         self.host = None
         self.id = None
         c = dbConn.get().cursor()
-        c.execute('SELECT id,host FROM targets WHERE ip=? AND port=?',(self.ip,self.port))
-        savedTarget = c.fetchone()
+        c.execute('SELECT id,host FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
+        savedEndpoint = c.fetchone()
         c.close()
-        if savedTarget is not None:
-            self.id = savedTarget[0]
-            self.host = Host.find(savedTarget[1])
+        if savedEndpoint is not None:
+            self.id = savedEndpoint[0]
+            self.host = Host.find(savedEndpoint[1])
 
     def getId(self):
         return self.id
@@ -31,9 +31,9 @@ class Target():
     def getConnection(self,working=True):
         c = dbConn.get().cursor()
         if working:
-            c.execute('''SELECT id FROM connections WHERE target=? AND working=? ORDER BY root DESC''',(self.getId(),1))
+            c.execute('''SELECT id FROM connections WHERE endpoint=? AND working=? ORDER BY root DESC''',(self.getId(),1))
         else:
-            c.execute('''SELECT id FROM connections WHERE target=? ORDER BY root DESC''',(self.getId(),))
+            c.execute('''SELECT id FROM connections WHERE endpoint=? ORDER BY root DESC''',(self.getId(),))
         ret = c.fetchone()
         c.close()
         if ret is None:
@@ -45,8 +45,8 @@ class Target():
     def save(self):
         c = dbConn.get().cursor()
         if self.id is not None:
-            #If we have an ID, the target is already saved in the database : UPDATE
-            c.execute('''UPDATE targets 
+            #If we have an ID, the endpoint is already saved in the database : UPDATE
+            c.execute('''UPDATE endpoints 
                 SET
                     ip = ?,
                     port = ?
@@ -54,13 +54,13 @@ class Target():
                 WHERE id = ?''',
                 (self.ip, self.port, self.host.getId() if self.host is not None else None, self.id))
         else:
-            #The target doesn't exists in database : INSERT
-            c.execute('''INSERT INTO targets(ip,port,host)
+            #The endpoint doesn't exists in database : INSERT
+            c.execute('''INSERT INTO endpoints(ip,port,host)
                 VALUES (?,?,?) ''',
                 (self.ip,self.port,self.host.getId() if self.host is not None else None))
             c.close()
             c = dbConn.get().cursor()
-            c.execute('SELECT id FROM targets WHERE ip=? AND port=?',(self.ip,self.port))
+            c.execute('SELECT id FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
             self.id  = c.fetchone()[0]
         c.close()
         dbConn.get().commit()
@@ -75,8 +75,8 @@ class Target():
     def findAll(cls):
         ret = []
         c = dbConn.get().cursor()
-        for row in c.execute('SELECT ip,port FROM targets'):
-            ret.append(Target(row[0],row[1]))
+        for row in c.execute('SELECT ip,port FROM endpoints'):
+            ret.append(Endpoint(row[0],row[1]))
         return ret
 
     @classmethod
@@ -85,22 +85,22 @@ class Target():
         if port == "":
             raise ValueError
         c = dbConn.get().cursor()
-        c.execute('''SELECT id FROM targets WHERE ip=? and port=?''',(ip,port))
+        c.execute('''SELECT id FROM endpoints WHERE ip=? and port=?''',(ip,port))
         row = c.fetchone()
         c.close()
         if row == None:
             return None
-        return Target(ip,port)
+        return Endpoint(ip,port)
 
     @classmethod
-    def find(cls,targetId):
+    def find(cls,endpointId):
         c = dbConn.get().cursor()
-        c.execute('''SELECT ip,port FROM targets WHERE id=?''',(targetId,))
+        c.execute('''SELECT ip,port FROM endpoints WHERE id=?''',(endpointId,))
         row = c.fetchone()
         c.close()
         if row == None:
             return None
-        return Target(row[0],row[1])
+        return Endpoint(row[0],row[1])
 
     def __str__(self):
         return self.ip+":"+self.port

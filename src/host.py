@@ -4,11 +4,11 @@ from src.params import dbConn
 
 class Host():
     def __init__(self,name):
-        from src.target import Target
+        from src.endpoint import Endpoint
         self.name = name
         self.id = None
         self.identifier = ""
-        self.targets = []
+        self.endpoints = []
         c = dbConn.get().cursor()
         c.execute('SELECT id,identifier FROM hosts WHERE name=?',(self.name,))
         savedHost = c.fetchone()
@@ -38,10 +38,10 @@ class Host():
             c = dbConn.get().cursor()
             c.execute('SELECT id,identifier FROM hosts WHERE name=?',(self.name,))
             self.id = c.fetchone()[0]
-            self.targets = []
+            self.endpoints = []
             c = dbConn.get().cursor()
-            for row in c.execute('''SELECT ip,port FROM targets WHERE host=?''',(self.id,)):
-                self.targets.append(Target(row[0],row[1]))
+            for row in c.execute('''SELECT ip,port FROM endpoints WHERE host=?''',(self.id,)):
+                self.endpoints.append(Endpoint(row[0],row[1]))
             c.close()
         c.close()
         dbConn.get().commit()
@@ -66,8 +66,8 @@ class Host():
 
     def toList(self):
         listStr = "<"+self.name+">"
-        for target in self.targets:
-            listStr = listStr+"\n\t- "+target.toList()
+        for endpoint in self.endpoints:
+            listStr = listStr+"\n\t- "+endpoint.toList()
         return listStr
     
     def __str__(self):

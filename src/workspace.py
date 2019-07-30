@@ -5,7 +5,7 @@ import ipaddress
 from fabric import Connection as FabConnection
 from src.params import dbConn,Extensions
 from src.host import Host
-from src.target import Target
+from src.endpoint import Endpoint
 from src.user import User
 from src.creds import Creds
 from src.connection import Connection
@@ -60,14 +60,14 @@ class Workspace():
         dbConn.connect(name)
         self.name = name
         self.options = {
-            "target":None,
+            "endpoint":None,
             "user":None,
             "creds":None,
             "payload":None,
                 }
 
 #################################################################
-###################          TARGETS          ###################
+###################         ENDPOINTS         ###################
 #################################################################
 
     #Checks if a host already exists with given name
@@ -78,10 +78,10 @@ class Workspace():
         c.close()
         return res is not None
 
-    #Checks if a target already exists
-    def checkTargetExists(self,ip,port):
+    #Checks if a endpoint already exists
+    def checkEndpointExists(self,ip,port):
         c = dbConn.get().cursor()
-        c.execute('SELECT id FROM targets WHERE ip=? AND port=?',(ip,port))
+        c.execute('SELECT id FROM endpoints WHERE ip=? AND port=?',(ip,port))
         res = c.fetchone()
         c.close()
         return res is not None
@@ -94,21 +94,21 @@ class Workspace():
             return False
         return True
 
-    #Manually add a target
-    def addTarget_Manual(self,ip,port):
+    #Manually add a endpoint
+    def addEndpoint_Manual(self,ip,port):
         if not self.checkIsIP(ip):
             print("The address given isn't a valid IP")
             raise ValueError
         if not port.isdigit():
             print("The port given isn't a positive integer")
             raise ValueError
-        if self.checkTargetExists(ip,port):
-            print("The target "+ip+":"+port+" already exists")
+        if self.checkEndpointExists(ip,port):
+            print("The endpoint "+ip+":"+port+" already exists")
             raise ValueError
 
-        #Creates and saves target associated to Host
-        newTarget = Target(ip,port)
-        newTarget.save()
+        #Creates and saves endpoint associated to Host
+        newEndpoint = Endpoint(ip,port)
+        newEndpoint.save()
 
 #################################################################
 ###################           USERS           ###################
@@ -146,16 +146,37 @@ class Workspace():
 #################################################################
 
     def setOption(self,option,value):
+        if option == 'target' and '@' in value and ':' in value:
+            auth,sep,endpoint = value.partition('@')
+            endpoint  = Endpoint.findByIpPort(endpoint)
+            if endpoint is None:
+                raise ValueError("Supplied endpoint isn't in workspace")
+            user,sep,cred = auth.partition(":")
+            if sep == "":
+                raise ValueError("No credentials supplied")
+            user = User.findByUsername(user)
+            if user is None:
+                raise ValueError("Supplied user isn't in workspace")
+            if cred[0] == "#":
+                cred = cred[1:]
+            cred = Creds.find(cred)
+            if cred is None:
+                raise ValueError("Supplied credentials aren't in workspace")
+            self.options['endpoint'] = endpoint
+            self.options['user'] = user
+            self.options['creds'] = cred
+            for option in ['endpoint','user','creds']:
+                print(option+" => "+str(self.getOption(option)))
+            return 
         if not option in self.options.keys():
-            print(option+" isn't a valid option.")
-            raise ValueError
+            raise ValueError(option+" isn't a valid option.")
         if value != "":
             value = value.strip()
-            if option == "target":
-                target = Target.findByIpPort(value)
-                if target is None:
+            if option == "endpoint":
+                endpoint = Endpoint.findByIpPort(value)
+                if endpoint is None:
                     raise ValueError
-                value = target
+                value = endpoint
             elif option == "user":
                 user = self.getUserByName(value)
                 if user is None:
@@ -180,12 +201,12 @@ class Workspace():
 ###################        CONNECTIONS        ###################
 #################################################################
 
-    def connect(self,target,user,cred):
-        newConn = Connection(target,user,cred)
-        print("Establishing connection to "+str(user)+"@"+str(target)+" (with creds "+str(cred)+")",end="...")
+    def connect(self,endpoint,user,cred):
+        newConn = Connection(endpoint,user,cred)
+        print("Establishing connection to "+str(user)+"@"+str(endpoint)+" (with creds "+str(cred)+")",end="...")
         kwargs = {} #Add default values here
         authArgs = cred.getKwargs()
-        c = FabConnection(host=target.getIp(),port=target.getPort(),user=user.getName(),connect_kwargs={**kwargs, **authArgs})
+        c = FabConnection(host=endpoint.getIp(),port=endpoint.getPort(),user=user.getName(),connect_kwargs={**kwargs, **authArgs})
         try:
             c.open()
         except Exception as e:
@@ -199,12 +220,12 @@ class Workspace():
         newConn.save()
         return newConn.isWorking()
 
-    def connectTarget(self,arg):
+    def connectEndpoint(self,arg):
         if '@' in arg and ':' in arg:
-            auth,sep,target = arg.partition('@')
-            target  = Target.findByIpPort(target)
-            if target is None:
-                raise ValueError("Supplied target isn't in workspace")
+            auth,sep,endpoint = arg.partition('@')
+            endpoint  = Endpoint.findByIpPort(endpoint)
+            if endpoint is None:
+                raise ValueError("Supplied endpoint isn't in workspace")
             user,sep,cred = auth.partition(":")
             if sep == "":
                 raise ValueError("No credentials supplied")
@@ -217,15 +238,15 @@ class Workspace():
             if cred is None:
                 raise ValueError("Supplied credentials aren't in workspace")
         else:    
-            target = Target.findByIpPort(arg)
-            if target is None:
-                raise ValueError("Supplied target isn't in workspace")
-            connection = target.getConnection()
+            endpoint = Endpoint.findByIpPort(arg)
+            if endpoint is None:
+                raise ValueError("Supplied endpoint isn't in workspace")
+            connection = endpoint.getConnection()
             if connection == None:
-                raise ValueError("No working connection for supplied target")
+                raise ValueError("No working connection for supplied endpoint")
             user = connection.getUser()
             cred = connection.getCred()
-        self.connect(target,user,cred)
+        self.connect(endpoint,user,cred)
 
 
 #################################################################
@@ -238,18 +259,18 @@ class Workspace():
     def getHosts(self):
         return Host.findAll()
 
-    def getTargets(self):
-        targets = []
-        for target in Target.findAll():
-            targets.append(target)
-        return targets
+    def getEndpoints(self):
+        endpoints = []
+        for endpoint in Endpoint.findAll():
+            endpoints.append(endpoint)
+        return endpoints
 
-    def getTargetsList(self):
-        targets = []
+    def getEndpointsList(self):
+        endpoints = []
         for host in Host.findAll():
-            for target in host.targets:
-                targets.append(target.ip+":"+target.port)
-        return targets
+            for endpoint in host.endpoints:
+                endpoints.append(endpoint.ip+":"+endpoint.port)
+        return endpoints
 
     def getUsersList(self):
         users = []

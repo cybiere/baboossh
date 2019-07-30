@@ -159,38 +159,38 @@ Available commands:
 
 
 #################################################################
-###################          TARGETS          ###################
+###################         ENDPOINTS         ###################
 #################################################################
 
-    def do_target(self, arg):
-        '''TARGET: Manage targets
+    def do_endpoint(self, arg):
+        '''ENDPOINT: Manage endpoints
 Available commands:
-    - target help                 show this help
-    - target list                 list existing targets
-    - target add IP[:PORT]        add target
+    - endpoint help                 show this help
+    - endpoint list                 list existing endpoints
+    - endpoint add IP[:PORT]        add endpoint
 '''
         command,sep,params = arg.partition(" ")
         if command == "list" or command == "":
-            self.target_list()
+            self.endpoint_list()
         elif command == "add":
-            self.target_add(params)
+            self.endpoint_add(params)
         else:
             if command != "help" and command != "?":
                 print("Unrecognized command.")
-            self.target_help()
+            self.endpoint_help()
     
-    def target_list(self):
-        print("Current targets in workspace:")
-        targets = self.workspace.getTargets()
-        if not targets:
-            print("No targets in current workspace")
+    def endpoint_list(self):
+        print("Current endpoints in workspace:")
+        endpoints = self.workspace.getEndpoints()
+        if not endpoints:
+            print("No endpoints in current workspace")
             return
-        for target in targets:
-            print(target.toList())
+        for endpoint in endpoints:
+            print(endpoint.toList())
     
-    def target_add(self,params):
+    def endpoint_add(self,params):
         if params == "":
-            self.target_help()
+            self.endpoint_help()
             return
         if len(params.split(':')) == 2:
             ip, port = params.split(':')
@@ -198,19 +198,19 @@ Available commands:
             ip = params
             port = "22"
         try:
-            self.workspace.addTarget_Manual(ip,port)
+            self.workspace.addEndpoint_Manual(ip,port)
         except Exception as e:
-            print("Target addition failed: "+str(e))
+            print("Endpoint addition failed: "+str(e))
         else:
-            print("Target "+ip+":"+port+" added.")
+            print("Endpoint "+ip+":"+port+" added.")
 
-    def target_help(self):
+    def endpoint_help(self):
         print('''Available commands:
-    - target help                 show this help
-    - target list                 list existing targets
-    - target add IP[:PORT]   create new target''')
+    - endpoint help                 show this help
+    - endpoint list                 list existing endpoints
+    - endpoint add IP[:PORT]   create new endpoint''')
 
-    def complete_target(self, text, line, begidx, endidx):
+    def complete_endpoint(self, text, line, begidx, endidx):
         matches = []
         n = len(text)
         for word in ['add','list','help']:
@@ -401,7 +401,7 @@ Available commands:
         command,sep,params = arg.partition(" ")
         if command == "":
             self.options_list()
-        elif command in self.workspace.getOptions():
+        elif command in list(self.workspace.getOptions())+['target']:
             try:
                 self.workspace.setOption(command,params)
             except ValueError:
@@ -442,9 +442,9 @@ Available commands:
             compKey = "none"
         n = len(text)
         if compKey == "cmd":
-            comp = self.workspace.getOptions()
-        elif compKey == "target":
-            comp = self.workspace.getTargetsList()
+            comp = list(self.workspace.getOptions())+['target']
+        elif compKey == "endpoint":
+            comp = self.workspace.getEndpointsList()
         elif compKey == "user":
             comp = self.workspace.getUsersList()
         elif compKey == "creds":
@@ -463,9 +463,9 @@ Available commands:
     def do_connect(self,arg):
         if arg != "":
             try:
-                self.workspace.connectTarget(arg)
+                self.workspace.connectEndpoint(arg)
             except Exception as e:
-                print("Targeted connect failed : "+str(e))
+                print("Endpointed connect failed : "+str(e))
             else:
                 return
         
@@ -478,15 +478,15 @@ Available commands:
             users = self.workspace.getUsers()
         else:
             users = [user]
-        target = self.workspace.getOption("target")
-        if target is None:
-            targets = self.workspace.getTargets()
-            if len(targets) > 1:
-                if not yesNo("Try with all ("+str(len(targets))+") targets in scope ?",False):
+        endpoint = self.workspace.getOption("endpoint")
+        if endpoint is None:
+            endpoints = self.workspace.getEndpoints()
+            if len(endpoints) > 1:
+                if not yesNo("Try with all ("+str(len(endpoints))+") endpoints in scope ?",False):
                     return
-            targets = self.workspace.getTargets()
+            endpoints = self.workspace.getEndpoints()
         else:
-            targets = [target]
+            endpoints = [endpoint]
         cred = self.workspace.getOption("creds")
         if cred is None:
             creds = self.workspace.getCreds()
@@ -497,16 +497,17 @@ Available commands:
         else:
             creds = [cred]
 
-        nbIter = len(targets)*len(users)*len(creds)
+        nbIter = len(endpoints)*len(users)*len(creds)
 
         if nbIter > 1:
             if not yesNo("Will now attempt "+str(nbIter)+" connections. Proceed ?",False):
                 return
         
-        for target in targets:
+        for endpoint in endpoints:
             for user in users:
                 for cred in creds:
-                    if self.workspace.connect(target,user,cred):
+                    #TODO re-enable ^C to cancel
+                    if self.workspace.connect(endpoint,user,cred):
                         break;
 
 
@@ -523,13 +524,13 @@ Available commands:
     def initPrompt(self):
         newPrompt = ""
         newPrompt = newPrompt+"["+self.workspace.getName()+"]"
-        if self.workspace.getOption("target"):
+        if self.workspace.getOption("endpoint"):
             if self.workspace.getOption("user"):
                 newPrompt = newPrompt+str(self.workspace.getOption("user"))
                 if self.workspace.getOption("creds"):
                     newPrompt = newPrompt+":"+str(self.workspace.getOption("creds"))
                 newPrompt = newPrompt+"@"
-            newPrompt = newPrompt+str(self.workspace.getOption("target"))
+            newPrompt = newPrompt+str(self.workspace.getOption("endpoint"))
         elif self.workspace.getOption("user"):
             newPrompt = newPrompt+str(self.workspace.getOption("user"))
             if self.workspace.getOption("creds"):

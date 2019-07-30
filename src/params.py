@@ -30,7 +30,7 @@ class dbConn():
             name TEXT NOT NULL,
             identifier TEXT
             )''')
-        c.execute('''CREATE TABLE targets (
+        c.execute('''CREATE TABLE endpoints (
             id INTEGER PRIMARY KEY ASC,
             host INTEGER,
             ip TEXT NOT NULL,
@@ -52,11 +52,11 @@ class dbConn():
             working INTEGER NOT NULL,
             root INTEGER NOT NULL,
             host INTEGER,
-            target INTEGER NOT NULL,
+            endpoint INTEGER NOT NULL,
             user INTEGER NOT NULL,
             cred INTEGER NOT NULL,
             FOREIGN KEY(host) REFERENCES hosts(id)
-            FOREIGN KEY(target) REFERENCES targets(id)
+            FOREIGN KEY(endpoint) REFERENCES endpoints(id)
             FOREIGN KEY(user) REFERENCES users(id)
             FOREIGN KEY(cred) REFERENCES creds(id)
             )''')
