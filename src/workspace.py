@@ -48,44 +48,7 @@ class Workspace():
             print("Workspace already exists")
             raise ValueError
         #create database
-        c = sqlite3.connect(os.path.join(workspaceFolder,"workspace.db"))
-        c.execute('''CREATE TABLE hosts (
-            id INTEGER PRIMARY KEY ASC,
-            name TEXT NOT NULL,
-            identifier TEXT
-            )''')
-        c.execute('''CREATE TABLE targets (
-            id INTEGER PRIMARY KEY ASC,
-            host INTEGER NOT NULL,
-            ip TEXT NOT NULL,
-            port TEXT NOT NULL,
-            FOREIGN KEY(host) REFERENCES hosts(id)
-            )''')
-        c.execute('''CREATE TABLE users (
-            id INTEGER PRIMARY KEY ASC,
-            username TEXT NOT NULL
-            )''')
-        c.execute('''CREATE TABLE creds (
-            id INTEGER PRIMARY KEY ASC,
-            type TEXT NOT NULL,
-            content TEXT NOT NULL
-            )''')
-        c.execute('''CREATE TABLE connections (
-            id INTEGER PRIMARY KEY ASC,
-            tested INTEGER NOT NULL,
-            working INTEGER NOT NULL,
-            root INTEGER NOT NULL,
-            host INTEGER NOT NULL,
-            target INTEGER NOT NULL,
-            user INTEGER NOT NULL,
-            cred INTEGER NOT NULL,
-            FOREIGN KEY(host) REFERENCES hosts(id)
-            FOREIGN KEY(target) REFERENCES targets(id)
-            FOREIGN KEY(user) REFERENCES users(id)
-            FOREIGN KEY(cred) REFERENCES creds(id)
-            )''')
-        c.commit()
-        c.close()
+        dbConn.build(name)
         return Workspace(name)
 
     def loadHosts(self):
@@ -137,15 +100,13 @@ class Workspace():
 
     def __init__(self,name):
         if name == "":
-            print("Cannot use workspace with empty name")
-            raise ValueError
+            raise ValueError("Cannot use workspace with empty name")
         if re.match('^[\w_\.-]+$', name) is None:
             print('Invalid characters in workspace name. Allowed characters are letters, numbers and ._-')
             raise ValueError
         workspaceFolder = os.path.join(config['DEFAULT']['workspaces'],name)
         if not os.path.exists(workspaceFolder):
-            print("Workspace "+name+" does not exist")
-            raise ValueError
+            raise ValueError("Workspace "+name+" does not exist")
         dbConn.connect(name)
         self.name = name
 

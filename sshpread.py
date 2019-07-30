@@ -74,7 +74,6 @@ Available commands:
         except:
             print("Workspace creation failed")
         else:
-            self.workspace.close()
             self.workspace = newWorkspace
 
     def workspace_use(self,params):
@@ -86,7 +85,6 @@ Available commands:
         except:
             print("Workspace change failed")
         else:
-            self.workspace.close()
             self.workspace = newWorkspace
 
     def workspace_help(self):
