@@ -7,7 +7,7 @@ class SpreadExt():
 
     @classmethod
     def getKey(cls):
-        return "pubkey"
+        return "privkey"
 
     @classmethod
     def descr(cls):
@@ -20,7 +20,7 @@ class SpreadExt():
             print("Key path cannot be empty")
             raise ValueError()
         passphrase = input("Private key passphrase (empty for none): ")
-        return cls(json.dumps({'passphrase':passphrase,'keypath':keypath}))
+        return json.dumps({'passphrase':passphrase,'keypath':keypath})
 
     def __init__(self,creds):
         data = json.loads(creds)

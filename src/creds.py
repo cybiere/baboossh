@@ -2,12 +2,14 @@ import sqlite3
 
 
 class Creds():
-    def __init__(self,creds,conn):
-        self.obj = creds
-        self.conn = conn
+    def __init__(self,credsType,credsContent,wspace):
+        self.credsType = credsType
+        self.credsContent = credsContent
+        self.wspace = wspace
+        self.obj = self.wspace.getAuthClasses()[credsType](credsContent)
         self.id = None
-        c = self.conn.cursor()
-        c.execute('SELECT id FROM creds WHERE type=? AND content=?',(self.obj.getKey(), self.obj.serialize()))
+        c = self.wspace.getConn().cursor()
+        c.execute('SELECT id FROM creds WHERE type=? AND content=?',(self.credsType, self.credsContent))
         savedCreds = c.fetchone()
         c.close()
         if savedCreds is not None:
@@ -17,7 +19,7 @@ class Creds():
         return self.id
 
     def save(self):
-        c = self.conn.cursor()
+        c = self.wspace.getConn().cursor()
         if self.id is not None:
             #If we have an ID, the creds is already saved in the database : UPDATE
             c.execute('''UPDATE creds 
@@ -25,18 +27,18 @@ class Creds():
                     type = ?,
                     content = ?,
                 WHERE id = ?''',
-                (self.obj.getKey(), self.obj.serialize(), self.id))
+                (self.credsType, self.credsContent, self.id))
         else:
             #The creds doesn't exists in database : INSERT
             c.execute('''INSERT INTO creds(type,content)
                 VALUES (?,?) ''',
-                (self.obj.getKey(), self.obj.serialize()))
+                (self.credsType, self.credsContent))
             c.close()
-            c = self.conn.cursor()
-            c.execute('SELECT id FROM creds WHERE type=? and content=?',(self.obj.getKey(),self.obj.serialize()))
+            c = self.wspace.getConn().cursor()
+            c.execute('SELECT id FROM creds WHERE type=? and content=?',(self.credsType,self.credsContent))
             self.id = c.fetchone()[0]
         c.close()
-        self.conn.commit()
+        self.wspace.getConn().commit()
 
     def getKwargs(self):
         return self.obj.getKwargs()

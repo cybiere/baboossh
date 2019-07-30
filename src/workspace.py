@@ -5,11 +5,13 @@ import sqlite3
 import ipaddress
 import inspect
 import importlib
-from fabric import Connection
+from fabric import Connection as FabConnection
 from src.host import Host
 from src.target import Target
 from src.user import User
 from src.creds import Creds
+from src.connection import Connection
+
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -69,6 +71,8 @@ class Workspace():
         c.execute('''CREATE TABLE connections (
             id INTEGER PRIMARY KEY ASC,
             tested INTEGER NOT NULL,
+            working INTEGER NOT NULL,
+            root INTEGER NOT NULL,
             host INTEGER NOT NULL,
             target INTEGER NOT NULL,
             user INTEGER NOT NULL,
@@ -86,21 +90,21 @@ class Workspace():
         self.hosts = []
         c = self.conn.cursor()
         for row in c.execute('''SELECT name FROM hosts'''):
-            self.hosts.append(Host(row[0],self.conn))
+            self.hosts.append(Host(row[0],self))
         c.close()
 
     def loadUsers(self):
         self.users = []
         c = self.conn.cursor()
         for row in c.execute('''SELECT username FROM users'''):
-            self.users.append(User(row[0],self.conn))
+            self.users.append(User(row[0],self))
         c.close()
 
     def loadCreds(self):
         self.creds = []
         c = self.conn.cursor()
         for row in c.execute('''SELECT type,content FROM creds'''):
-            self.creds.append(Creds(self.authMethods[row[0]](row[1]),self.conn))
+            self.creds.append(Creds(row[0],row[1],self))
         c.close()
 
     def loadExtensions(self):
@@ -214,12 +218,12 @@ class Workspace():
             raise ValueError
 
         #Creates and saves host
-        newHost = Host(name,self.conn)
+        newHost = Host(name,self)
         newHost.save()
         self.hosts.append(newHost)
 
         #Creates and saves target associated to Host
-        newTarget = Target(ip,port,newHost,self.conn)
+        newTarget = Target(ip,port,newHost,self)
         newTarget.save()
 
 #################################################################
@@ -241,7 +245,7 @@ class Workspace():
             raise ValueError
 
         #Creates and saves user
-        newUser = User(name,self.conn)
+        newUser = User(name,self)
         newUser.save()
         self.users.append(newUser)
 
@@ -250,7 +254,8 @@ class Workspace():
 #################################################################
 
     def addCreds_Manual(self,credsType):
-        newCreds = Creds(self.authMethods[credsType].build(),self.conn)
+        credsContent = self.authMethods[credsType].build()
+        newCreds = Creds(credsType,credsContent,self)
         newCreds.save()
         self.creds.append(newCreds)
 
@@ -262,27 +267,30 @@ class Workspace():
         if not option in self.options.keys():
             print(option+" isn't a valid option.")
             raise ValueError
-        value = value.strip()
-        if option == "target":
-            target = self.getTargetByIpPort(value)
-            if target is None:
-                raise ValueError
-            value = target
-        elif option == "user":
-            user = self.getUserByName(value)
-            if user is None:
-                raise ValueError
-            value = user
-        elif option == "creds":
-            if value[0] == '#':
-                credId = value[1:]
-            else:
-                credId = value
-            creds = self.getCredsById(credId)
-            if creds is None:
-                raise ValueError
-            value = creds
-
+        if value != "":
+            value = value.strip()
+            if option == "target":
+                target = self.getTargetByIpPort(value)
+                if target is None:
+                    raise ValueError
+                value = target
+            elif option == "user":
+                user = self.getUserByName(value)
+                if user is None:
+                    raise ValueError
+                value = user
+            elif option == "creds":
+                if value[0] == '#':
+                    credId = value[1:]
+                else:
+                    credId = value
+                creds = self.getCredsById(credId)
+                if creds is None:
+                    raise ValueError
+                value = creds
+        else:
+            self.options[option] = None
+    
         self.options[option] = value
         print(option+" => "+str(self.getOption(option)))
 
@@ -291,19 +299,25 @@ class Workspace():
 #################################################################
 
     def connect(self,target,user,cred):
+        newConn = Connection(target.getHost(),target,user,cred,self)
         #TODO: create connection if not exists
         #TODO: this is just a POC
-        print("Establishing connection to "+str(target))
+        print("Establishing connection to "+str(user)+"@"+str(target)+" (with creds "+str(cred)+")",end="...")
         kwargs = {} #Add default values here
         authArgs = cred.getKwargs()
-        c = Connection(host=target.getIp(),port=target.getPort(),user=user.getName(),connect_kwargs={**kwargs, **authArgs})
+        c = FabConnection(host=target.getIp(),port=target.getPort(),user=user.getName(),connect_kwargs={**kwargs, **authArgs})
         try:
             c.open()
         except Exception as e:
-            print("Connection failed : "+str(e))
-            return
+            print("\t> Connection failed : "+str(e))
+            newConn.setWorking(False)
+        else:
+            print("\t> Connection successful")
+            newConn.setWorking(True)
         c.close()
-        print("Connection successful")
+        newConn.setTested(True)
+        newConn.save()
+        return newConn.isWorking()
 
 #################################################################
 ###################          GETTERS          ###################
@@ -314,6 +328,13 @@ class Workspace():
 
     def getHosts(self):
         return self.hosts
+
+    def getTargets(self):
+        targets = []
+        for host in self.hosts:
+            for target in host.targets:
+                targets.append(target)
+        return targets
 
     def getTargetsList(self):
         targets = []
@@ -335,7 +356,7 @@ class Workspace():
         c.close()
         if row == None:
             return None
-        return Creds(self.authMethods[row[0]](row[1]),self.conn)
+        return Creds(row[0],row[1],self)
 
     def getUserByName(self,name):
         c = self.conn.cursor()
@@ -344,7 +365,7 @@ class Workspace():
         c.close()
         if row == None:
             return None
-        return User(name,self.conn)
+        return User(name,self)
 
     def getHostById(self,hostId):
         c = self.conn.cursor()
@@ -353,7 +374,7 @@ class Workspace():
         c.close()
         if row == None:
             return None
-        return Host(row[0],self.conn)
+        return Host(row[0],self)
 
     def getTargetByIpPort(self,endpoint):
         ip,sep,port = endpoint.partition(":")
@@ -365,7 +386,7 @@ class Workspace():
         c.close()
         if row == None:
             return None
-        return Target(ip,port,self.getHostById(row[0]),self.conn)
+        return Target(ip,port,self.getHostById(row[0]),self)
 
     def getUsers(self):
         return self.users
@@ -385,6 +406,9 @@ class Workspace():
     def getAuthMethods(self):
         return self.authMethods.items()
 
+    def getAuthClasses(self):
+        return self.authMethods
+
     def getPayloads(self):
         return self.payloads.items()
 
@@ -401,7 +425,9 @@ class Workspace():
             return None
         return self.options[key]
 
-    
+    def getConn(self):
+        return self.conn
+
     def close(self):
         self.conn.close()
         print("Closing workspace "+self.name)

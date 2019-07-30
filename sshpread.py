@@ -353,7 +353,7 @@ Available commands:
         command,sep,params = arg.partition(" ")
         if command == "":
             self.options_list()
-        elif command in self.workspace.getOptions() and params != "":
+        elif command in self.workspace.getOptions():
             try:
                 self.workspace.setOption(command,params)
             except ValueError:
@@ -394,7 +394,7 @@ Available commands:
             compKey = "none"
         n = len(text)
         if compKey == "cmd":
-            comp = ['target','user','creds','payload']
+            comp = self.workspace.getOptions()
         elif compKey == "target":
             comp = self.workspace.getTargetsList()
         elif compKey == "user":
@@ -415,27 +415,60 @@ Available commands:
     def do_connect(self,arg):
         user = self.workspace.getOption("user")
         if user is None:
-            #TODO : enum avail users
-            raise NotImplementedError
+            users = self.workspace.getUsers()
+            a = ""
+            while a not in ["y","n"]:
+                a = input("Try with all ("+str(len(users))+") users in scope ? [y/N]")
+                if a == "":
+                    a = "n"
+            if a == "n":
+                return
+            users = self.workspace.getUsers()
         else:
             users = [user]
         target = self.workspace.getOption("target")
         if target is None:
-            #TODO : enum avail targets
-            raise NotImplementedError
+            targets = self.workspace.getTargets()
+            a = ""
+            while a not in ["y","n"]:
+                a = input("Try with all ("+str(len(targets))+") targets in scope ? [y/N]")
+                if a == "":
+                    a = "n"
+            if a == "n":
+                return
+            targets = self.workspace.getTargets()
         else:
             targets = [target]
         cred = self.workspace.getOption("creds")
         if cred is None:
-            #TODO : enum avail creds
-            raise NotImplementedError
+            creds = self.workspace.getCreds()
+            a = ""
+            while a not in ["y","n"]:
+                a = input("Try with all ("+str(len(creds))+") credentials in scope ? [y/N]")
+                if a == "":
+                    a = "n"
+            if a == "n":
+                return
+            creds = self.workspace.getCreds()
         else:
             creds = [cred]
 
+        nbIter = len(targets)*len(users)*len(creds)
+
+        if nbIter > 1:
+            a = ""
+            while a not in ["y","n"]:
+                a = input("Will now attempt "+str(nbIter)+" connections. Proceed ? [y/N]")
+                if a == "":
+                    a = "n"
+            if a == "n":
+                return
+        
         for target in targets:
             for user in users:
                 for cred in creds:
-                    self.workspace.connect(target,user,cred)
+                    if self.workspace.connect(target,user,cred):
+                        break;
 
 
 
@@ -464,6 +497,9 @@ Available commands:
                 newPrompt = newPrompt+":"+str(self.workspace.getOption("creds"))
             newPrompt = newPrompt+"@..."
         self.prompt = newPrompt+"> "
+
+    def emptyline(self):
+        pass
 
     def postcmd(self,stop,line):
         self.initPrompt()

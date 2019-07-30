@@ -2,11 +2,11 @@ import sqlite3
 
 
 class User():
-    def __init__(self,name,conn):
+    def __init__(self,name,wspace):
         self.name = name
-        self.conn = conn
+        self.wspace = wspace
         self.id = None
-        c = self.conn.cursor()
+        c = self.wspace.getConn().cursor()
         c.execute('SELECT id FROM users WHERE username=?',(self.name,))
         savedUser = c.fetchone()
         c.close()
@@ -20,7 +20,7 @@ class User():
         return self.name
 
     def save(self):
-        c = self.conn.cursor()
+        c = self.wspace.getConn().cursor()
         if self.id is not None:
             #If we have an ID, the user is already saved in the database : UPDATE
             c.execute('''UPDATE users 
@@ -34,11 +34,11 @@ class User():
                 VALUES (?) ''',
                 (self.name,))
             c.close()
-            c = self.conn.cursor()
+            c = self.wspace.getConn().cursor()
             c.execute('SELECT id FROM users WHERE username=?',(self.name,))
             self.id = c.fetchone()[0]
         c.close()
-        self.conn.commit()
+        self.wspace.getConn().commit()
 
     def toList(self):
         print("<"+self.name+">")
