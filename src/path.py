@@ -84,5 +84,9 @@ class Path():
         return str(self)
 
     def __str__(self):
-        return str(self.src) if self.src is not None else "local"+" -> "+str(self.dst)
+        if self.src is not None:
+            src = str(self.src)
+        else:
+            src = "local"
+        return src+" -> "+str(self.dst)
 

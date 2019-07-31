@@ -462,6 +462,60 @@ Available commands:
         return matches
 
 #################################################################
+###################           PATHS           ###################
+#################################################################Q
+
+    def do_path(self,arg):
+        '''USER: Manage paths
+Available commands:
+    - path help                 show this help
+    - path list                 list existing paths
+    - path get ENDPOINT         get path to ENDPOINT
+'''
+        command,sep,params = arg.partition(" ")
+        if command == "list" or command == "":
+            self.path_list()
+        elif command == "get":
+            self.path_get(params)
+        else:
+            if command != "help" and command != "?":
+                print("Unrecognized command.")
+            self.path_help()
+    
+    def path_list(self):
+        print("Current paths in workspace:")
+        paths = self.workspace.getPaths()
+        if not paths:
+            print("No paths in current workspace")
+            return
+        for path in paths:
+            print(path.toList())
+    
+    def path_get(self,params):
+        if params == "":
+            self.path_help()
+            return
+        params = params.split(' ')
+        if len(params) != 1:
+            self.path_help()
+            return
+        self.workspace.getPathToDst(params[0])
+
+    def path_help(self):
+        print('''Available commands:
+    - path help                 show this help
+    - path list                 list existing paths
+    - path get ENDPOINT         get path to ENDPOINT''')
+
+    def complete_path(self, text, line, begidx, endidx):
+        matches = []
+        n = len(text)
+        for word in ['get','list','help']:
+            if word[:n] == text:
+                matches.append(word)
+        return matches
+
+#################################################################
 ###################          CONNECT          ###################
 #################################################################
 

@@ -179,6 +179,25 @@ class Workspace():
         payload = Extensions.getPayload(payloadName)
         connection.run(payload)
 
+#################################################################
+###################           PATHS           ###################
+#################################################################
+
+    def getPathToDst(self,dst):
+        try:
+            dst = Endpoint.findByIpPort(dst)
+        except:
+            print("Please specify a valid endpoint in the IP:PORT form")
+        if dst is None:
+            print("The endpoint provided doesn't exist in this workspace")
+            return
+        if Path.hasDirectPath(dst):
+            print("The destination should be reachable from the host")
+            return
+        #TODO calculate path
+        print("Path should be here")
+
+
 
 #################################################################
 ###################          GETTERS          ###################
@@ -213,6 +232,9 @@ class Workspace():
         for user in User.findAll():
             users.append(str(user))
         return users
+
+    def getPaths(self):
+        return Path.findAll()
 
     def getUsers(self):
         return User.findAll()
