@@ -1,5 +1,6 @@
 import sqlite3
-from src.params import dbConn
+from fabric import Connection as FabConnection
+from src.params import dbConn,Extensions
 from src.host import Host
 from src.endpoint import Endpoint
 from src.user import User
@@ -90,7 +91,68 @@ class Connection():
             return None
         return Connection(Endpoint.find(row[0]),User.find(row[1]),Creds.find(row[2]))
 
+    @classmethod
+    def fromTarget(cls,arg):
+        if '@' in arg and ':' in arg:
+            auth,sep,endpoint = arg.partition('@')
+            endpoint  = Endpoint.findByIpPort(endpoint)
+            if endpoint is None:
+                raise ValueError("Supplied endpoint isn't in workspace")
+            user,sep,cred = auth.partition(":")
+            if sep == "":
+                raise ValueError("No credentials supplied")
+            user = User.findByUsername(user)
+            if user is None:
+                raise ValueError("Supplied user isn't in workspace")
+            if cred[0] == "#":
+                cred = cred[1:]
+            cred = Creds.find(cred)
+            if cred is None:
+                raise ValueError("Supplied credentials aren't in workspace")
+            return Connection(endpoint,user,cred)
+        else:    
+            endpoint = Endpoint.findByIpPort(arg)
+            if endpoint is None:
+                raise ValueError("Supplied endpoint isn't in workspace")
+            connection = endpoint.getConnection()
+            if connection == None:
+                raise ValueError("No working connection for supplied endpoint")
+            return connection
+        return None
 
+    def initConnect(self):
+        print("Establishing connection to "+str(self.getUser())+"@"+str(self.getEndpoint())+" (with creds "+str(self.getCred())+")",end="...")
+        kwargs = {} #Add default values here
+        authArgs = self.getCred().getKwargs()
+        c = FabConnection(host=self.getEndpoint().getIp(),port=self.getEndpoint().getPort(),user=self.getUser().getName(),connect_kwargs={**kwargs, **authArgs})
+        self.setTested(True)
+        try:
+            c.open()
+        except Exception as e:
+            print("> "+str(e))
+            self.setWorking(False)
+            self.save()
+            return None
+        print("> \033[1;31;40mPWND\033[0m")
+        self.setWorking(True)
+        self.save()
+        return c
+
+    def connect(self):
+        c = self.initConnect()
+        if c == None:
+            return False
+        c.close()
+        return True
+
+    def run(self,payload):
+        print(type(payload))
+        c = self.initConnect()
+        if c == None:
+            return False
+        ret = payload.run(c,self)
+        c.close()
+        return True
 
     def __str__(self):
         return str(self.user)+":"+str(self.cred)+"@"+str(self.endpoint)

@@ -2,7 +2,6 @@ import os
 import re
 import configparser
 import ipaddress
-from fabric import Connection as FabConnection
 from src.params import dbConn,Extensions
 from src.host import Host
 from src.endpoint import Endpoint
@@ -114,10 +113,12 @@ class Workspace():
 
     def setOption(self,option,value):
         if option == 'target' and '@' in value and ':' in value:
-            endpoint,user,cred = self.parseTarget(value)
-            self.options['endpoint'] = endpoint
-            self.options['user'] = user
-            self.options['creds'] = cred
+            connection = Connection.fromTarget(value)
+            if connection == None:
+                return
+            self.options['endpoint'] = connection.getEndpoint()
+            self.options['user'] = connection.getUser()
+            self.options['creds'] = connection.getCred()
             for option in ['endpoint','user','creds']:
                 print(option+" => "+str(self.getOption(option)))
             return 
@@ -158,83 +159,21 @@ class Workspace():
 #################################################################
 
     def connect(self,endpoint,user,cred):
-        newConn = Connection(endpoint,user,cred)
-        print("Establishing connection to "+str(user)+"@"+str(endpoint)+" (with creds "+str(cred)+")",end="...")
-        kwargs = {} #Add default values here
-        authArgs = cred.getKwargs()
-        c = FabConnection(host=endpoint.getIp(),port=endpoint.getPort(),user=user.getName(),connect_kwargs={**kwargs, **authArgs})
-        try:
-            c.open()
-        except Exception as e:
-            print("> "+str(e))
-            newConn.setWorking(False)
-        else:
-            print("> \033[1;31;40mPWND\033[0m")
-            newConn.setWorking(True)
-        c.close()
-        newConn.setTested(True)
-        newConn.save()
-        return newConn.isWorking()
+        connection = Connection(endpoint,user,cred)
+        connection.connect()
 
     def run(self,endpoint,user,cred,payload):
-        newConn = Connection(endpoint,user,cred)
-        print("Establishing connection to "+str(user)+"@"+str(endpoint)+" (with creds "+str(cred)+")")
-        kwargs = {} #Add default values here
-        authArgs = cred.getKwargs()
-        c = FabConnection(host=endpoint.getIp(),port=endpoint.getPort(),user=user.getName(),connect_kwargs={**kwargs, **authArgs})
-        try:
-            c.open()
-        except Exception as e:
-            print("> "+str(e))
-            newConn.setWorking(False)
-            newConn.setTested(True)
-            newConn.save()
-            return False
-        print("> \033[1;31;40mConnected\033[0m")
-        newConn.setWorking(True)
-        newConn.setTested(True)
-        newConn.save()
-        
-        ret = payload.run(c)
-        
-        c.close()
-        return ret
-
-    def parseTarget(self,arg):
-        if '@' in arg and ':' in arg:
-            auth,sep,endpoint = arg.partition('@')
-            endpoint  = Endpoint.findByIpPort(endpoint)
-            if endpoint is None:
-                raise ValueError("Supplied endpoint isn't in workspace")
-            user,sep,cred = auth.partition(":")
-            if sep == "":
-                raise ValueError("No credentials supplied")
-            user = User.findByUsername(user)
-            if user is None:
-                raise ValueError("Supplied user isn't in workspace")
-            if cred[0] == "#":
-                cred = cred[1:]
-            cred = Creds.find(cred)
-            if cred is None:
-                raise ValueError("Supplied credentials aren't in workspace")
-        else:    
-            endpoint = Endpoint.findByIpPort(arg)
-            if endpoint is None:
-                raise ValueError("Supplied endpoint isn't in workspace")
-            connection = endpoint.getConnection()
-            if connection == None:
-                raise ValueError("No working connection for supplied endpoint")
-            user = connection.getUser()
-            cred = connection.getCred()
-        return (endpoint,user,cred)
+        connection = Connection(endpoint,user,cred)
+        connection.run(payload)
 
     def connectTarget(self,arg):
-        endpoint,user,cred = parseTarget(arg)
-        self.connect(endpoint,user,cred)
+        connection = Connection.fromTarget(arg)
+        connection.connect()
 
-    def runTarget(self,arg,payload):
-        endpoint,user,cred = parseTarget(arg)
-        self.run(endpoint,user,cred,payload)
+    def runTarget(self,arg,payloadName):
+        connection = Connection.fromTarget(arg)
+        payload = Extensions.getPayload(payloadName)
+        connection.run(payload)
 
 
 #################################################################

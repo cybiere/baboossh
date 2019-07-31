@@ -16,9 +16,9 @@ class BaboosshExt(object,metaclass=ExtStr):
         return "Print target hostname"
     
     @classmethod
-    def run(cls,connection):
+    def run(cls,socket, connection):
         try:
-            connection.run("hostname")
+            socket.run("hostname")
         except Exception as e:
             print("Error : "+str(e))
             return False
