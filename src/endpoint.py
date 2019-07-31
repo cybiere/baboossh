@@ -94,6 +94,8 @@ class Endpoint():
 
     @classmethod
     def find(cls,endpointId):
+        if endpointId == 0:
+            return None
         c = dbConn.get().cursor()
         c.execute('''SELECT ip,port FROM endpoints WHERE id=?''',(endpointId,))
         row = c.fetchone()

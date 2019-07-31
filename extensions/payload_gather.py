@@ -5,6 +5,7 @@ import glob
 import ipaddress
 from src.endpoint import Endpoint
 from src.user import User
+from src.path import Path
 
 #TODO implement those
 '''
@@ -175,10 +176,14 @@ class BaboosshExt(object,metaclass=ExtStr):
                     for ip in ips:
                         endpoint = Endpoint(ip,port if port is not None else 22)
                         endpoint.save()
+                        path = Path(self.connection.getEndpoint(),endpoint)
+                        path.save()
                         nbEndpoints = nbEndpoints + 1
                 else:
                     endpoint = Endpoint(hostname,port if port is not None else 22)
                     endpoint.save()
+                    path = Path(self.connection.getEndpoint(),endpoint)
+                    path.save()
                     nbEndpoints = nbEndpoints + 1
                 if user is not None:
                     user = User(user)

@@ -8,6 +8,7 @@ from src.endpoint import Endpoint
 from src.user import User
 from src.creds import Creds
 from src.connection import Connection
+from src.path import Path
 
 
 
@@ -78,7 +79,7 @@ class Workspace():
         return True
 
     #Manually add a endpoint
-    def addEndpoint_Manual(self,ip,port):
+    def addEndpoint_Manual(self,ip,port,directPath=True):
         if not self.checkIsIP(ip):
             print("The address given isn't a valid IP")
             raise ValueError
@@ -88,6 +89,9 @@ class Workspace():
 
         newEndpoint = Endpoint(ip,port)
         newEndpoint.save()
+        if directPath:
+            newPath = Path(None,newEndpoint)
+            newPath.save()
 
 #################################################################
 ###################           USERS           ###################

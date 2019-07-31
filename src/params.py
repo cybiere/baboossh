@@ -54,12 +54,20 @@ class dbConn():
             host INTEGER,
             endpoint INTEGER NOT NULL,
             user INTEGER NOT NULL,
-            cred INTEGER NOT NULL,
+            cred INTEGER,
             FOREIGN KEY(host) REFERENCES hosts(id)
             FOREIGN KEY(endpoint) REFERENCES endpoints(id)
             FOREIGN KEY(user) REFERENCES users(id)
             FOREIGN KEY(cred) REFERENCES creds(id)
             )''')
+        c.execute('''CREATE TABLE paths (
+            id INTEGER PRIMARY KEY ASC,
+            src INTEGER NOT NULL,
+            dst INTEGER NOT NULL,
+            FOREIGN KEY(src) REFERENCES endpoints(id)
+            FOREIGN KEY(dst) REFERENCES endpoints(id)
+            )''')
+
         c.commit()
         c.close()
 

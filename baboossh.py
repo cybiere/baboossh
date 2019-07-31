@@ -197,8 +197,9 @@ Available commands:
         else:
             ip = params
             port = "22"
+        addDirectPath = yesNo("Add path from local host ?",True)
         try:
-            self.workspace.addEndpoint_Manual(ip,port)
+            self.workspace.addEndpoint_Manual(ip,port,addDirectPath)
         except Exception as e:
             print("Endpoint addition failed: "+str(e))
         else:
