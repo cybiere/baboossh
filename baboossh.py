@@ -509,11 +509,34 @@ Available commands:
 
     def complete_path(self, text, line, begidx, endidx):
         matches = []
+        if len(line) != endidx:
+            #Complete only at the end of commands
+            return []
+        command = line.split()
+        if len(command) < 2 or len(command) == 2 and begidx != endidx:
+            compKey = "cmd"
+        elif text == "":
+            if command[-1] == "#":
+                compKey = command[-2]
+            else:
+                compKey = command[-1]
+
+        elif command[-2]:
+            compKey = command[-2]
+        else:
+            compKey = "none"
         n = len(text)
-        for word in ['get','list','help']:
+        if compKey == "cmd":
+            comp = ['help','list','get']
+        elif compKey == "get":
+            comp = self.workspace.getEndpointsList()
+        else:
+            comp = []
+        for word in comp:
             if word[:n] == text:
                 matches.append(word)
         return matches
+
 
 #################################################################
 ###################          CONNECT          ###################

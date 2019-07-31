@@ -5,6 +5,7 @@ from src.host import Host
 from src.endpoint import Endpoint
 from src.user import User
 from src.creds import Creds
+from src.path import Path
 
 class Connection():
     def __init__(self,endpoint,user,cred):
@@ -100,6 +101,16 @@ class Connection():
         return Connection(Endpoint.find(row[0]),User.find(row[1]),Creds.find(row[2]))
 
     @classmethod
+    def findWorkingByEndpoint(cls,endpoint):
+        c = dbConn.get().cursor()
+        c.execute('SELECT user,cred FROM connections WHERE working=1 AND endpoint=? ORDER BY root ASC',(endpoint.getId(),))
+        row = c.fetchone()
+        c.close()
+        if row is None:
+            return None
+        return Connection(endpoint,User.find(row[0]),Creds.find(row[1]))
+
+    @classmethod
     def fromTarget(cls,arg):
         if '@' in arg and ':' in arg:
             auth,sep,endpoint = arg.partition('@')
@@ -129,10 +140,18 @@ class Connection():
         return None
 
     def initConnect(self):
-        print("Establishing connection to "+str(self.getUser())+"@"+str(self.getEndpoint())+" (with creds "+str(self.getCred())+")",end="...")
         kwargs = {} #Add default values here
         authArgs = self.getCred().getKwargs()
-        c = FabConnection(host=self.getEndpoint().getIp(),port=self.getEndpoint().getPort(),user=self.getUser().getName(),connect_kwargs={**kwargs, **authArgs})
+        if Path.hasDirectPath(self.getEndpoint()):
+            #Direct connect
+            c = FabConnection(host=self.getEndpoint().getIp(),port=self.getEndpoint().getPort(),user=self.getUser().getName(),connect_kwargs={**kwargs, **authArgs})
+        else:
+            #Get previous hop
+            prevHop = Path.getPath(None,self.getEndpoint())[-1].getSrc()
+            gateway = Connection.findWorkingByEndpoint(prevHop)
+
+            c = FabConnection(host=self.getEndpoint().getIp(),port=self.getEndpoint().getPort(),user=self.getUser().getName(),connect_kwargs={**kwargs, **authArgs},gateway=gateway.initConnect())
+        print("Establishing connection to "+str(self.getUser())+"@"+str(self.getEndpoint())+" (with creds "+str(self.getCred())+")",end="...")
         self.setTested(True)
         try:
             c.open()
