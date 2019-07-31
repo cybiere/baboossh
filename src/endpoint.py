@@ -49,7 +49,7 @@ class Endpoint():
             c.execute('''UPDATE endpoints 
                 SET
                     ip = ?,
-                    port = ?
+                    port = ?,
                     host = ?
                 WHERE id = ?''',
                 (self.ip, self.port, self.host.getId() if self.host is not None else None, self.id))

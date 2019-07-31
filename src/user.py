@@ -25,7 +25,7 @@ class User():
             #If we have an ID, the user is already saved in the database : UPDATE
             c.execute('''UPDATE users 
                 SET
-                    username = ?,
+                    username = ?
                 WHERE id = ?''',
                 (self.name, self.id))
         else:
