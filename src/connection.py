@@ -154,7 +154,6 @@ class Connection():
         return True
 
     def run(self,payload):
-        print(type(payload))
         c = self.initConnect()
         if c == None:
             return False

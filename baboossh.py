@@ -492,15 +492,11 @@ Available commands:
             creds = self.workspace.getCreds()
         else:
             creds = [cred]
-
         nbIter = len(endpoints)*len(users)*len(creds)
-
         if nbIter > 1:
             if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?",False):
                 raise ValueError
         return (endpoints,users,creds)
-
-
 
     def do_connect(self,arg):
         if arg != "":
@@ -509,18 +505,24 @@ Available commands:
             except Exception as e:
                 print("Targeted connect failed : "+str(e))
             return
-        
         try:
             endpoints,users,creds = self.parseOptionsTarget()
         except:
             return
-
         for endpoint in endpoints:
             for user in users:
                 for cred in creds:
                     #TODO re-enable ^C to cancel
                     if self.workspace.connect(endpoint,user,cred):
                         break;
+
+    def complete_connect(self, text, line, begidx, endidx):
+        matches = []
+        n = len(text)
+        for word in self.workspace.getTargetsValidList():
+            if word[:n] == text:
+                matches.append(word)
+        return matches
 
     def do_run(self,arg):
         if arg != "":
@@ -534,16 +536,13 @@ Available commands:
                 #TODO print help
                 pass
             return
-        
         try:
             endpoints,users,creds = self.parseOptionsTarget()
         except:
             return
-
         payload = self.workspace.getOption("payload")
         if payload is None:
             raise ValueError("You must specify a payload")
-
         for endpoint in endpoints:
             for user in users:
                 for cred in creds:
@@ -551,7 +550,22 @@ Available commands:
                     if self.workspace.run(endpoint,user,cred,payload):
                         break;
 
-
+    def complete_run(self, text, line, begidx, endidx):
+        matches = []
+        if len(line) != endidx:
+            #Complete only at the end of commands
+            return []
+        command = line.split()
+        
+        if len(command) < 2 or len(command) == 2 and begidx != endidx:
+            comp = self.workspace.getTargetsValidList()
+        else:
+            comp = Extensions.payloadsAvail()
+        n = len(text)
+        for word in comp:
+            if word[:n] == text:
+                matches.append(word)
+        return matches
 
 #################################################################
 ###################            CMD            ###################
