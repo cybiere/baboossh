@@ -82,6 +82,14 @@ class Connection():
         dbConn.get().commit()
 
     @classmethod
+    def findByWorking(cls,working):
+        ret = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT endpoint,user,cred FROM connections WHERE working=?',(1 if working else 0,)):
+            ret.append(Connection(Endpoint.find(row[0]),User.find(row[1]),Creds.find(row[2])))
+        return ret
+
+    @classmethod
     def find(cls,connectionId):
         c = dbConn.get().cursor()
         c.execute('SELECT endpoint,user,cred FROM connections WHERE id=?',(connectionId,))

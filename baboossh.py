@@ -449,6 +449,10 @@ Available commands:
             comp = self.workspace.getUsersList()
         elif compKey == "creds":
             comp = self.workspace.getCredsIdList()
+        elif compKey == "target":
+            comp = self.workspace.getTargetsValidList()
+        elif compKey == "payload":
+            comp = Extensions.payloadsAvail()
         else:
             comp = []
         for word in comp:
@@ -556,6 +560,7 @@ Available commands:
     def do_exit(self, arg):
         'Quit Baboossh'
         self.workspace.close()
+        print("Bye !")
         return True
     
     def initPrompt(self):
@@ -582,8 +587,8 @@ Available commands:
 
     def postcmd(self,stop,line):
         self.initPrompt()
-        if line == "exit":
-            return stop
+        return stop
+        
 
     def __init__(self):
         super().__init__()

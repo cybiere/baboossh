@@ -194,15 +194,20 @@ class Workspace():
 
     def getEndpointsList(self):
         endpoints = []
-        for host in Host.findAll():
-            for endpoint in host.endpoints:
-                endpoints.append(endpoint.ip+":"+endpoint.port)
+        for endpoint in Endpoint.findAll():
+            endpoints.append(endpoint.ip+":"+endpoint.port)
         return endpoints
+    
+    def getTargetsValidList(self):
+        connections = []
+        for connection in Connection.findByWorking(True):
+            connections.append(str(connection))
+        return connections
 
     def getUsersList(self):
         users = []
         for user in User.findAll():
-            users.append(user.name)
+            users.append(str(user))
         return users
 
     def getUsers(self):
