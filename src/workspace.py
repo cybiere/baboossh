@@ -194,8 +194,12 @@ class Workspace():
         if Path.hasDirectPath(dst):
             print("The destination should be reachable from the host")
             return
-        #TODO calculate path
-        print("Path should be here")
+        chain = Path.getPath(None,dst)
+        if chain is None:
+            print("No path could be found to the destination")
+            return
+        for path in chain:
+            print(path)
 
 
 

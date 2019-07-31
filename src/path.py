@@ -51,6 +51,7 @@ class Path():
         c = dbConn.get().cursor()
         for row in c.execute('SELECT src,dst FROM paths'):
             ret.append(Path(Endpoint.find(row[0]),Endpoint.find(row[1])))
+        c.close()
         return ret
 
     @classmethod
@@ -69,6 +70,7 @@ class Path():
         c = dbConn.get().cursor()
         for row in c.execute('SELECT src,dst FROM paths WHERE dst=?',(dst.getId(), )):
             ret.append(Path(Endpoint.find(row[0]),Endpoint.find(row[1])))
+        c.close()
         return ret
 
     @classmethod
@@ -79,6 +81,57 @@ class Path():
         c.close()
         return row is not None
 
+    @classmethod
+    def getAdjacencyList(cls):
+        adj = {}
+        adj[0] = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT dst FROM paths WHERE src=0'):
+            adj[0].append(row[0])
+        c.close()
+
+        for endpoint in Endpoint.findAll():
+            adj[endpoint.getId()] = []
+            c = dbConn.get().cursor()
+            for row in c.execute('SELECT dst FROM paths WHERE src=?',(endpoint.getId(), )):
+                adj[endpoint.getId()].append(row[0])
+            c.close()
+        return adj
+
+    @classmethod
+    def easyPath(cls,srcId,dstId):
+        adj = cls.getAdjacencyList()
+        queue = [[srcId]]
+        done = []
+        while len(queue) > 0:
+            road = queue.pop(0)
+            head = road[-1]
+            if head in done:
+                continue
+            if dstId in adj[head]:
+                road.append(dstId)
+                return road
+            for nextHop in adj[head]:
+                newRoad = road.copy()
+                newRoad.append(nextHop)
+                queue.append(newRoad)
+            done.append(head)
+        return []
+
+    @classmethod
+    def getPath(cls,src,dst):
+        if src == None:
+            srcId = 0
+        else:
+            srcId = src.getId()
+        dstId = dst.getId()
+        chainId = cls.easyPath(srcId,dstId)
+        if len(chainId) == 0:
+            return None
+        chain = []
+        for i in range(0,len(chainId)-1):
+            chain.append(Path(Endpoint.find(chainId[i]),Endpoint.find(chainId[i+1])))
+        return chain
 
     def toList(self):
         return str(self)
