@@ -128,8 +128,7 @@ class Workspace():
             for option in ['endpoint','user','creds']:
                 print(option+" => "+str(self.getOption(option)))
             return 
-
-        if not option in self.options.keys():
+        if not option in list(self.options.keys()):
             raise ValueError(option+" isn't a valid option.")
         if value != "":
             value = value.strip()

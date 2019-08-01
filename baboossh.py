@@ -5,6 +5,14 @@ from src.workspace import Workspace
 import configparser
 import cmd2, sys, os
 import re
+import argparse
+from cmd2 import with_argparser
+
+config = configparser.ConfigParser()
+config.read('config.ini')
+if "DEFAULT" not in config or "workspaces" not in config['DEFAULT']:
+    print("Invalid config file")
+    exit()
 
 def yesNo(prompt,default=None):
     if default is None:
@@ -21,7 +29,6 @@ def yesNo(prompt,default=None):
     return a == "y"
 
 
-
 class BaboosshShell(cmd2.Cmd):
     intro = '\nWelcome to baboossh. Type help or ? to list commands.\n'
     prompt = '> '
@@ -30,31 +37,25 @@ class BaboosshShell(cmd2.Cmd):
 ###################         WORKSPACE         ###################
 #################################################################
 
-    def do_workspace(self, arg):
-        '''WORKSPACE: Manage workspaces
-Available commands:
-    - workspace help      show this help
-    - workspace list      list existing workspaces
-    - workspace add NAME  create new workspace
-    - workspace use NAME  change current workspace
-    - workspace del NAME  delete workspace
-'''
-        command,sep,params = arg.partition(" ")
-        if command == "list" or command == "":
-            self.workspace_list()
-        elif command == "add":
-            self.workspace_add(params)
-        elif command == "use":
-            self.workspace_use(params)
-        elif command == "del":
-            #TODO
-            print("Del workspace")
-        else:
-            if command != "help" and command != "?":
-                print("Unrecognized command.")
-            self.workspace_help()
+    def getAvailableWorkspaces():
+        return [name for name in os.listdir(config['DEFAULT']['workspaces']) if os.path.isdir(os.path.join(config['DEFAULT']['workspaces'], name))]
 
-    def workspace_list(self):
+    parser_wspace = argparse.ArgumentParser(prog="workspace")
+    subparser_wspace = parser_wspace.add_subparsers(title='Actions',help='Available actions')
+    parser_wspace_help = subparser_wspace.add_parser("help",help='Show workspace help')
+    parser_wspace_list = subparser_wspace.add_parser("list",help='List workspaces')
+    parser_wspace_add = subparser_wspace.add_parser("add",help='Add a new workspace')
+    parser_wspace_add.add_argument('name',help='New workspace name')
+    parser_wspace_use = subparser_wspace.add_parser("use",help='Change current workspace')
+    use_arg = parser_wspace_use.add_argument('name', help='Name of workspace to use', choices_function=getAvailableWorkspaces)
+    parser_wspace_del = subparser_wspace.add_parser("del",help='Delete workspace')
+    del_arg = parser_wspace_del.add_argument('name', help='Name of workspace to delete', choices_function=getAvailableWorkspaces)
+
+
+    def workspace_help(self, params):
+        self.do_help("workspace")
+
+    def workspace_list(self, params):
         print("Existing workspaces :")
         workspaces = [name for name in os.listdir(config['DEFAULT']['workspaces'])
             if os.path.isdir(os.path.join(config['DEFAULT']['workspaces'], name))]
@@ -64,51 +65,54 @@ Available commands:
             else:
                 print(" - "+workspace)
 
-    def workspace_add(self, params):
+    def workspace_add(self, stmt):
+        name = vars(stmt)['name']
         #Check if name was given
-        if params == "":
-            self.workspace_help()
-            return
-        if re.match('^[\w_\.-]+$', params) is None:
+        if re.match('^[\w_\.-]+$', name) is None:
             print('Invalid characters in workspace name. Allowed characters are letters, numbers and ._-')
             return
         #Check if workspace already exists
-        if os.path.exists(os.path.join(config['DEFAULT']['workspaces'],params)):
+        if os.path.exists(os.path.join(config['DEFAULT']['workspaces'],name)):
             print("Workspace already exists")
             return
         try:
-            newWorkspace = Workspace.create(params)
+            newWorkspace = Workspace.create(name)
         except:
             print("Workspace creation failed")
         else:
             self.workspace = newWorkspace
 
-    def workspace_use(self,params):
+    def workspace_use(self,stmt):
+        name = vars(stmt)['name']
         #Check if workspace already exists
-        if not os.path.exists(os.path.join(config['DEFAULT']['workspaces'],params)):
+        if not os.path.exists(os.path.join(config['DEFAULT']['workspaces'],name)):
             print("Workspace does not exist")
         try:
-            newWorkspace = Workspace(params)
+            newWorkspace = Workspace(name)
         except:
             print("Workspace change failed")
         else:
             self.workspace = newWorkspace
 
-    def workspace_help(self):
-        print('''Available commands:
-    - workspace help      show this help
-    - workspace list      list existing workspaces
-    - workspace add NAME  create new workspace
-    - workspace use NAME  change current workspace
-    - workspace del NAME  delete workspace''')
+    def workspace_del(self, params):
+        raise NotImplementedError
 
-    def complete_workspace(self, text, line, begidx, endidx):
-        matches = []
-        n = len(text)
-        for word in ['add','list','use','del','help']:
-            if word[:n] == text:
-                matches.append(word)
-        return matches
+    parser_wspace_help.set_defaults(func=workspace_help)
+    parser_wspace_list.set_defaults(func=workspace_list)
+    parser_wspace_add.set_defaults(func=workspace_add)
+    parser_wspace_use.set_defaults(func=workspace_use)
+    parser_wspace_del.set_defaults(func=workspace_del)
+
+    @cmd2.with_argparser(parser_wspace)
+    def do_workspace(self, stmt):
+        '''Manage workspaces'''
+        func = getattr(stmt, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, stmt)
+        else:
+            # No subcommand was provided, so call help
+            self.do_help('workspace')
 
 #################################################################
 ###################           HOSTS           ###################
@@ -690,13 +694,8 @@ Available commands:
         self.quit_on_sigint = False
 
 
-if __name__ == '__main__':
-    config = configparser.ConfigParser()
-    config.read('config.ini')
-    if "DEFAULT" not in config or "workspaces" not in config['DEFAULT']:
-        print("Invalid config file")
-        exit()
 
+if __name__ == '__main__':
     Extensions.load()
     
     if not os.path.exists(config['DEFAULT']['workspaces']):
