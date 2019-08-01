@@ -16,7 +16,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         return "Get a shell on target"
     
     @classmethod
-    def run(cls,socket, connection):
+    def run(cls,socket, connection,wspaceFolder):
         try:
             socket.run("sh",pty=True)
         except Exception as e:

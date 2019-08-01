@@ -56,8 +56,8 @@ class Workspace():
         if re.match('^[\w_\.-]+$', name) is None:
             print('Invalid characters in workspace name. Allowed characters are letters, numbers and ._-')
             raise ValueError
-        workspaceFolder = os.path.join(config['DEFAULT']['workspaces'],name)
-        if not os.path.exists(workspaceFolder):
+        self.workspaceFolder = os.path.join(config['DEFAULT']['workspaces'],name)
+        if not os.path.exists(self.workspaceFolder):
             raise ValueError("Workspace "+name+" does not exist")
         dbConn.connect(name)
         self.name = name
@@ -170,7 +170,7 @@ class Workspace():
 
     def run(self,endpoint,user,cred,payload):
         connection = Connection(endpoint,user,cred)
-        connection.run(payload)
+        connection.run(payload,self.workspaceFolder)
 
     def connectTarget(self,arg):
         connection = Connection.fromTarget(arg)
@@ -179,7 +179,7 @@ class Workspace():
     def runTarget(self,arg,payloadName):
         connection = Connection.fromTarget(arg)
         payload = Extensions.getPayload(payloadName)
-        connection.run(payload)
+        connection.run(payload,self.workspaceFolder)
 
 #################################################################
 ###################           PATHS           ###################

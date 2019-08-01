@@ -105,7 +105,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         return "Gather endpoints and creds from compromised target"
     
     @classmethod
-    def run(cls,socket, connection):
+    def run(cls,socket, connection, wspaceFolder):
         g = cls(socket,connection)
         g.gather()
         try:

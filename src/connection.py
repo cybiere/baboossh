@@ -172,11 +172,11 @@ class Connection():
         c.close()
         return True
 
-    def run(self,payload):
+    def run(self,payload,wspaceFolder):
         c = self.initConnect()
         if c == None:
             return False
-        ret = payload.run(c,self)
+        ret = payload.run(c,self,wspaceFolder)
         c.close()
         return True
 
