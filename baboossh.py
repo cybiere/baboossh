@@ -3,10 +3,11 @@
 from src.params import Extensions
 from src.workspace import Workspace
 import configparser
-import cmd, sys, os
+import cmd2, sys, os
 import re
 
 import signal
+
 
 def handler(signum, frame):
     pass
@@ -29,7 +30,7 @@ def yesNo(prompt,default=None):
 
 
 
-class BaboosshShell(cmd.Cmd):
+class BaboosshShell(cmd2.Cmd):
     intro = '\nWelcome to baboossh. Type help or ? to list commands.\n'
     prompt = '> '
 
@@ -392,12 +393,12 @@ Available commands:
 ###################          OPTIONS          ###################
 #################################################################
 
-    def do_set(self,arg):
-        '''SET: Manage options
+    def do_use(self,arg):
+        '''USE: Manage options
 Available commands:
-    - set help                 show this help
-    - set                      list current options' values
-    - set OPTION VALUE         change an option's value
+    - use help                 show this help
+    - use                      list current options' values
+    - use OPTION VALUE         change an option's value
 '''
         command,sep,params = arg.partition(" ")
         if command == "":
@@ -419,11 +420,11 @@ Available commands:
     
     def options_help(self):
         print('''Available commands:
-    - set help                 show this help
-    - set                      list current options' values
-    - set OPTION VALUE         change an option's value''')
+    - use help                 show this help
+    - use                      list current options' values
+    - use OPTION VALUE         change an option's value''')
 
-    def complete_set(self, text, line, begidx, endidx):
+    def complete_use(self, text, line, begidx, endidx):
         matches = []
         if len(line) != endidx:
             #Complete only at the end of commands

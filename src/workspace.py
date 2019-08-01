@@ -37,6 +37,8 @@ class Workspace():
         if not os.path.exists(workspaceFolder):
             try:
                 os.mkdir(workspaceFolder)
+                os.mkdir(os.path.join(workspaceFolder,"loot"))
+                os.mkdir(os.path.join(workspaceFolder,"keys"))
             except OSError:
                 print ("Creation of the directory %s failed" % workspaceFolder)
                 raise OSError
