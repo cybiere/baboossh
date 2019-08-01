@@ -6,14 +6,6 @@ import configparser
 import cmd2, sys, os
 import re
 
-import signal
-
-
-def handler(signum, frame):
-    pass
-
-signal.signal(signal.SIGINT, handler)
-
 def yesNo(prompt,default=None):
     if default is None:
         choices = "[y,n]"
@@ -687,6 +679,16 @@ Available commands:
         super().__init__()
         self.workspace = Workspace("default")
         self.initPrompt()
+        #Removes cmd2 default commands
+        self.disable_command("run_pyscript","disabled")
+        self.disable_command("run_script","disabled")
+        self.disable_command("alias","disabled")
+        self.disable_command("edit","disabled")
+        self.disable_command("quit","disabled")
+        self.disable_command("macro","disabled")
+        self.disable_command("shortcuts","disabled")
+        self.quit_on_sigint = False
+
 
 if __name__ == '__main__':
     config = configparser.ConfigParser()
