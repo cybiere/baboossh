@@ -37,21 +37,6 @@ class BaboosshShell(cmd2.Cmd):
 ###################         WORKSPACE         ###################
 #################################################################
 
-    def getAvailableWorkspaces():
-        return [name for name in os.listdir(config['DEFAULT']['workspaces']) if os.path.isdir(os.path.join(config['DEFAULT']['workspaces'], name))]
-
-    parser_wspace = argparse.ArgumentParser(prog="workspace")
-    subparser_wspace = parser_wspace.add_subparsers(title='Actions',help='Available actions')
-    parser_wspace_help = subparser_wspace.add_parser("help",help='Show workspace help')
-    parser_wspace_list = subparser_wspace.add_parser("list",help='List workspaces')
-    parser_wspace_add = subparser_wspace.add_parser("add",help='Add a new workspace')
-    parser_wspace_add.add_argument('name',help='New workspace name')
-    parser_wspace_use = subparser_wspace.add_parser("use",help='Change current workspace')
-    use_arg = parser_wspace_use.add_argument('name', help='Name of workspace to use', choices_function=getAvailableWorkspaces)
-    parser_wspace_del = subparser_wspace.add_parser("del",help='Delete workspace')
-    del_arg = parser_wspace_del.add_argument('name', help='Name of workspace to delete', choices_function=getAvailableWorkspaces)
-
-
     def workspace_help(self, params):
         self.do_help("workspace")
 
@@ -97,6 +82,20 @@ class BaboosshShell(cmd2.Cmd):
     def workspace_del(self, params):
         raise NotImplementedError
 
+    def getArgWorkspaces(self):
+        return [name for name in os.listdir(config['DEFAULT']['workspaces']) if os.path.isdir(os.path.join(config['DEFAULT']['workspaces'], name))]
+
+    parser_wspace = argparse.ArgumentParser(prog="workspace")
+    subparser_wspace = parser_wspace.add_subparsers(title='Actions',help='Available actions')
+    parser_wspace_help = subparser_wspace.add_parser("help",help='Show workspace help')
+    parser_wspace_list = subparser_wspace.add_parser("list",help='List workspaces')
+    parser_wspace_add = subparser_wspace.add_parser("add",help='Add a new workspace')
+    parser_wspace_add.add_argument('name',help='New workspace name')
+    parser_wspace_use = subparser_wspace.add_parser("use",help='Change current workspace')
+    use_arg = parser_wspace_use.add_argument('name', help='Name of workspace to use', choices_method=getArgWorkspaces)
+    parser_wspace_del = subparser_wspace.add_parser("del",help='Delete workspace')
+    del_arg = parser_wspace_del.add_argument('name', help='Name of workspace to delete', choices_method=getArgWorkspaces)
+
     parser_wspace_help.set_defaults(func=workspace_help)
     parser_wspace_list.set_defaults(func=workspace_list)
     parser_wspace_add.set_defaults(func=workspace_add)
@@ -117,7 +116,7 @@ class BaboosshShell(cmd2.Cmd):
 #################################################################
 ###################           HOSTS           ###################
 #################################################################
-
+    """
     def do_host(self, arg):
         '''HOST: Manage hosts
 Available commands:
@@ -153,30 +152,16 @@ Available commands:
             if word[:n] == text:
                 matches.append(word)
         return matches
-
+    """
 
 #################################################################
 ###################         ENDPOINTS         ###################
 #################################################################
+   
+    def endpoint_help(self, params):
+        self.do_help("endpoint")
 
-    def do_endpoint(self, arg):
-        '''ENDPOINT: Manage endpoints
-Available commands:
-    - endpoint help                 show this help
-    - endpoint list                 list existing endpoints
-    - endpoint add IP[:PORT]        add endpoint
-'''
-        command,sep,params = arg.partition(" ")
-        if command == "list" or command == "":
-            self.endpoint_list()
-        elif command == "add":
-            self.endpoint_add(params)
-        else:
-            if command != "help" and command != "?":
-                print("Unrecognized command.")
-            self.endpoint_help()
-    
-    def endpoint_list(self):
+    def endpoint_list(self,stmt):
         print("Current endpoints in workspace:")
         endpoints = self.workspace.getEndpoints()
         if not endpoints:
@@ -185,15 +170,9 @@ Available commands:
         for endpoint in endpoints:
             print(endpoint.toList())
     
-    def endpoint_add(self,params):
-        if params == "":
-            self.endpoint_help()
-            return
-        if len(params.split(':')) == 2:
-            ip, port = params.split(':')
-        else:
-            ip = params
-            port = "22"
+    def endpoint_add(self,stmt):
+        ip = vars(stmt)['ip']
+        port = str(vars(stmt)['port'])
         addDirectPath = yesNo("Add path from local host ?",True)
         try:
             self.workspace.addEndpoint_Manual(ip,port,addDirectPath)
@@ -202,19 +181,28 @@ Available commands:
         else:
             print("Endpoint "+ip+":"+port+" added.")
 
-    def endpoint_help(self):
-        print('''Available commands:
-    - endpoint help                 show this help
-    - endpoint list                 list existing endpoints
-    - endpoint add IP[:PORT]   create new endpoint''')
+    parser_endpoint = argparse.ArgumentParser(prog="endpoint")
+    subparser_endpoint = parser_endpoint.add_subparsers(title='Actions',help='Available actions')
+    parser_endpoint_help = subparser_endpoint.add_parser("help",help='Show endpoint help')
+    parser_endpoint_list = subparser_endpoint.add_parser("list",help='List endpoints')
+    parser_endpoint_add = subparser_endpoint.add_parser("add",help='Add a new endpoint')
+    parser_endpoint_add.add_argument('ip',help='New endpoint ip')
+    parser_endpoint_add.add_argument('port',help='New endpoint port', type=int, default=22, nargs='?')
 
-    def complete_endpoint(self, text, line, begidx, endidx):
-        matches = []
-        n = len(text)
-        for word in ['add','list','help']:
-            if word[:n] == text:
-                matches.append(word)
-        return matches
+    parser_endpoint_help.set_defaults(func=endpoint_help)
+    parser_endpoint_list.set_defaults(func=endpoint_list)
+    parser_endpoint_add.set_defaults(func=endpoint_add)
+
+    @cmd2.with_argparser(parser_endpoint)
+    def do_endpoint(self, stmt):
+        '''Manage endpoints'''
+        func = getattr(stmt, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, stmt)
+        else:
+            # No subcommand was provided, so call help
+            self.do_help('endpoint')
 
 #################################################################
 ###################           USERS           ###################
