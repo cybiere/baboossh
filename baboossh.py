@@ -158,7 +158,7 @@ Available commands:
 ###################         ENDPOINTS         ###################
 #################################################################
    
-    def endpoint_help(self, params):
+    def endpoint_help(self, stmt):
         self.do_help("endpoint")
 
     def endpoint_list(self,stmt):
@@ -208,24 +208,7 @@ Available commands:
 ###################           USERS           ###################
 #################################################################
 
-    def do_user(self, arg):
-        '''USER: Manage users
-Available commands:
-    - user help                 show this help
-    - user list                 list existing users
-    - user add USERNAME         create new user
-'''
-        command,sep,params = arg.partition(" ")
-        if command == "list" or command == "":
-            self.user_list()
-        elif command == "add":
-            self.user_add(params)
-        else:
-            if command != "help" and command != "?":
-                print("Unrecognized command.")
-            self.user_help()
-    
-    def user_list(self):
+    def user_list(self,stmt):
         print("Current users in workspace:")
         users = self.workspace.getUsers()
         if not users:
@@ -234,15 +217,8 @@ Available commands:
         for user in users:
             print(user.toList())
     
-    def user_add(self,params):
-        if params == "":
-            self.user_help()
-            return
-        params = params.split(' ')
-        if len(params) != 1:
-            self.user_help()
-            return
-        name = params[0]
+    def user_add(self,stmt):
+        name = vars(stmt)['name']
         try:
             self.workspace.addUser_Manual(name)
         except Exception as e:
@@ -250,50 +226,41 @@ Available commands:
         else:
             print("User "+name+" added.")
 
-    def user_help(self):
-        print('''Available commands:
-    - user help                 show this help
-    - user list                 list existing users
-    - user add USERNAME         create new user''')
+    def user_help(self,stmt):
+        self.do_help("user")
 
-    def complete_user(self, text, line, begidx, endidx):
-        matches = []
-        n = len(text)
-        for word in ['add','list','help']:
-            if word[:n] == text:
-                matches.append(word)
-        return matches
+    parser_user = argparse.ArgumentParser(prog="user")
+    subparser_user = parser_user.add_subparsers(title='Actions',help='Available actions')
+    parser_user_help = subparser_user.add_parser("help",help='Show user help')
+    parser_user_list = subparser_user.add_parser("list",help='List users')
+    parser_user_add = subparser_user.add_parser("add",help='Add a new user')
+    parser_user_add.add_argument('name',help='New user name')
+
+    parser_user_help.set_defaults(func=user_help)
+    parser_user_list.set_defaults(func=user_list)
+    parser_user_add.set_defaults(func=user_add)
+
+    @cmd2.with_argparser(parser_user)
+    def do_user(self, stmt):
+        '''Manage users'''
+        func = getattr(stmt, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, stmt)
+        else:
+            # No subcommand was provided, so call help
+            self.do_help('user')
 
 #################################################################
 ###################           CREDS           ###################
 #################################################################
 
-    def do_creds(self, arg):
-        '''CREDS: Manage creds
-Available commands:
-    - creds help                 show this help
-    - creds list                 list existing creds
-    - creds types                list available credential types
-    - creds add TYPE             create new cred
-'''
-        command,sep,params = arg.partition(" ")
-        if command == "list" or command == "":
-            self.creds_list()
-        elif command == "types":
-            self.creds_types()
-        elif command == "add":
-            self.creds_add(params)
-        else:
-            if command != "help" and command != "?":
-                print("Unrecognized command.")
-            self.creds_help()
-
-    def creds_types(self):
+    def creds_types(self,stmt):
         print("Supported credential types:")
         for key in Extensions.authMethodsAvail():
             print("    - "+key+": "+Extensions.getAuthMethod(key).descr())
     
-    def creds_list(self):
+    def creds_list(self,stmt):
         creds = self.workspace.getCreds()
         if not creds:
             print("No creds in current workspace")
@@ -301,77 +268,79 @@ Available commands:
         for cred in creds:
             print(cred.toList())
 
-    def creds_show(self,credId):
+    def creds_show(self,stmt):
         #TODO
         pass
 
-    
-    def creds_add(self,params):
-        if params == "":
-            self.creds_help()
-            return
-        if params not in Extensions.authMethodsAvail():
-            print(params+" is not a valid credentials type.")
-            return
+    def creds_add(self,stmt):
+        credsType = vars(stmt)['type']
         try:
-            self.workspace.addCreds_Manual(params)
+            self.workspace.addCreds_Manual(credsType)
         except Exception as e:
             print("Credentials addition failed: "+str(e))
         else:
             print("Credentials added.")
 
-    def creds_help(self):
-        print('''Available commands:
-    - creds help                 show this help
-    - creds list                 list existing creds
-    - creds types                list available credential types
-    - creds add TYPE             create new cred''')
+    def creds_help(self,stmt):
+        self.do_help("creds")
 
-    def complete_creds(self, text, line, begidx, endidx):
-        matches = []
-        n = len(text)
-        for word in ['add','list','types','help']:
-            if word[:n] == text:
-                matches.append(word)
-        #TODO autocomplete creds types on ADD
-        return matches
+    parser_creds = argparse.ArgumentParser(prog="creds")
+    subparser_creds = parser_creds.add_subparsers(title='Actions',help='Available actions')
+    parser_creds_help = subparser_creds.add_parser("help",help='Show credentials help')
+    parser_creds_list = subparser_creds.add_parser("list",help='List saved credentials')
+    parser_creds_types = subparser_creds.add_parser("types",help='List available credentials types')
+    parser_creds_show = subparser_creds.add_parser("show",help='Show credentials details')
+    parser_creds_add = subparser_creds.add_parser("add",help='Add a new credentials')
+    parser_creds_add.add_argument('type',help='New credentials type',choices_function=Extensions.authMethodsAvail)
 
+    parser_creds_help.set_defaults(func=creds_help)
+    parser_creds_list.set_defaults(func=creds_list)
+    parser_creds_types.set_defaults(func=creds_types)
+    parser_creds_show.set_defaults(func=creds_show)
+    parser_creds_add.set_defaults(func=creds_add)
+
+    @cmd2.with_argparser(parser_creds)
+    def do_creds(self, stmt):
+        '''Manage credentials'''
+        func = getattr(stmt, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, stmt)
+        else:
+            # No subcommand was provided, so call help
+            self.do_help('creds')
 
 #################################################################
 ###################          PAYLOADS         ###################
 #################################################################
 
-    def do_payload(self, arg):
-        '''PAYLOAD: Manage payload
-Available commands:
-    - payload help                 show this help
-    - payload list                 list existing payload
-'''
-        command,sep,params = arg.partition(" ")
-        if command == "list" or command == "":
-            self.payload_list()
-        else:
-            if command != "help" and command != "?":
-                print("Unrecognized command.")
-            self.payload_help()
-
-    def payload_list(self):
+    def payload_list(self,stmt):
         print("Available payloads:")
         for key in Extensions.payloadsAvail():
             print("    - "+key+": "+Extensions.getPayload(key).descr())
     
-    def payload_help(self):
-        print('''Available commands:
-    - payload help                 show this help
-    - payload list                 list existing payload''')
+    def payload_help(self,stmt):
+        self.do_help("payload")
 
-    def complete_payload(self, text, line, begidx, endidx):
-        matches = []
-        n = len(text)
-        for word in ['list','help']:
-            if word[:n] == text:
-                matches.append(word)
-        return matches
+    parser_payload = argparse.ArgumentParser(prog="payload")
+    subparser_payload = parser_payload.add_subparsers(title='Actions',help='Available actions')
+    parser_payload_help = subparser_payload.add_parser("help",help='Show payload help')
+    parser_payload_list = subparser_payload.add_parser("list",help='List payloads')
+
+    parser_payload_help.set_defaults(func=payload_help)
+    parser_payload_list.set_defaults(func=payload_list)
+
+    @cmd2.with_argparser(parser_payload)
+    def do_payload(self, stmt):
+        '''Manage payloads'''
+        func = getattr(stmt, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, stmt)
+        else:
+            # No subcommand was provided, so call help
+            self.do_help('payload')
+
 
 #################################################################
 ###################          OPTIONS          ###################
