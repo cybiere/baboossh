@@ -346,97 +346,86 @@ Available commands:
 ###################          OPTIONS          ###################
 #################################################################
 
-    def do_use(self,arg):
-        '''USE: Manage options
-Available commands:
-    - use help                 show this help
-    - use                      list current options' values
-    - use OPTION VALUE         change an option's value
-'''
-        command,sep,params = arg.partition(" ")
-        if command == "":
-            self.options_list()
-        elif command in list(self.workspace.getOptions())+['target']:
-            try:
-                self.workspace.setOption(command,params)
-            except ValueError:
-                print("Invalid value for "+command)
-        else:
-            if command != "help" and command != "?":
-                print("Unrecognized command.")
-            self.options_help()
-
     def options_list(self):
         print("Current options:")
         for key,val in self.workspace.getOptionsValues():
             print("    - "+key+": "+str(val))
     
-    def options_help(self):
-        print('''Available commands:
-    - use help                 show this help
-    - use                      list current options' values
-    - use OPTION VALUE         change an option's value''')
+    def getOptionUser(self):
+        return self.workspace.getUsers()
 
-    def complete_use(self, text, line, begidx, endidx):
-        matches = []
-        if len(line) != endidx:
-            #Complete only at the end of commands
-            return []
-        command = line.split()
-        if len(command) < 2 or len(command) == 2 and begidx != endidx:
-            compKey = "cmd"
-        elif text == "":
-            if command[-1] == "#":
-                compKey = command[-2]
-            else:
-                compKey = command[-1]
+    def getOptionCreds(self):
+        return self.workspace.getCreds()
 
-        elif command[-2]:
-            compKey = command[-2]
+    def getOptionEndpoint(self):
+        return self.workspace.getEndpoints()
+
+    def getOptionPayload(self):
+        return Extensions.payloadsAvail()
+
+    def getOptionConnection(self):
+        return self.workspace.getTargetsValidList()
+
+    parser_option = argparse.ArgumentParser(prog="option")
+    subparser_option = parser_option.add_subparsers(title='Actions',help='Available actions')
+    parser_option_help = subparser_option.add_parser("help",help='Show option help')
+    parser_option_list = subparser_option.add_parser("list",help='List options')
+    parser_option_user = subparser_option.add_parser("user",help='Set target user')
+    parser_option_user.add_argument('username',help='User name',choices_method=getOptionUser)
+    parser_option_creds = subparser_option.add_parser("creds",help='Set target creds')
+    parser_option_creds.add_argument('id',help='Creds ID',choices_method=getOptionCreds)
+    parser_option_endpoint = subparser_option.add_parser("endpoint",help='Set target endpoint')
+    parser_option_endpoint.add_argument('endpoint',help='Endpoint',choices_method=getOptionEndpoint)
+    parser_option_payload = subparser_option.add_parser("payload",help='Set target payload')
+    parser_option_payload.add_argument('payload',help='Payload name',choices_method=getOptionPayload)
+    parser_option_connection = subparser_option.add_parser("connection",help='Set target connection')
+    parser_option_connection.add_argument('connection',help='Connection string',choices_method=getOptionConnection)
+
+    parser_option_help.set_defaults(option="help")
+    parser_option_list.set_defaults(option="list")
+    parser_option_user.set_defaults(option="user")
+    parser_option_creds.set_defaults(option="creds")
+    parser_option_endpoint.set_defaults(option="endpoint")
+    parser_option_payload.set_defaults(option="payload")
+    parser_option_connection.set_defaults(option="connection")
+
+    @cmd2.with_argparser(parser_option)
+    def do_set(self,stmt):
+        '''Manage options'''
+        if 'option' not in vars(stmt):
+            self.do_help("set")
+            return
+        option = vars(stmt)['option']
+        if option is not None:
+            if option == "list":
+                self.options_list()
+                return
+            elif option == "help":
+                self.do_help("set")
+                return
+            elif option == "user":
+                value = vars(stmt)['username']
+            elif option == "creds":
+                value = vars(stmt)['id']
+            elif option == "endpoint":
+                value = vars(stmt)['endpoint']
+            elif option == "payload":
+                value = vars(stmt)['payload']
+            elif option == "connection":
+                value = vars(stmt)['connection']
+            try:
+                self.workspace.setOption(option,value)
+            except ValueError:
+                print("Invalid value for "+option)
         else:
-            compKey = "none"
-        n = len(text)
-        if compKey == "cmd":
-            comp = list(self.workspace.getOptions())+['target']
-        elif compKey == "endpoint":
-            comp = self.workspace.getEndpointsList()
-        elif compKey == "user":
-            comp = self.workspace.getUsersList()
-        elif compKey == "creds":
-            comp = self.workspace.getCredsIdList()
-        elif compKey == "target":
-            comp = self.workspace.getTargetsValidList()
-        elif compKey == "payload":
-            comp = Extensions.payloadsAvail()
-        else:
-            comp = []
-        for word in comp:
-            if word[:n] == text:
-                matches.append(word)
-        return matches
+            # No subcommand was provided, so call help
+            self.do_help('set')
 
 #################################################################
 ###################           PATHS           ###################
-#################################################################Q
+#################################################################
 
-    def do_path(self,arg):
-        '''USER: Manage paths
-Available commands:
-    - path help                 show this help
-    - path list                 list existing paths
-    - path get ENDPOINT         get path to ENDPOINT
-'''
-        command,sep,params = arg.partition(" ")
-        if command == "list" or command == "":
-            self.path_list()
-        elif command == "get":
-            self.path_get(params)
-        else:
-            if command != "help" and command != "?":
-                print("Unrecognized command.")
-            self.path_help()
-    
-    def path_list(self):
+    def path_list(self,stmt):
         print("Current paths in workspace:")
         paths = self.workspace.getPaths()
         if not paths:
@@ -445,51 +434,35 @@ Available commands:
         for path in paths:
             print(path.toList())
     
-    def path_get(self,params):
-        if params == "":
-            self.path_help()
-            return
-        params = params.split(' ')
-        if len(params) != 1:
-            self.path_help()
-            return
-        self.workspace.getPathToDst(params[0])
+    def path_get(self,stmt):
+        endpoint = vars(stmt)['endpoint']
+        self.workspace.getPathToDst(endpoint)
 
-    def path_help(self):
-        print('''Available commands:
-    - path help                 show this help
-    - path list                 list existing paths
-    - path get ENDPOINT         get path to ENDPOINT''')
+    def path_help(self,stmt):
+        self.do_help('path')
 
-    def complete_path(self, text, line, begidx, endidx):
-        matches = []
-        if len(line) != endidx:
-            #Complete only at the end of commands
-            return []
-        command = line.split()
-        if len(command) < 2 or len(command) == 2 and begidx != endidx:
-            compKey = "cmd"
-        elif text == "":
-            if command[-1] == "#":
-                compKey = command[-2]
-            else:
-                compKey = command[-1]
+    parser_path = argparse.ArgumentParser(prog="path")
+    subparser_path = parser_path.add_subparsers(title='Actions',help='Available actions')
+    parser_path_help = subparser_path.add_parser("help",help='Show path help')
+    parser_path_list = subparser_path.add_parser("list",help='List paths')
+    parser_path_get = subparser_path.add_parser("get",help='Get path to endpoint')
+    parser_path_get.add_argument('endpoint',help='Endpoint',choices_method=getOptionEndpoint)
 
-        elif command[-2]:
-            compKey = command[-2]
+    parser_path_help.set_defaults(func=path_help)
+    parser_path_list.set_defaults(func=path_list)
+    parser_path_get.set_defaults(func=path_get)
+
+    @cmd2.with_argparser(parser_path)
+    def do_path(self, stmt):
+        '''Manage paths'''
+        func = getattr(stmt, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, stmt)
         else:
-            compKey = "none"
-        n = len(text)
-        if compKey == "cmd":
-            comp = ['help','list','get']
-        elif compKey == "get":
-            comp = self.workspace.getEndpointsList()
-        else:
-            comp = []
-        for word in comp:
-            if word[:n] == text:
-                matches.append(word)
-        return matches
+            # No subcommand was provided, so call help
+            self.do_help('path')
+
 
 
 #################################################################

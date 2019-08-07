@@ -118,7 +118,7 @@ class Workspace():
 #################################################################
 
     def setOption(self,option,value):
-        if option == 'target' and '@' in value and ':' in value:
+        if option == 'connection' and '@' in value and ':' in value:
             connection = Connection.fromTarget(value)
             if connection == None:
                 return
