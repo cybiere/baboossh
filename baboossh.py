@@ -371,15 +371,15 @@ Available commands:
     parser_option_help = subparser_option.add_parser("help",help='Show option help')
     parser_option_list = subparser_option.add_parser("list",help='List options')
     parser_option_user = subparser_option.add_parser("user",help='Set target user')
-    parser_option_user.add_argument('username',help='User name',choices_method=getOptionUser)
+    parser_option_user.add_argument('username',help='User name',nargs="?",choices_method=getOptionUser)
     parser_option_creds = subparser_option.add_parser("creds",help='Set target creds')
-    parser_option_creds.add_argument('id',help='Creds ID',choices_method=getOptionCreds)
+    parser_option_creds.add_argument('id',help='Creds ID',nargs="?",choices_method=getOptionCreds)
     parser_option_endpoint = subparser_option.add_parser("endpoint",help='Set target endpoint')
-    parser_option_endpoint.add_argument('endpoint',help='Endpoint',choices_method=getOptionEndpoint)
+    parser_option_endpoint.add_argument('endpoint',nargs="?",help='Endpoint',choices_method=getOptionEndpoint)
     parser_option_payload = subparser_option.add_parser("payload",help='Set target payload')
-    parser_option_payload.add_argument('payload',help='Payload name',choices_method=getOptionPayload)
+    parser_option_payload.add_argument('payload',nargs="?",help='Payload name',choices_method=getOptionPayload)
     parser_option_connection = subparser_option.add_parser("connection",help='Set target connection')
-    parser_option_connection.add_argument('connection',help='Connection string',choices_method=getOptionConnection)
+    parser_option_connection.add_argument('connection',nargs="?",help='Connection string',choices_method=getOptionConnection)
 
     parser_option_help.set_defaults(option="help")
     parser_option_list.set_defaults(option="list")
@@ -393,7 +393,7 @@ Available commands:
     def do_set(self,stmt):
         '''Manage options'''
         if 'option' not in vars(stmt):
-            self.do_help("set")
+            self.options_list()
             return
         option = vars(stmt)['option']
         if option is not None:

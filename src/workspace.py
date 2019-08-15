@@ -118,7 +118,16 @@ class Workspace():
 #################################################################
 
     def setOption(self,option,value):
-        if option == 'connection' and '@' in value and ':' in value:
+        if option == 'connection':
+            if value is None:
+                self.options['endpoint'] = None
+                self.options['user'] = None
+                self.options['creds'] = None
+                for option in ['endpoint','user','creds']:
+                    print(option+" => "+str(self.getOption(option)))
+                return 
+            if '@' not in value or ':' not in value:
+                return
             connection = Connection.fromTarget(value)
             if connection == None:
                 return
@@ -130,7 +139,7 @@ class Workspace():
             return 
         if not option in list(self.options.keys()):
             raise ValueError(option+" isn't a valid option.")
-        if value != "":
+        if value != None:
             value = value.strip()
             if option == "endpoint":
                 endpoint = Endpoint.findByIpPort(value)
