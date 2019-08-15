@@ -503,10 +503,15 @@ Available commands:
                 raise ValueError
         return (endpoints,users,creds)
 
-    def do_connect(self,arg):
-        if arg != "":
+    parser_connect = argparse.ArgumentParser(prog="connect")
+    parser_connect.add_argument('connection',help='Connection string',nargs="?",choices_method=getOptionConnection)
+
+    @cmd2.with_argparser(parser_connect)
+    def do_connect(self,stmt):
+        connect = vars(stmt)['connection']
+        if connect != None:
             try:
-                self.workspace.connectTarget(arg)
+                self.workspace.connectTarget(connect)
             except Exception as e:
                 print("Targeted connect failed : "+str(e))
             return
@@ -521,56 +526,33 @@ Available commands:
                     if self.workspace.connect(endpoint,user,cred):
                         break;
 
-    def complete_connect(self, text, line, begidx, endidx):
-        matches = []
-        n = len(text)
-        for word in self.workspace.getTargetsValidList():
-            if word[:n] == text:
-                matches.append(word)
-        return matches
+    parser_run = argparse.ArgumentParser(prog="run")
+    parser_run.add_argument('connection',help='Connection string',nargs="?",choices_method=getOptionConnection)
+    parser_run.add_argument('payload',help='Payload name',nargs="?",choices_method=getOptionPayload)
 
-    def do_run(self,arg):
-        if arg != "":
-            if len(arg.split()) == 2:
-                target,payload = arg.split()
-                try:
-                    self.workspace.runTarget(target,payload)
-                except Exception as e:
-                    print("Run failed : "+str(e))
-            else:
-                #TODO print help
-                pass
+    @cmd2.with_argparser(parser_run)
+    def do_run(self,stmt):
+        connect = vars(stmt)['connection']
+        payload = vars(stmt)['payload']
+        if connect != None and payload != None:
+            try:
+                self.workspace.runTarget(connect,payload)
+            except Exception as e:
+                print("Run failed : "+str(e))
+            return
+        payload = self.workspace.getOption("payload")
+        if payload is None:
+            print("Error : No payload specified")
             return
         try:
             endpoints,users,creds = self.parseOptionsTarget()
         except:
             return
-        payload = self.workspace.getOption("payload")
-        if payload is None:
-            raise ValueError("You must specify a payload")
         for endpoint in endpoints:
             for user in users:
                 for cred in creds:
-                    #TODO re-enable ^C to cancel
                     if self.workspace.run(endpoint,user,cred,payload):
                         break;
-
-    def complete_run(self, text, line, begidx, endidx):
-        matches = []
-        if len(line) != endidx:
-            #Complete only at the end of commands
-            return []
-        command = line.split()
-        
-        if len(command) < 2 or len(command) == 2 and begidx != endidx:
-            comp = self.workspace.getTargetsValidList()
-        else:
-            comp = Extensions.payloadsAvail()
-        n = len(text)
-        for word in comp:
-            if word[:n] == text:
-                matches.append(word)
-        return matches
 
 #################################################################
 ###################            CMD            ###################
