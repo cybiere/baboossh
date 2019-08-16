@@ -80,6 +80,18 @@ class Endpoint():
         return ret
 
     @classmethod
+    def findAllWorking(cls):
+        endpointsId = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT endpoint FROM connections WHERE working=?',(True,)):
+            endpointsId.append(row[0])
+        endpointsId = set(endpointsId)
+        ret = []
+        for endpointId in endpointsId:
+            ret.append(cls.find(endpointId))
+        return ret
+
+    @classmethod
     def findByIpPort(cls,endpoint):
         ip,sep,port = endpoint.partition(":")
         if port == "":

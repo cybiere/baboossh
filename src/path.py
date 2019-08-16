@@ -90,7 +90,7 @@ class Path():
             adj[0].append(row[0])
         c.close()
 
-        for endpoint in Endpoint.findAll():
+        for endpoint in Endpoint.findAllWorking():
             adj[endpoint.getId()] = []
             c = dbConn.get().cursor()
             for row in c.execute('SELECT dst FROM paths WHERE src=?',(endpoint.getId(), )):
@@ -106,6 +106,8 @@ class Path():
         while len(queue) > 0:
             road = queue.pop(0)
             head = road[-1]
+            if head not in adj.keys():
+                done.append(head)
             if head in done:
                 continue
             if dstId in adj[head]:
