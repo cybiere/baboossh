@@ -199,7 +199,6 @@ class Connection():
             ret.append(cls.find(row[0]))
         return ret
 
-    @classmethod
     def run(self,payload,wspaceFolder):
         c = self.initConnect()
         if c == None:
