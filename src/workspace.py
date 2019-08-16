@@ -256,6 +256,13 @@ class Workspace():
     def getCreds(self):
         return Creds.findAll()
 
+    def getConnections(self,tested=False,working=False):
+        if working:
+            return Connection.findWorking()
+        if tested:
+            return Connection.findTested()
+        return Connection.findAll()
+
     def getCredsIdList(self):
         idList = []
         for cred in Creds.findAll():

@@ -46,14 +46,17 @@ class Connection():
     def setTested(self, tested):
         self.tested = tested == True
 
+    def isTested(self):
+        return self.tested == True
+
     def setWorking(self, working):
         self.working = working == True
 
-    def setRoot(self, root):
-        self.root = root == True
-
     def isWorking(self):
         return self.working == True
+
+    def setRoot(self, root):
+        self.root = root == True
 
     def save(self):
         c = dbConn.get().cursor()
@@ -172,6 +175,31 @@ class Connection():
         c.close()
         return True
 
+    @classmethod
+    def findAll(cls):
+        ret = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT id FROM connections'):
+            ret.append(cls.find(row[0]))
+        return ret
+
+    @classmethod
+    def findTested(cls):
+        ret = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT id FROM connections where tested=?',(True,)):
+            ret.append(cls.find(row[0]))
+        return ret
+
+    @classmethod
+    def findWorking(cls):
+        ret = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT id FROM connections where working=?',(True,)):
+            ret.append(cls.find(row[0]))
+        return ret
+
+    @classmethod
     def run(self,payload,wspaceFolder):
         c = self.initConnect()
         if c == None:
@@ -179,6 +207,9 @@ class Connection():
         ret = payload.run(c,self,wspaceFolder)
         c.close()
         return True
+
+    def toList(self):
+        return str(self)
 
     def __str__(self):
         return str(self.user)+":"+str(self.cred)+"@"+str(self.endpoint)

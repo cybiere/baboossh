@@ -2,6 +2,7 @@
 
 from src.params import Extensions
 from src.workspace import Workspace
+from tabulate import tabulate
 import configparser
 import cmd2, sys, os
 import re
@@ -111,7 +112,7 @@ class BaboosshShell(cmd2.Cmd):
             func(self, stmt)
         else:
             # No subcommand was provided, so call help
-            self.do_help('workspace')
+            self.workspace_list(None)
 
 #################################################################
 ###################           HOSTS           ###################
@@ -202,7 +203,7 @@ Available commands:
             func(self, stmt)
         else:
             # No subcommand was provided, so call help
-            self.do_help('endpoint')
+            self.endpoint_list(None)
 
 #################################################################
 ###################           USERS           ###################
@@ -249,7 +250,7 @@ Available commands:
             func(self, stmt)
         else:
             # No subcommand was provided, so call help
-            self.do_help('user')
+            self.user_list(None)
 
 #################################################################
 ###################           CREDS           ###################
@@ -308,7 +309,7 @@ Available commands:
             func(self, stmt)
         else:
             # No subcommand was provided, so call help
-            self.do_help('creds')
+            self.creds_list(None)
 
 #################################################################
 ###################          PAYLOADS         ###################
@@ -339,7 +340,51 @@ Available commands:
             func(self, stmt)
         else:
             # No subcommand was provided, so call help
-            self.do_help('payload')
+            self.payload_list(None)
+
+#################################################################
+###################        CONNECTIONS        ###################
+#################################################################
+
+    def connection_list(self,stmt):
+        print("Available connections:")
+        tested = False
+        working = False
+        if stmt is not None:
+            opt = vars(stmt)["opt"]
+            tested = "tested" in opt
+            working = "working" in opt
+        connections = self.workspace.getConnections(tested=tested,working=working)
+        if not connections:
+            print("No connetions in current workspace")
+            return
+        data = []
+        for connection in connections:
+            data.append([connection.getEndpoint(),connection.getUser(),connection.getCred(),connection.isTested(),connection.isWorking()])
+        print(tabulate(data,headers=["Endpoint","User","Creds","Tested","Working"]))
+    
+    def connection_help(self,stmt):
+        self.do_help("connection")
+
+    parser_connection = argparse.ArgumentParser(prog="connection")
+    subparser_connection = parser_connection.add_subparsers(title='Actions',help='Available actions')
+    parser_connection_help = subparser_connection.add_parser("help",help='Show connection help')
+    parser_connection_list = subparser_connection.add_parser("list",help='List connections')
+    parser_connection_list.add_argument('opt',help='Filter options',nargs=argparse.REMAINDER,choices=["working","tested"])
+
+    parser_connection_help.set_defaults(func=connection_help)
+    parser_connection_list.set_defaults(func=connection_list)
+
+    @cmd2.with_argparser(parser_connection)
+    def do_connection(self, stmt):
+        '''Manage connections'''
+        func = getattr(stmt, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, stmt)
+        else:
+            # No subcommand was provided, so call help
+            self.connection_list(None)
 
 
 #################################################################
@@ -419,7 +464,7 @@ Available commands:
                 print("Invalid value for "+option)
         else:
             # No subcommand was provided, so call help
-            self.do_help('set')
+            self.options_list()
 
 #################################################################
 ###################           PATHS           ###################
@@ -461,7 +506,7 @@ Available commands:
             func(self, stmt)
         else:
             # No subcommand was provided, so call help
-            self.do_help('path')
+            self.path_list(None)
 
 
 
