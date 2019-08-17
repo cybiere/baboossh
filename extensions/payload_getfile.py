@@ -37,7 +37,7 @@ class BaboosshExt(object,metaclass=ExtStr):
     
     def listContent(self,folder):
         ret = []
-        res = self.socket.run("ls -F "+folder,hide=True)
+        res = self.socket.run("ls -FA "+folder,hide=True)
         for element in res.stdout.splitlines():
             ret.append(join(folder,element))
         return ret

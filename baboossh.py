@@ -579,6 +579,7 @@ Available commands:
     def do_run(self,stmt):
         connect = vars(stmt)['connection']
         payload = vars(stmt)['payload']
+        self._reset_completion_defaults()
         if connect != None and payload != None:
             try:
                 self.workspace.runTarget(connect,payload)
