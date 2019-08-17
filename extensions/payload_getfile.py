@@ -1,6 +1,7 @@
 from os.path import join,exists
 from os import mkdir
 import readline
+import sys
 
 class ExtStr(type):
     def __str__(self):
@@ -67,17 +68,20 @@ class BaboosshExt(object,metaclass=ExtStr):
         return response
 
     def start(self):
+        oldcompleter = readline.get_completer()
+        readline.set_completer(self.complete)
         lootFolder = join(self.wspaceFolder,"loot",str(self.connection.getEndpoint()),"")
-        print(lootFolder)
         if not exists(lootFolder):
             mkdir(lootFolder)
-
-        readline.set_completer(self.complete)
-        readline.parse_and_bind('tab: complete')
         line = ''
         filepath = input('Remote file% ')
+        readline.set_completer(oldcompleter)
         print("Retreiving file "+filepath+"... ",end="")
-        self.socket.get(filepath,join(lootFolder,filepath.replace('/','_')))
+        sys.stdout.flush()
+        fileDest=join(lootFolder,filepath.replace('/','_'))
+        self.socket.get(filepath,fileDest)
         print("Done")
+        print("File saved as "+fileDest)
+
 
 

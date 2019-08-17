@@ -6,6 +6,7 @@ from src.endpoint import Endpoint
 from src.user import User
 from src.creds import Creds
 from src.path import Path
+import sys
 
 class Connection():
     def __init__(self,endpoint,user,cred):
@@ -155,6 +156,7 @@ class Connection():
 
             c = FabConnection(host=self.getEndpoint().getIp(),port=self.getEndpoint().getPort(),user=self.getUser().getName(),connect_kwargs={**kwargs, **authArgs},gateway=gateway.initConnect())
         print("Establishing connection to "+str(self.getUser())+"@"+str(self.getEndpoint())+" (with creds "+str(self.getCred())+")",end="...")
+        sys.stdout.flush()
         self.setTested(True)
         try:
             c.open()
