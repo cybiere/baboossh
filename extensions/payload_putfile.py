@@ -1,7 +1,8 @@
-from os.path import join,exists
+from os.path import join,exists,basename
 from os import mkdir
 import readline
 import sys
+import subprocess
 
 class ExtStr(type):
     def __str__(self):
@@ -14,11 +15,11 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     @classmethod
     def getKey(cls):
-        return "getfile"
+        return "putfile"
 
     @classmethod
     def descr(cls):
-        return "Retrieve file from target"
+        return "Copy file to target"
     
     @classmethod
     def run(cls,socket, connection, wspaceFolder):
@@ -37,8 +38,8 @@ class BaboosshExt(object,metaclass=ExtStr):
     
     def listContent(self,folder):
         ret = []
-        res = self.socket.run("ls -FA "+folder,hide=True)
-        for element in res.stdout.splitlines():
+        res = subprocess.run(["ls","-FA",folder], stdout=subprocess.PIPE)
+        for element in res.stdout.decode('utf-8').splitlines():
             ret.append(join(folder,element))
         return ret
 
@@ -70,18 +71,15 @@ class BaboosshExt(object,metaclass=ExtStr):
     def start(self):
         oldcompleter = readline.get_completer()
         readline.set_completer(self.complete)
-        lootFolder = join(self.wspaceFolder,"loot",str(self.connection.getEndpoint()),"")
-        if not exists(lootFolder):
-            mkdir(lootFolder)
-        filepath = input('Remote file% ')
+        filepath = input('Local file% ')
         readline.set_completer(oldcompleter)
-        #TODO check if file or folder
-        print("Retreiving file "+filepath+"... ",end="")
+        print("Pushing file "+filepath+"... ",end="")
         sys.stdout.flush()
-        fileDest=join(lootFolder,filepath.replace('/','_'))
-        self.socket.get(filepath,fileDest)
+        filename = basename(filepath)
+        #TODO check if file or folder
+        self.socket.put(filepath,filename)
         print("Done")
-        print("File saved as "+fileDest)
+        print("File pushed as ~/"+filename)
 
 
 
