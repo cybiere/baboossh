@@ -1,10 +1,10 @@
-#Baboossh
+# Baboossh
 
 SSH spreader
 
-#Features
+# Features
 
-##Implemented
+## Implemented
 
 - Workspaces
 - Endpoint connection
@@ -12,16 +12,16 @@ SSH spreader
 - Endpoint pivoting
 - Payload executions
 
-##Planned
+## Planned
 
 - Exportation plugins
 - Host management
 - Importation plugins
 - Uninteractive mode
 
-#Payloads
+# Payloads
 
-##Implemented
+## Implemented
 
 - Gather (partial)
 - Hostname
@@ -29,18 +29,18 @@ SSH spreader
 - Putfile
 - Shell
 
-##Planned
+## Planned
 
 - ?
 
-#Supported authentication methods
+# Supported authentication methods
 
-##Implemented
+## Implemented
 
 - Password auth
 - Private key (+facultative passphrase)
 
-##Planned
+## Planned
 
 - GSSAPI (Kerberos)
 
