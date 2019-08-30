@@ -1,3 +1,4 @@
 cmd2
 Fabric
 tabulate
+pycryptodomex

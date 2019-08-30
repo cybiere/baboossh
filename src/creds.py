@@ -9,7 +9,7 @@ class Creds():
         self.obj = Extensions.getAuthMethod(credsType)(credsContent)
         self.id = None
         c = dbConn.get().cursor()
-        c.execute('SELECT id FROM creds WHERE type=? AND content=?',(self.credsType, self.credsContent))
+        c.execute('SELECT id FROM creds WHERE type=? AND identifier=?',(self.credsType, self.obj.getIdentifier()))
         savedCreds = c.fetchone()
         c.close()
         if savedCreds is not None:
@@ -26,16 +26,17 @@ class Creds():
                 SET
                     type = ?,
                     content = ?,
+                    identifier = ?
                 WHERE id = ?''',
-                (self.credsType, self.credsContent, self.id))
+                (self.credsType, self.credsContent, self.obj.getIdentifier(), self.id))
         else:
             #The creds doesn't exists in database : INSERT
-            c.execute('''INSERT INTO creds(type,content)
-                VALUES (?,?) ''',
-                (self.credsType, self.credsContent))
+            c.execute('''INSERT INTO creds(type,content,identifier)
+                VALUES (?,?,?) ''',
+                (self.credsType, self.credsContent, self.obj.getIdentifier()))
             c.close()
             c = dbConn.get().cursor()
-            c.execute('SELECT id FROM creds WHERE type=? and content=?',(self.credsType,self.credsContent))
+            c.execute('SELECT id FROM creds WHERE type=? and identifier=?',(self.credsType,self.obj.getIdentifier()))
             self.id = c.fetchone()[0]
         c.close()
         dbConn.get().commit()
@@ -61,9 +62,27 @@ class Creds():
             return None
         return Creds(row[0],row[1])
 
+    @classmethod
+    def findByIdentifier(cls,identifier):
+        c = dbConn.get().cursor()
+        c.execute('''SELECT type,content FROM creds WHERE identifier=?''',(identifier,))
+        row = c.fetchone()
+        c.close()
+        if row == None:
+            return None
+        return Creds(row[0],row[1])
+
     def toList(self):
         return " #"+str(self.id)+" <"+self.obj.getKey()+"> "+self.obj.toList()
 
+    def show(self):
+        self.obj.show()
+
+    def edit(self):
+        self.obj.edit()
+        self.credsContent = self.obj.serialize()
+        self.save()
+
     def __str__(self):
-        return "#"+str(self.id)
+        return self.obj.getIdentifier()
 

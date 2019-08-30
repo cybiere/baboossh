@@ -28,5 +28,14 @@ class BaboosshExt():
     def getKwargs(self):
         return {"password":self.creds}
 
+    def getIdentifier(self):
+        return self.creds
+
     def toList(self):
         return self.creds
+
+    def show(self):
+        print("Password: "+self.creds)
+
+    def edit(self):
+        print("Nothing to edit")

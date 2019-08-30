@@ -44,7 +44,8 @@ class dbConn():
         c.execute('''CREATE TABLE creds (
             id INTEGER PRIMARY KEY ASC,
             type TEXT NOT NULL,
-            content TEXT NOT NULL
+            content TEXT NOT NULL,
+            identifier TEXT NOT NULL
             )''')
         c.execute('''CREATE TABLE connections (
             id INTEGER PRIMARY KEY ASC,

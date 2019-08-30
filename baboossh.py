@@ -270,7 +270,13 @@ Available commands:
             print(cred.toList())
 
     def creds_show(self,stmt):
-        #TODO
+        credsIdentifier = vars(stmt)['id']
+        self.workspace.showCreds(credsIdentifier)
+        pass
+
+    def creds_edit(self,stmt):
+        credsIdentifier = vars(stmt)['id']
+        self.workspace.editCreds(credsIdentifier)
         pass
 
     def creds_add(self,stmt):
@@ -285,12 +291,18 @@ Available commands:
     def creds_help(self,stmt):
         self.do_help("creds")
 
+    def getOptionCreds(self):
+        return self.workspace.getCreds()
+
     parser_creds = argparse.ArgumentParser(prog="creds")
     subparser_creds = parser_creds.add_subparsers(title='Actions',help='Available actions')
     parser_creds_help = subparser_creds.add_parser("help",help='Show credentials help')
     parser_creds_list = subparser_creds.add_parser("list",help='List saved credentials')
     parser_creds_types = subparser_creds.add_parser("types",help='List available credentials types')
     parser_creds_show = subparser_creds.add_parser("show",help='Show credentials details')
+    parser_creds_show.add_argument('id',help='Creds identifier',choices_method=getOptionCreds)
+    parser_creds_edit = subparser_creds.add_parser("edit",help='Edit credentials details')
+    parser_creds_edit.add_argument('id',help='Creds identifier',choices_method=getOptionCreds)
     parser_creds_add = subparser_creds.add_parser("add",help='Add a new credentials')
     parser_creds_add.add_argument('type',help='New credentials type',choices_function=Extensions.authMethodsAvail)
 
@@ -298,6 +310,7 @@ Available commands:
     parser_creds_list.set_defaults(func=creds_list)
     parser_creds_types.set_defaults(func=creds_types)
     parser_creds_show.set_defaults(func=creds_show)
+    parser_creds_edit.set_defaults(func=creds_edit)
     parser_creds_add.set_defaults(func=creds_add)
 
     @cmd2.with_argparser(parser_creds)
@@ -398,9 +411,6 @@ Available commands:
     
     def getOptionUser(self):
         return self.workspace.getUsers()
-
-    def getOptionCreds(self):
-        return self.workspace.getCreds()
 
     def getOptionEndpoint(self):
         return self.workspace.getEndpoints()
@@ -650,6 +660,8 @@ Available commands:
         self.disable_command("macro","disabled")
         self.disable_command("shortcuts","disabled")
         self.quit_on_sigint = False
+        #TODO remove debug
+        self.debug=True
 
 
 
