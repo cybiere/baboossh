@@ -2,7 +2,10 @@ import json
 import readline
 from os.path import join,exists,basename
 import subprocess
-from Cryptodome.PublicKey import RSA, DSA, ECC
+from paramiko.rsakey import RSAKey
+from paramiko.ecdsakey import ECDSAKey
+from paramiko.dsskey import DSSKey
+from paramiko.ssh_exception import *
 
 class BaboosshExt():
     @classmethod
@@ -56,29 +59,32 @@ class BaboosshExt():
         haspass = False
         valid = True
         try:
-            key = RSA.import_key(open(filepath).read())
-        except UnicodeDecodeError:
-            valid = False
-        except ValueError as e:
-            if "PEM is encrypted" in str(e):
+            pkey = RSAKey.from_private_key_file(filepath)
+        except PasswordRequiredException:
+            haspass = True
+        except SSHException:
+            try:
+                pkey = ECDSAKey.from_private_key_file(filepath)
+            except PasswordRequiredException:
                 haspass = True
-            else:
+            except SSHException:
                 try:
-                    key = DSA.import_key(open(filepath).read())
-                except ValueError as e:
-                    try:
-                        key = ECC.import_key(open(filepath).read())
-                    except ValueError as e:
-                        valid = False
-                    except:
-                        raise
+                    pkey = DSSKey.from_private_key_file(filepath)
+                except PasswordRequiredException:
+                    haspass = True
+                except Exception as e:
+                    valid = False
+            except Exception as e:
+                valid = False
+        except Exception as e:
+            valid = False
         return valid,haspass
 
     @classmethod
     def checkPassphrase(cls,filepath,passphrase):
-        for keyType in [RSA,DSA,ECC]:
+        for keyType in [RSAKey,ECDSAKey,DSSKey]:
             try:
-                key = keyType.import_key(open(filepath).read(),passphrase=passphrase)
+                key = keyType.from_private_key_file(filepath,password=passphrase)
             except:
                 pass
             else:
