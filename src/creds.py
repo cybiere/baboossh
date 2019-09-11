@@ -84,5 +84,8 @@ class Creds():
         self.save()
 
     def __str__(self):
+        return "#"+str(self.getId())
+
+    def getIdentifier(self):
         return self.obj.getIdentifier()
 

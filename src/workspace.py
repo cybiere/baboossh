@@ -113,15 +113,19 @@ class Workspace():
         newCreds = Creds(credsType,credsContent)
         newCreds.save()
 
-    def showCreds(self,credsIdentifier):
-        creds = Creds.findByIdentifier(credsIdentifier)
+    def showCreds(self,credsId):
+        if credsId[0] == '#':
+            credsId = credsId[1:]
+        creds = Creds.find(credsId)
         if creds == None:
             print("Specified creds not found")
             return
         creds.show()
 
-    def editCreds(self,credsIdentifier):
-        creds = Creds.findByIdentifier(credsIdentifier)
+    def editCreds(self,credsId):
+        if credsId[0] == '#':
+            credsId = credsId[1:]
+        creds = Creds.find(credsId)
         if creds == None:
             print("Specified creds not found")
             return
@@ -167,10 +171,10 @@ class Workspace():
                 value = user
             elif option == "creds":
                 if value[0] == '#':
-                    credIdentifier = value[1:]
+                    credId = value[1:]
                 else:
-                    credIdentifier = value
-                creds = Creds.findByIdentifier(credIdentifier)
+                    credId = value
+                creds = Creds.findById(credId)
                 if creds is None:
                     raise ValueError
                 value = creds

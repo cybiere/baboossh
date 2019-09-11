@@ -270,13 +270,13 @@ Available commands:
             print(cred.toList())
 
     def creds_show(self,stmt):
-        credsIdentifier = vars(stmt)['id']
-        self.workspace.showCreds(credsIdentifier)
+        credsId = vars(stmt)['id']
+        self.workspace.showCreds(credsId)
         pass
 
     def creds_edit(self,stmt):
-        credsIdentifier = vars(stmt)['id']
-        self.workspace.editCreds(credsIdentifier)
+        credsId = vars(stmt)['id']
+        self.workspace.editCreds(credsId)
         pass
 
     def creds_add(self,stmt):
