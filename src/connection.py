@@ -143,7 +143,7 @@ class Connection():
             return connection
         return None
 
-    def initConnect(self):
+    def initConnect(self,target=True):
         kwargs = {} #Add default values here
         authArgs = self.getCred().getKwargs()
         if Path.hasDirectPath(self.getEndpoint()):
@@ -153,10 +153,10 @@ class Connection():
             #Get previous hop
             prevHop = Path.getPath(None,self.getEndpoint())[-1].getSrc()
             gateway = Connection.findWorkingByEndpoint(prevHop)
-
-            c = FabConnection(host=self.getEndpoint().getIp(),port=self.getEndpoint().getPort(),user=self.getUser().getName(),connect_kwargs={**kwargs, **authArgs},gateway=gateway.initConnect())
-        print("Establishing connection to "+str(self.getUser())+"@"+str(self.getEndpoint())+" (with creds "+str(self.getCred())+")",end="...")
-        sys.stdout.flush()
+            c = FabConnection(host=self.getEndpoint().getIp(),port=self.getEndpoint().getPort(),user=self.getUser().getName(),connect_kwargs={**kwargs, **authArgs},gateway=gateway.initConnect(False))
+        if target:
+            print("Establishing connection to "+str(self.getUser())+"@"+str(self.getEndpoint())+" (with creds "+str(self.getCred())+")",end="...")
+            sys.stdout.flush()
         self.setTested(True)
         try:
             c.open()
@@ -165,7 +165,8 @@ class Connection():
             self.setWorking(False)
             self.save()
             return None
-        print("> \033[1;31;40mPWND\033[0m")
+        if target:
+            print("> \033[1;31;40mPWND\033[0m")
         self.setWorking(True)
         self.save()
         return c
