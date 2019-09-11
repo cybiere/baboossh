@@ -418,8 +418,11 @@ Available commands:
     def getOptionPayload(self):
         return Extensions.payloadsAvail()
 
-    def getOptionConnection(self):
+    def getOptionValidConnection(self):
         return self.workspace.getTargetsValidList()
+
+    def getOptionConnection(self):
+        return self.workspace.getTargetsList()
 
     parser_option = argparse.ArgumentParser(prog="option")
     subparser_option = parser_option.add_subparsers(title='Actions',help='Available actions')
@@ -577,7 +580,6 @@ Available commands:
         for endpoint in endpoints:
             for user in users:
                 for cred in creds:
-                    #TODO re-enable ^C to cancel
                     if self.workspace.connect(endpoint,user,cred):
                         break;
 

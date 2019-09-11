@@ -259,6 +259,12 @@ class Workspace():
             connections.append(str(connection))
         return connections
 
+    def getTargetsList(self):
+        connections = []
+        for connection in Connection.findAll():
+            connections.append(str(connection))
+        return connections
+
     def getUsersList(self):
         users = []
         for user in User.findAll():
