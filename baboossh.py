@@ -584,7 +584,7 @@ Available commands:
                         break;
 
     parser_run = argparse.ArgumentParser(prog="run")
-    parser_run.add_argument('connection',help='Connection string',nargs="?",choices_method=getOptionConnection)
+    parser_run.add_argument('connection',help='Connection string',nargs="?",choices_method=getOptionValidConnection)
     parser_run.add_argument('payload',help='Payload name',nargs="?",choices_method=getOptionPayload)
 
     @cmd2.with_argparser(parser_run)

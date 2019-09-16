@@ -17,31 +17,6 @@ from paramiko.ssh_exception import *
 
 #TODO implement those
 '''
-def gatherFromConfig(sshConfFile,hosts):
-    with open(sshConfFile,'r',errors='replace') as f:
-        data = f.read()
-    lines = data.split('\n')
-    nbHosts = 0
-    curHost = None
-    for line in lines:
-        if line == '':
-            continue
-        if line[:5] == "Host ":
-            curHost = Host(line.split()[1])
-            hosts.append(curHost)
-            nbHosts = nbHosts+1
-        else:
-            [key,val] = line.strip().split(' ',1)
-            if key == "User":
-                curHost.user = val
-            elif key == "Port":
-                curHost.port = val
-            elif key == "HostName":
-                curHost.host = val
-            elif key == "IdentityFile":
-                curHost.setIdentity(val)
-    print("Found "+str(nbHosts)+" hosts in "+sshConfFile)
-
 def gatherFromKnown(homedir,hosts,hostsInConfig):
     with open(homedir+".ssh/known_hosts",'r',errors='replace') as f:
         data = f.read()
@@ -114,10 +89,90 @@ class BaboosshExt(object,metaclass=ExtStr):
         return True
     
     def gather(self):
+        self.gatherFromConfig()
         historyFiles = self.listHistoryFiles()
         for historyFile in historyFiles:
             self.gatherFromHistory(historyFile)
         self.gatherKeys()
+
+    def hostnameToIP(self,hostname,port=None):
+        endpoints = []
+        #Check if hostname is IP or Hostname :
+        try:
+            ipaddress.ip_address(hostname)
+        except ValueError:
+            res = self.socket.run("getent hosts "+hostname+" | awk '{ print $1 }'",hide=True)
+            ips = res.stdout.splitlines()
+            for ip in ips:
+                endpoint = Endpoint(ip,port if port is not None else 22)
+                endpoint.save()
+                path = Path(self.connection.getEndpoint(),endpoint)
+                path.save()
+                endpoints.append(endpoint)
+        else:
+            endpoint = Endpoint(hostname,port if port is not None else 22)
+            endpoint.save()
+            path = Path(self.connection.getEndpoint(),endpoint)
+            path.save()
+            endpoints.append(endpoint)
+        return endpoints
+
+    def gatherFromConfig(self):
+        lootFolder = os.path.join(self.wspaceFolder,"loot")
+        filename = str(self.connection.getEndpoint())+"_"+str(self.connection.getUser())+"_.ssh_config"
+        filepath = os.path.join(lootFolder,filename)
+        try:
+            self.socket.get(".ssh/config",filepath)
+        except Exception as e:
+            return None
+        with open(filepath,'r',errors='replace') as f:
+            data = f.read()
+        lines = data.split('\n')
+        nbEndpoints = 0
+        nbUsers = 0
+        nbCreds = 0
+        curHost = None
+        for line in lines:
+            if line == '':
+                continue
+            if line[:5] == "Host ":
+                if curHost != None:
+                    if "host" in curHost.keys():
+                        host = curHost["host"]
+                    else:
+                        host = curHost["name"]
+                    if "port" in curHost.keys():
+                        port = curHost["port"]
+                    else:
+                        port=None
+
+                    endpoints = self.hostnameToIP(host,port)
+                    nbEndpoints = nbEndpoints + len(endpoints)
+                    if "user" in curHost.keys():
+                        user = User(curHost["user"])
+                        user.save()
+                        nbUsers = nbUsers + 1
+                    if "identity" in curHost.keys():
+                        identity = self.getKeyToCreds(curHost["identity"],".")
+                        if identity != None:
+                            nbCreds = nbCreds+1
+                    if user is not None and identity is not None:
+                        for endpoint in endpoints:
+                            conn = Connection(endpoint,user,identity)
+                            conn.save()
+                curHost = {}
+                curHost["name"] = line.split()[1]
+            else:
+                [key,val] = line.strip().split(' ',1)
+                if key == "User":
+                    curHost['user'] = val
+                elif key == "Port":
+                    curHost['port'] = val
+                elif key == "HostName":
+                    curHost['host'] = val
+                elif key == "IdentityFile":
+                    curHost['identity'] = val
+        print("Found "+str(nbEndpoints)+" enpoints, "+str(nbUsers)+" users and "+str(nbCreds)+" creds in config file")
 
     def gatherKeys(self):
         files = []
@@ -197,28 +252,10 @@ class BaboosshExt(object,metaclass=ExtStr):
                         else:
                             hostname = words[i]
                         host = True
-                
                 if not host:
                     continue
-                
-                #Check if hostname is IP or Hostname :
-                try:
-                    ipaddress.ip_address(hostname)
-                except ValueError:
-                    res = self.socket.run("getent hosts "+hostname+" | awk '{ print $1 }'",hide=True)
-                    ips = res.stdout.splitlines()
-                    for ip in ips:
-                        endpoint = Endpoint(ip,port if port is not None else 22)
-                        endpoint.save()
-                        path = Path(self.connection.getEndpoint(),endpoint)
-                        path.save()
-                        nbEndpoints = nbEndpoints + 1
-                else:
-                    endpoint = Endpoint(hostname,port if port is not None else 22)
-                    endpoint.save()
-                    path = Path(self.connection.getEndpoint(),endpoint)
-                    path.save()
-                    nbEndpoints = nbEndpoints + 1
+                endpoints = self.hostnameToIP(hostname,port)
+                nbEndpoints = nbEndpoints + len(endpoints)
                 if user is not None:
                     user = User(user)
                     user.save()
@@ -228,8 +265,9 @@ class BaboosshExt(object,metaclass=ExtStr):
                     if identity != None:
                         nbCreds = nbCreds+1
                 if user is not None and identity is not None:
-                   conn = Connection(endpoint,user,identity)
-                   conn.save()
+                    for endpoint in endpoints:
+                        conn = Connection(endpoint,user,identity)
+                        conn.save()
 
         print("Found "+str(nbEndpoints)+" enpoints, "+str(nbUsers)+" users and "+str(nbCreds)+" creds in "+historyFile)
 
