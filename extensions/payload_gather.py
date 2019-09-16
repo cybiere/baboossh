@@ -17,41 +17,6 @@ from paramiko.ssh_exception import *
 
 #TODO implement those
 '''
-def gatherFromKnown(homedir,hosts,hostsInConfig):
-    with open(homedir+".ssh/known_hosts",'r',errors='replace') as f:
-        data = f.read()
-    lines = data.split('\n')
-    nbHosts = 0
-    for line in lines:
-        if "|" in line:
-            #The entry is hashed, and should be ignored
-            continue
-        hostnames = []
-        ip = ""
-        targets = line.partition(' ')[0]
-        for target in targets.split(','):
-            try:
-                ipaddress.ip_address(target)
-            except ValueError:
-                hostnames.append(target)
-            else:
-                ip = target
-        if len(hostnames) > 0 and hostnames[0] != "":
-            newHost = Host(hostnames[0])
-        elif ip == "":
-            continue
-        else:
-            newHost = Host(ip)
-        newHost.hostnames = hostnames
-        if ip != "":
-            newHost.host = ip
-        else:
-            newHost.host = hostnames[0]
-        nbHosts = nbHosts+1
-        if not newHost in hosts:
-            hosts.append(newHost)
-
-    print("Found "+str(nbHosts)+" hosts in known_hosts")
 
 '''
 
@@ -94,6 +59,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         for historyFile in historyFiles:
             self.gatherFromHistory(historyFile)
         self.gatherKeys()
+        self.gatherFromKnown()
 
     def hostnameToIP(self,hostname,port=None):
         endpoints = []
@@ -164,7 +130,6 @@ class BaboosshExt(object,metaclass=ExtStr):
                 curHost = {}
                 curHost["name"] = line.split()[1]
             else:
-                #TODO case sensitivity
                 [key,val] = line.strip().split(' ',1)
                 key = key.lower()
                 if key == "user":
@@ -200,8 +165,28 @@ class BaboosshExt(object,metaclass=ExtStr):
                 for endpoint in endpoints:
                     conn = Connection(endpoint,user,identity)
                     conn.save()
-
         print("Found "+str(nbEndpoints)+" enpoints, "+str(nbUsers)+" users and "+str(nbCreds)+" creds in config file")
+
+    def gatherFromKnown(self):
+        lootFolder = os.path.join(self.wspaceFolder,"loot")
+        filename = str(self.connection.getEndpoint())+"_"+str(self.connection.getUser())+"_.ssh_known_hosts"
+        filepath = os.path.join(lootFolder,filename)
+        try:
+            self.socket.get(".ssh/known_hosts",filepath)
+        except Exception as e:
+            return None
+        with open(filepath,'r',errors='replace') as f:
+            data = f.read()
+        lines = data.split('\n')
+        endpoints = []
+        for line in lines:
+            if "|" in line:
+                #The entry is hashed, and should be ignored
+                continue
+            targets = line.partition(' ')[0]
+            for target in targets.split(','):
+                endpoints = endpoints + self.hostnameToIP(target)
+        print("Found "+str(len(endpoints))+" hosts in known_hosts")
 
     def gatherKeys(self):
         files = []
