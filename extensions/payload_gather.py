@@ -135,7 +135,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         for line in lines:
             if line == '':
                 continue
-            if line[:5] == "Host ":
+            if line[:5].lower() == "Host ".lower():
                 if curHost != None:
                     if "host" in curHost.keys():
                         host = curHost["host"]
@@ -145,9 +145,10 @@ class BaboosshExt(object,metaclass=ExtStr):
                         port = curHost["port"]
                     else:
                         port=None
-
                     endpoints = self.hostnameToIP(host,port)
                     nbEndpoints = nbEndpoints + len(endpoints)
+                    user = None
+                    identity = None
                     if "user" in curHost.keys():
                         user = User(curHost["user"])
                         user.save()
@@ -163,15 +164,43 @@ class BaboosshExt(object,metaclass=ExtStr):
                 curHost = {}
                 curHost["name"] = line.split()[1]
             else:
+                #TODO case sensitivity
                 [key,val] = line.strip().split(' ',1)
-                if key == "User":
+                key = key.lower()
+                if key == "user":
                     curHost['user'] = val
-                elif key == "Port":
+                elif key == "port":
                     curHost['port'] = val
-                elif key == "HostName":
+                elif key == "hostname":
                     curHost['host'] = val
-                elif key == "IdentityFile":
+                elif key == "identityfile":
                     curHost['identity'] = val
+        if curHost != None:
+            if "host" in curHost.keys():
+                host = curHost["host"]
+            else:
+                host = curHost["name"]
+            if "port" in curHost.keys():
+                port = curHost["port"]
+            else:
+                port=None
+            endpoints = self.hostnameToIP(host,port)
+            nbEndpoints = nbEndpoints + len(endpoints)
+            user = None
+            identity = None
+            if "user" in curHost.keys():
+                user = User(curHost["user"])
+                user.save()
+                nbUsers = nbUsers + 1
+            if "identity" in curHost.keys():
+                identity = self.getKeyToCreds(curHost["identity"],".")
+                if identity != None:
+                    nbCreds = nbCreds+1
+            if user is not None and identity is not None:
+                for endpoint in endpoints:
+                    conn = Connection(endpoint,user,identity)
+                    conn.save()
+
         print("Found "+str(nbEndpoints)+" enpoints, "+str(nbUsers)+" users and "+str(nbCreds)+" creds in config file")
 
     def gatherKeys(self):

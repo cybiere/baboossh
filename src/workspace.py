@@ -174,7 +174,7 @@ class Workspace():
                     credId = value[1:]
                 else:
                     credId = value
-                creds = Creds.findById(credId)
+                creds = Creds.find(credId)
                 if creds is None:
                     raise ValueError
                 value = creds
