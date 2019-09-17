@@ -524,7 +524,54 @@ Available commands:
             # No subcommand was provided, so call help
             self.path_list(None)
 
+#################################################################
+###################         WORDLISTS         ###################
+#################################################################
 
+    def wordlist_list(self,stmt):
+        print("Current wordlists in workspace:")
+        wordlists = self.workspace.getWordlists()
+        if not wordlists:
+            print("No wordlists in current workspace")
+            return
+        for wordlist in wordlists:
+            print(wordlist.toList())
+    
+    def wordlist_add(self,stmt):
+        name = vars(stmt)['name']
+        filename = vars(stmt)['file']
+        try:
+            self.workspace.addWordlist_Manual(name,filename)
+        except Exception as e:
+            print("Wordlist addition failed: "+str(e))
+        else:
+            print("Wordlist "+name+" added.")
+
+    def wordlist_help(self,stmt):
+        self.do_help("wordlist")
+
+    parser_wordlist = argparse.ArgumentParser(prog="wordlist")
+    subparser_wordlist = parser_wordlist.add_subparsers(title='Actions',help='Available actions')
+    parser_wordlist_help = subparser_wordlist.add_parser("help",help='Show wordlist help')
+    parser_wordlist_list = subparser_wordlist.add_parser("list",help='List wordlists')
+    parser_wordlist_add = subparser_wordlist.add_parser("add",help='Add a new wordlist')
+    parser_wordlist_add.add_argument('name',help='New wordlist name')
+    parser_wordlist_add.add_argument('file',help='New wordlist file path',completer_method=cmd2.Cmd.path_complete)
+
+    parser_wordlist_help.set_defaults(func=wordlist_help)
+    parser_wordlist_list.set_defaults(func=wordlist_list)
+    parser_wordlist_add.set_defaults(func=wordlist_add)
+
+    @cmd2.with_argparser(parser_wordlist)
+    def do_wordlist(self, stmt):
+        '''Manage wordlists'''
+        func = getattr(stmt, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, stmt)
+        else:
+            # No subcommand was provided, so call help
+            self.wordlist_list(None)
 
 #################################################################
 ###################          CONNECT          ###################

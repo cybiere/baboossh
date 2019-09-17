@@ -9,6 +9,7 @@ from src.user import User
 from src.creds import Creds
 from src.connection import Connection
 from src.path import Path
+from src.wordlist import Wordlist
 
 
 
@@ -103,6 +104,15 @@ class Workspace():
     def addUser_Manual(self,name):
         newUser = User(name)
         newUser.save()
+
+#################################################################
+###################         WORDLISTS         ###################
+#################################################################
+
+    #Manually add a wordlist
+    def addWordlist_Manual(self,name,filename):
+        newWordlist = Wordlist(name,filename)
+        newWordlist.save()
 
 #################################################################
 ###################           CREDS           ###################
@@ -288,6 +298,9 @@ class Workspace():
 
     def getUsers(self):
         return User.findAll()
+
+    def getWordlists(self):
+        return Wordlist.findAll()
 
     def getCreds(self):
         return Creds.findAll()

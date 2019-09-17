@@ -68,6 +68,11 @@ class dbConn():
             FOREIGN KEY(src) REFERENCES endpoints(id)
             FOREIGN KEY(dst) REFERENCES endpoints(id)
             )''')
+        c.execute('''CREATE TABLE wordlists (
+            id INTEGER PRIMARY KEY ASC,
+            name TEXT NOT NULL,
+            file TEXT NOT NULL
+            )''')
 
         c.commit()
         c.close()
