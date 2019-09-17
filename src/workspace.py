@@ -125,8 +125,8 @@ class Workspace():
 ###################           CREDS           ###################
 #################################################################
 
-    def addCreds_Manual(self,credsType):
-        credsContent = Extensions.getAuthMethod(credsType).build()
+    def addCreds_Manual(self,credsType,stmt):
+        credsContent = Extensions.getAuthMethod(credsType).fromStatement(stmt)
         newCreds = Creds(credsType,credsContent)
         newCreds.save()
 

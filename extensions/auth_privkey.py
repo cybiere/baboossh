@@ -3,6 +3,7 @@ import readline
 from os.path import join,exists,basename
 import sys
 import subprocess
+import cmd2
 from paramiko.rsakey import RSAKey
 from paramiko.ecdsakey import ECDSAKey
 from paramiko.dsskey import DSSKey
@@ -93,24 +94,24 @@ class BaboosshExt():
         return False
 
     @classmethod
-    def build(cls):
-        oldcompleter = readline.get_completer()
-        readline.set_completer(cls.complete)
-        keypath = input("Path to private key file: ")
-        readline.set_completer(oldcompleter)
-        if keypath == "":
-            raise ValueError("Key path cannot be empty")
+    def buildParser(cls,parser):
+        parser.add_argument('file',help='Private key file path',completer_method=cmd2.Cmd.path_complete)
+        parser.add_argument('passphrase',help='Private key passphrase',nargs="?")
+
+    @classmethod
+    def fromStatement(cls,stmt):
+        passphrase = vars(stmt)['passphrase']
+        if passphrase is None:
+            passphrase = ""
+        keypath = vars(stmt)['file']
         valid,haspass = cls.checkKeyfile(keypath)
         if not valid:
             raise ValueError(keypath+" isn't a valid key file")
         if haspass:
-            passphrase = input("Private key passphrase (empty if unknown): ")
-            if passphrase != "":
-                passOk = cls.checkPassphrase(keypath,passphrase)
-                if not passOk:
-                    raise ValueError("Invalid passphrase, please retry")
-        else:
-            passphrase = ""
+            passOk = cls.checkPassphrase(keypath,passphrase)
+            if not passOk:
+                print("Invalid passphrase, key saved without passphrase")
+                passphrase = ""
         return json.dumps({'passphrase':passphrase,'keypath':keypath,'haspass':haspass})
 
     def __init__(self,creds):

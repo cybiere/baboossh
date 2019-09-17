@@ -12,12 +12,12 @@ class BaboosshExt():
         return "Password authentication"
 
     @classmethod
-    def build(cls):
-        password = input("Password: ")
-        if password == "":
-            print("Password cannot be empty")
-            raise ValueError()
-        return password
+    def buildParser(cls,parser):
+        parser.add_argument('value',help='Password value')
+
+    @classmethod
+    def fromStatement(cls,stmt):
+        return vars(stmt)['value']
 
     def __init__(self,creds):
         self.creds = creds

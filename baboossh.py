@@ -18,6 +18,8 @@ if "DEFAULT" not in config or "workspaces" not in config['DEFAULT']:
     print("Invalid config file")
     exit()
 
+Extensions.load()
+
 def yesNo(prompt,default=None):
     if default is None:
         choices = "[y,n]"
@@ -285,7 +287,7 @@ Available commands:
     def creds_add(self,stmt):
         credsType = vars(stmt)['type']
         try:
-            self.workspace.addCreds_Manual(credsType)
+            self.workspace.addCreds_Manual(credsType,stmt)
         except Exception as e:
             print("Credentials addition failed: "+str(e))
         else:
@@ -307,7 +309,12 @@ Available commands:
     parser_creds_edit = subparser_creds.add_parser("edit",help='Edit credentials details')
     parser_creds_edit.add_argument('id',help='Creds identifier',choices_method=getOptionCreds)
     parser_creds_add = subparser_creds.add_parser("add",help='Add a new credentials')
-    parser_creds_add.add_argument('type',help='New credentials type',choices_function=Extensions.authMethodsAvail)
+    subparser_creds_add = parser_creds_add.add_subparsers(title='Add creds',help='Available creds types')
+    for methodName in Extensions.authMethodsAvail():
+        method = Extensions.getAuthMethod(methodName)
+        parser_method = subparser_creds_add.add_parser(methodName,help=method.descr())
+        parser_method.set_defaults(type=methodName)
+        method.buildParser(parser_method)
 
     parser_creds_help.set_defaults(func=creds_help)
     parser_creds_list.set_defaults(func=creds_list)
@@ -730,8 +737,6 @@ Available commands:
 
 
 if __name__ == '__main__':
-    Extensions.load()
-    
     if not os.path.exists(config['DEFAULT']['workspaces']):
         print("> First run ? Creating workspaces directory")
         os.makedirs(config['DEFAULT']['workspaces'])
