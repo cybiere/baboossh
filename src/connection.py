@@ -9,7 +9,7 @@ from src.path import Path
 import sys
 
 class Connection():
-    def __init__(self,endpoint,user,cred):
+    def __init__(self,endpoint,user,cred,brute=False):
         self.host = None
         self.endpoint = endpoint
         self.user = user
@@ -18,6 +18,9 @@ class Connection():
         self.tested = False
         self.working = False
         self.root = False
+        self.brute = brute
+        if brute:
+            return
         c = dbConn.get().cursor()
         c.execute('SELECT id,tested,working,root,host FROM connections WHERE endpoint=? AND user=? AND cred=?',(self.endpoint.getId(),self.user.getId(),self.cred.getId()))
         savedEndpoint = c.fetchone()
@@ -168,10 +171,9 @@ class Connection():
         return None
 
     def initConnect(self,target=True,gw=None,retry=True):
-        #print("# \033[1;32;40mINIT\033[0m "+str(self.getEndpoint()))
         kwargs = {} #Add default values here
         authArgs = self.getCred().getKwargs()
-        if target:
+        if target and not self.brute:
             print("Establishing connection to \033[1;32;40m"+str(self.getUser())+"@"+str(self.getEndpoint())+"\033[0m (with creds "+str(self.getCred())+")",end="...")
             sys.stdout.flush()
         if gw is not None:
@@ -189,6 +191,8 @@ class Connection():
         try:
             c.open()
         except Exception as e:
+            if self.brute:
+                return None
             if "Error reading SSH protocol banner" in str(e):
                 if retry:
                     print("\033[1;33;40mTimeout\033[0m, retrying...")
@@ -200,10 +204,11 @@ class Connection():
             self.setWorking(False)
             self.save()
             return None
-        if target:
+        if target and not self.brute:
             print("> \033[1;31;40mPWND\033[0m")
         self.setWorking(True)
-        self.save()
+        if not self.brute:
+            self.save()
         return c
 
     def connect(self,gw=None):

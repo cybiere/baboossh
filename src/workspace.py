@@ -2,6 +2,7 @@ import os
 import re
 import configparser
 import ipaddress
+import sys
 from src.params import dbConn,Extensions
 from src.host import Host
 from src.endpoint import Endpoint
@@ -67,6 +68,7 @@ class Workspace():
             "user":None,
             "creds":None,
             "payload":None,
+            "wordlist":None,
                 }
 
 #################################################################
@@ -186,6 +188,11 @@ class Workspace():
                 if user is None:
                     raise ValueError
                 value = user
+            elif option == "wordlist":
+                wordlist = Wordlist.findByName(value)
+                if wordlist is None:
+                    raise ValueError
+                value = wordlist
             elif option == "creds":
                 if value[0] == '#':
                     credId = value[1:]
@@ -209,15 +216,43 @@ class Workspace():
 
     def massConnect(self,endpoints,users,creds):
         for endpoint in endpoints:
-            prevHop = Path.getPath(None,endpoint)[-1].getSrc()
-            gateway = Connection.findWorkingByEndpoint(prevHop).initConnect(False)
+            if Path.hasDirectPath(endpoint):
+                gateway = None
+            else:
+                prevHop = Path.getPath(None,endpoint)[-1].getSrc()
+                gateway = Connection.findWorkingByEndpoint(prevHop).initConnect(False)
             for user in users:
                 for cred in creds:
                     connection = Connection(endpoint,user,cred)
                     if connection.connect(gateway):
                         break;
-            gateway.close()
+            if gateway is not None:
+                gateway.close()
 
+    def bruteforce(self,endpoint,user,wordlist):
+        if Path.hasDirectPath(endpoint):
+            gateway = None
+        else:
+            prevHop = Path.getPath(None,endpoint)[-1].getSrc()
+            gateway = Connection.findWorkingByEndpoint(prevHop).initConnect(False)
+        found = False
+        with open(wordlist.getFile(),"r") as f:
+            for w in f:
+                password = w.rstrip()
+                cred = Creds("password",password)
+                connection = Connection(endpoint,user,cred,brute=True)
+                if connection.connect(gateway):
+                    cred.save()
+                    connection.save()
+                    found=True
+                    print("Password found for user "+str(user)+"@"+str(endpoint)+" : "+password)
+                    break;
+                print(".",end="")
+                sys.stdout.flush()
+        if gateway is not None:
+            gateway.close()
+        if not found:
+            print("Password not found for user "+str(user)+"@"+str(endpoint))
 
     def connect(self,endpoint,user,cred):
         connection = Connection(endpoint,user,cred)

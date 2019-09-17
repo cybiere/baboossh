@@ -451,6 +451,8 @@ Available commands:
     parser_option_payload.add_argument('payload',nargs="?",help='Payload name',choices_method=getOptionPayload)
     parser_option_connection = subparser_option.add_parser("connection",help='Set target connection')
     parser_option_connection.add_argument('connection',nargs="?",help='Connection string',choices_method=getOptionConnection)
+    parser_option_wordlist = subparser_option.add_parser("wordlist",help='Set source wordlist')
+    parser_option_wordlist.add_argument('wordlist',nargs="?",help='Wordlist name',choices_method=getOptionWordlist)
 
     parser_option_help.set_defaults(option="help")
     parser_option_list.set_defaults(option="list")
@@ -459,6 +461,7 @@ Available commands:
     parser_option_endpoint.set_defaults(option="endpoint")
     parser_option_payload.set_defaults(option="payload")
     parser_option_connection.set_defaults(option="connection")
+    parser_option_wordlist.set_defaults(option="wordlist")
 
     @cmd2.with_argparser(parser_option)
     def do_set(self,stmt):
@@ -484,6 +487,8 @@ Available commands:
                 value = vars(stmt)['payload']
             elif option == "connection":
                 value = vars(stmt)['connection']
+            elif option == "wordlist":
+                value = vars(stmt)['wordlist']
             try:
                 self.workspace.setOption(option,value)
             except ValueError:
@@ -601,35 +606,34 @@ Available commands:
         user = self.workspace.getOption("user")
         if user is None:
             users = self.workspace.getUsers()
-            if len(users) > 1:
-                if not yesNo("Try with all ("+str(len(users))+") users in scope ?",False):
-                    raise ValueError
-            users = self.workspace.getUsers()
         else:
             users = [user]
         endpoint = self.workspace.getOption("endpoint")
         if endpoint is None:
             endpoints = self.workspace.getEndpoints()
-            if len(endpoints) > 1:
-                if not yesNo("Try with all ("+str(len(endpoints))+") endpoints in scope ?",False):
-                    raise ValueError
-            endpoints = self.workspace.getEndpoints()
         else:
             endpoints = [endpoint]
         cred = self.workspace.getOption("creds")
+        wordlist = self.workspace.getOption("wordlist")
         if cred is None:
-            creds = self.workspace.getCreds()
-            if len(creds) > 1:
-                if not yesNo("Try with all ("+str(len(creds))+") credentials in scope ?",False):
-                    raise ValueError
-            creds = self.workspace.getCreds()
+            if wordlist is not None:
+                wordlist = wordlist
+                creds = None
+            else:
+                wordlist = None
+                creds = self.workspace.getCreds()
         else:
+            wordlist = None
             creds = [cred]
-        nbIter = len(endpoints)*len(users)*len(creds)
-        if nbIter > 1:
-            if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?",False):
+        if creds != None:
+            nbIter = len(endpoints)*len(users)*len(creds)
+            if nbIter > 1:
+                if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?",False):
+                    raise ValueError
+        else:
+            if not yesNo("This will attempt a bruteforce attack using \""+str(wordlist)+"\" wordlist. Proceed ?",False):
                 raise ValueError
-        return (endpoints,users,creds)
+        return (endpoints,users,creds,wordlist)
 
     parser_connect = argparse.ArgumentParser(prog="connect")
     parser_connect.add_argument('connection',help='Connection string',nargs="?",choices_method=getOptionConnection)
@@ -644,10 +648,15 @@ Available commands:
                 print("Targeted connect failed : "+str(e))
             return
         try:
-            endpoints,users,creds = self.parseOptionsTarget()
+            endpoints,users,creds,wordlist = self.parseOptionsTarget()
         except:
             return
-        if len(endpoints)*len(users)*len(creds) > 1:
+        if wordlist != None:
+            if len(endpoints)*len(users) > 1:
+                print("You can't perform a bruteforce without targeting a single endpoint and user.")
+                return
+            self.workspace.bruteforce(endpoints[0],users[0],wordlist)
+        elif len(endpoints)*len(users)*len(creds) > 1:
             self.workspace.massConnect(endpoints,users,creds)
         else:
             self.workspace.connect(endpoints[0],users[0],creds[0])
@@ -672,7 +681,7 @@ Available commands:
             print("Error : No payload specified")
             return
         try:
-            endpoints,users,creds = self.parseOptionsTarget()
+            endpoints,users,creds,wordlist = self.parseOptionsTarget()
         except:
             return
         for endpoint in endpoints:
