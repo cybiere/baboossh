@@ -114,6 +114,13 @@ class Workspace():
         newWordlist = Wordlist(name,filename)
         newWordlist.save()
 
+    def bruteWordlist(self,name,credsId):
+        if credsId[0] == '#':
+            credsId = credsId[1:]
+        creds = Creds.find(credsId)
+        wordlist = Wordlist.findByName(name)
+        creds.bruteforce(wordlist)
+
 #################################################################
 ###################           CREDS           ###################
 #################################################################
@@ -262,6 +269,12 @@ class Workspace():
 
     def getHosts(self):
         return Host.findAll()
+
+    def getWordlist(self):
+        wordlists = []
+        for wordlist in Wordlist.findAll():
+            wordlists.append(wordlist)
+        return wordlists
 
     def getEndpoints(self):
         endpoints = []

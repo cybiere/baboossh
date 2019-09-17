@@ -1,6 +1,7 @@
 import json
 import readline
 from os.path import join,exists,basename
+import sys
 import subprocess
 from paramiko.rsakey import RSAKey
 from paramiko.ecdsakey import ECDSAKey
@@ -172,5 +173,20 @@ class BaboosshExt():
                 print("Working passphrase already defined")
         else:
             print("Private key doesn't have a passphrase")
+
+    def bruteforce(self,wordlist):
+        found = False
+        with open(wordlist.getFile(),"r") as f:
+            for w in f:
+                passphrase = w.rstrip()
+                print(".",end="")
+                sys.stdout.flush()
+                if self.__class__.checkPassphrase(self.keypath,passphrase):
+                    found=True
+                    print("\nPassphrase found: "+passphrase)
+                    self.passphrase = passphrase
+                    break
+        if not found:
+            print("\nPassphrase not found")
 
 

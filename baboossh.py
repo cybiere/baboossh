@@ -418,6 +418,9 @@ Available commands:
     def getOptionEndpoint(self):
         return self.workspace.getEndpoints()
 
+    def getOptionWordlist(self):
+        return self.workspace.getWordlists()
+
     def getOptionPayload(self):
         return Extensions.payloadsAvail()
 
@@ -547,6 +550,12 @@ Available commands:
         else:
             print("Wordlist "+name+" added.")
 
+    def wordlist_brute(self,stmt):
+        name = vars(stmt)['name']
+        credsId = vars(stmt)['credsid']
+        self.workspace.bruteWordlist(name,credsId)
+
+
     def wordlist_help(self,stmt):
         self.do_help("wordlist")
 
@@ -557,10 +566,14 @@ Available commands:
     parser_wordlist_add = subparser_wordlist.add_parser("add",help='Add a new wordlist')
     parser_wordlist_add.add_argument('name',help='New wordlist name')
     parser_wordlist_add.add_argument('file',help='New wordlist file path',completer_method=cmd2.Cmd.path_complete)
+    parser_wordlist_brute = subparser_wordlist.add_parser("bruteforce",help='Bruteforce creds with a wordlist')
+    parser_wordlist_brute.add_argument('credsid',help='Creds identifier',choices_method=getOptionCreds)
+    parser_wordlist_brute.add_argument('name',help='Wordlist name',choices_method=getOptionWordlist)
 
     parser_wordlist_help.set_defaults(func=wordlist_help)
     parser_wordlist_list.set_defaults(func=wordlist_list)
     parser_wordlist_add.set_defaults(func=wordlist_add)
+    parser_wordlist_brute.set_defaults(func=wordlist_brute)
 
     @cmd2.with_argparser(parser_wordlist)
     def do_wordlist(self, stmt):

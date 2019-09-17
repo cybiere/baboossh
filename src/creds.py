@@ -83,6 +83,14 @@ class Creds():
         self.credsContent = self.obj.serialize()
         self.save()
 
+    def bruteforce(self,wordlist):
+        if not hasattr(self.obj,"bruteforce"):
+            print("No bruteforce fonction for "+self.credsType)
+            return
+        self.obj.bruteforce(wordlist)
+        self.credsContent = self.obj.serialize()
+        self.save()
+
     def __str__(self):
         return "#"+str(self.getId())
 
