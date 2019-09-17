@@ -115,6 +115,30 @@ class Connection():
         return Connection(endpoint,User.find(row[0]),Creds.find(row[1]))
 
     @classmethod
+    def findAll(cls):
+        ret = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT id FROM connections'):
+            ret.append(cls.find(row[0]))
+        return ret
+
+    @classmethod
+    def findTested(cls):
+        ret = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT id FROM connections where tested=?',(True,)):
+            ret.append(cls.find(row[0]))
+        return ret
+
+    @classmethod
+    def findWorking(cls):
+        ret = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT id FROM connections where working=?',(True,)):
+            ret.append(cls.find(row[0]))
+        return ret
+
+    @classmethod
     def fromTarget(cls,arg):
         if '@' in arg and ':' in arg:
             auth,sep,endpoint = arg.partition('@')
@@ -143,25 +167,36 @@ class Connection():
             return connection
         return None
 
-    def initConnect(self,target=True):
+    def initConnect(self,target=True,gw=None,retry=True):
+        #print("# \033[1;32;40mINIT\033[0m "+str(self.getEndpoint()))
         kwargs = {} #Add default values here
         authArgs = self.getCred().getKwargs()
-        if Path.hasDirectPath(self.getEndpoint()):
-            #Direct connect
-            c = FabConnection(host=self.getEndpoint().getIp(),port=self.getEndpoint().getPort(),user=self.getUser().getName(),connect_kwargs={**kwargs, **authArgs})
-        else:
-            #Get previous hop
-            prevHop = Path.getPath(None,self.getEndpoint())[-1].getSrc()
-            gateway = Connection.findWorkingByEndpoint(prevHop)
-            c = FabConnection(host=self.getEndpoint().getIp(),port=self.getEndpoint().getPort(),user=self.getUser().getName(),connect_kwargs={**kwargs, **authArgs},gateway=gateway.initConnect(False))
         if target:
-            print("Establishing connection to "+str(self.getUser())+"@"+str(self.getEndpoint())+" (with creds "+str(self.getCred())+")",end="...")
+            print("Establishing connection to \033[1;32;40m"+str(self.getUser())+"@"+str(self.getEndpoint())+"\033[0m (with creds "+str(self.getCred())+")",end="...")
             sys.stdout.flush()
+        if gw is not None:
+            c = FabConnection(host=self.getEndpoint().getIp(),port=self.getEndpoint().getPort(),user=self.getUser().getName(),connect_kwargs={**kwargs, **authArgs},gateway=gw)
+        else:
+            if Path.hasDirectPath(self.getEndpoint()):
+                #Direct connect
+                c = FabConnection(host=self.getEndpoint().getIp(),port=self.getEndpoint().getPort(),user=self.getUser().getName(),connect_kwargs={**kwargs, **authArgs})
+            else:
+                #Get previous hop
+                prevHop = Path.getPath(None,self.getEndpoint())[-1].getSrc()
+                gateway = Connection.findWorkingByEndpoint(prevHop)
+                c = FabConnection(host=self.getEndpoint().getIp(),port=self.getEndpoint().getPort(),user=self.getUser().getName(),connect_kwargs={**kwargs, **authArgs},gateway=gateway.initConnect(False))
         self.setTested(True)
         try:
             c.open()
         except Exception as e:
-            print("> "+str(e))
+            if "Error reading SSH protocol banner" in str(e):
+                if retry:
+                    print("\033[1;33;40mTimeout\033[0m, retrying...")
+                    return self.initConnect(target,gw,False)
+                else:
+                    print("> Retry failed")
+            else:
+                print("> "+str(e))
             self.setWorking(False)
             self.save()
             return None
@@ -171,44 +206,22 @@ class Connection():
         self.save()
         return c
 
-    def connect(self):
-        c = self.initConnect()
+    def connect(self,gw=None):
+        c = self.initConnect(True,gw)
         if c == None:
             return False
         c.close()
         return True
 
-    @classmethod
-    def findAll(cls):
-        ret = []
-        c = dbConn.get().cursor()
-        for row in c.execute('SELECT id FROM connections'):
-            ret.append(cls.find(row[0]))
-        return ret
-
-    @classmethod
-    def findTested(cls):
-        ret = []
-        c = dbConn.get().cursor()
-        for row in c.execute('SELECT id FROM connections where tested=?',(True,)):
-            ret.append(cls.find(row[0]))
-        return ret
-
-    @classmethod
-    def findWorking(cls):
-        ret = []
-        c = dbConn.get().cursor()
-        for row in c.execute('SELECT id FROM connections where working=?',(True,)):
-            ret.append(cls.find(row[0]))
-        return ret
-
-    def run(self,payload,wspaceFolder):
-        c = self.initConnect()
+    def run(self,payload,wspaceFolder,gw=None):
+        c = self.initConnect(True,gw)
         if c == None:
             return False
         ret = payload.run(c,self,wspaceFolder)
         c.close()
         return True
+
+
 
     def toList(self):
         return str(self)

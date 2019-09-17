@@ -9,6 +9,9 @@ import re
 import argparse
 from cmd2 import with_argparser
 
+import logging
+logging.getLogger("paramiko").setLevel(logging.CRITICAL)
+
 config = configparser.ConfigParser()
 config.read('config.ini')
 if "DEFAULT" not in config or "workspaces" not in config['DEFAULT']:
@@ -577,11 +580,10 @@ Available commands:
             endpoints,users,creds = self.parseOptionsTarget()
         except:
             return
-        for endpoint in endpoints:
-            for user in users:
-                for cred in creds:
-                    if self.workspace.connect(endpoint,user,cred):
-                        break;
+        if len(endpoints)*len(users)*len(creds) > 1:
+            self.workspace.massConnect(endpoints,users,creds)
+        else:
+            self.workspace.connect(endpoints[0],users[0],creds[0])
 
     parser_run = argparse.ArgumentParser(prog="run")
     parser_run.add_argument('connection',help='Connection string',nargs="?",choices_method=getOptionValidConnection)

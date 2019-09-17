@@ -190,22 +190,34 @@ class Workspace():
 ###################        CONNECTIONS        ###################
 #################################################################
 
+    def massConnect(self,endpoints,users,creds):
+        for endpoint in endpoints:
+            prevHop = Path.getPath(None,endpoint)[-1].getSrc()
+            gateway = Connection.findWorkingByEndpoint(prevHop).initConnect(False)
+            for user in users:
+                for cred in creds:
+                    connection = Connection(endpoint,user,cred)
+                    if connection.connect(gateway):
+                        break;
+            gateway.close()
+
+
     def connect(self,endpoint,user,cred):
         connection = Connection(endpoint,user,cred)
-        connection.connect()
+        return connection.connect()
 
     def run(self,endpoint,user,cred,payload):
         connection = Connection(endpoint,user,cred)
-        connection.run(payload,self.workspaceFolder)
+        return connection.run(payload,self.workspaceFolder)
 
     def connectTarget(self,arg):
         connection = Connection.fromTarget(arg)
-        connection.connect()
+        return connection.connect()
 
     def runTarget(self,arg,payloadName):
         connection = Connection.fromTarget(arg)
         payload = Extensions.getPayload(payloadName)
-        connection.run(payload,self.workspaceFolder)
+        return connection.run(payload,self.workspaceFolder)
 
 #################################################################
 ###################           PATHS           ###################
