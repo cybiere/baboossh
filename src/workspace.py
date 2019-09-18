@@ -131,6 +131,7 @@ class Workspace():
         credsContent = Extensions.getAuthMethod(credsType).fromStatement(stmt)
         newCreds = Creds(credsType,credsContent)
         newCreds.save()
+        return newCreds.getId()
 
     def showCreds(self,credsId):
         if credsId[0] == '#':
@@ -220,11 +221,11 @@ class Workspace():
                 gateway = None
             else:
                 prevHop = Path.getPath(None,endpoint)[-1].getSrc()
-                gateway = Connection.findWorkingByEndpoint(prevHop).initConnect(False)
+                gateway = Connection.findWorkingByEndpoint(prevHop).connect(gw=None,silent=True)
             for user in users:
                 for cred in creds:
                     connection = Connection(endpoint,user,cred)
-                    if connection.connect(gateway):
+                    if connection.testConnect(gateway):
                         break;
             if gateway is not None:
                 gateway.close()
@@ -234,14 +235,14 @@ class Workspace():
             gateway = None
         else:
             prevHop = Path.getPath(None,endpoint)[-1].getSrc()
-            gateway = Connection.findWorkingByEndpoint(prevHop).initConnect(False)
+            gateway = Connection.findWorkingByEndpoint(prevHop).connect(gw=None,silent=True)
         found = False
         with open(wordlist.getFile(),"r") as f:
             for w in f:
                 password = w.rstrip()
                 cred = Creds("password",password)
                 connection = Connection(endpoint,user,cred,brute=True)
-                if connection.connect(gateway):
+                if connection.testConnect(gateway):
                     cred.save()
                     connection.save()
                     found=True
@@ -256,7 +257,7 @@ class Workspace():
 
     def connect(self,endpoint,user,cred):
         connection = Connection(endpoint,user,cred)
-        return connection.connect()
+        return connection.testConnect()
 
     def run(self,endpoint,user,cred,payload):
         connection = Connection(endpoint,user,cred)
@@ -264,7 +265,7 @@ class Workspace():
 
     def connectTarget(self,arg):
         connection = Connection.fromTarget(arg)
-        return connection.connect()
+        return connection.testConnect()
 
     def runTarget(self,arg,payloadName):
         connection = Connection.fromTarget(arg)

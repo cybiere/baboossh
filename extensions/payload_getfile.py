@@ -1,7 +1,7 @@
 from os.path import join,exists
 from os import mkdir
-import readline
 import sys
+import asyncio, asyncssh
 
 class ExtStr(type):
     def __str__(self):
@@ -21,10 +21,10 @@ class BaboosshExt(object,metaclass=ExtStr):
         return "Retrieve file from target"
     
     @classmethod
-    def run(cls,socket, connection, wspaceFolder):
+    async def run(cls,socket, connection, wspaceFolder):
         try:
             e = cls(socket,connection, wspaceFolder)
-            e.start()
+            await e.start()
         except Exception as e:
             print("Error : "+str(e))
             return False
@@ -35,53 +35,22 @@ class BaboosshExt(object,metaclass=ExtStr):
         self.connection = connection
         self.wspaceFolder = wspaceFolder
     
-    def listContent(self,folder):
-        ret = []
-        res = self.socket.run("ls -FA "+folder,hide=True)
-        for element in res.stdout.splitlines():
-            ret.append(join(folder,element))
-        return ret
-
-    def complete(self, text, state):
-        response = None
-        if state == 0:
-            if text == "":
-                folder = "/"
-            else:
-                path,sep,t = text.rpartition("/")
-                if path == "":
-                    folder = "/"
-                else:
-                    folder = path+"/"
-            self.options = self.listContent(folder)
-            # This is the first time for this text, so build a match list.
-            if text:
-                self.matches = [s 
-                                for s in self.options
-                                if s and s.startswith(text)]
-            else:
-                self.matches = self.options[:]
-        try:
-            response = self.matches[state]
-        except IndexError:
-            response = None
-        return response
-
-    def start(self):
-        oldcompleter = readline.get_completer()
-        readline.set_completer(self.complete)
-        lootFolder = join(self.wspaceFolder,"loot",str(self.connection.getEndpoint()),"")
+    async def start(self):
+        lootFolder = join(self.wspaceFolder,"loot",str(self.connection.getEndpoint()).replace(':','-'),"")
         if not exists(lootFolder):
             mkdir(lootFolder)
         filepath = input('Remote file% ')
-        readline.set_completer(oldcompleter)
         #TODO check if file or folder
         print("Retreiving file "+filepath+"... ",end="")
         sys.stdout.flush()
-        fileDest=join(lootFolder,filepath.replace('/','_'))
-        self.socket.get(filepath,fileDest)
+        filedest=join(lootFolder,filepath.replace('/','_'))
+        try:
+            await asyncssh.scp((self.socket,filepath),filedest,recurse=True)
+        except Exception as e:
+            print("Error "+str(type(e))+": "+str(e))
+            return False
         print("Done")
-        print("File saved as "+fileDest)
+        print("File saved as "+filedest)
 
 
 

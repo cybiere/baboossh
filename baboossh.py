@@ -9,9 +9,6 @@ import re
 import argparse
 from cmd2 import with_argparser
 
-import logging
-logging.getLogger("paramiko").setLevel(logging.CRITICAL)
-
 config = configparser.ConfigParser()
 config.read('config.ini')
 if "DEFAULT" not in config or "workspaces" not in config['DEFAULT']:
@@ -287,11 +284,11 @@ Available commands:
     def creds_add(self,stmt):
         credsType = vars(stmt)['type']
         try:
-            self.workspace.addCreds_Manual(credsType,stmt)
+            credsId = self.workspace.addCreds_Manual(credsType,stmt)
         except Exception as e:
             print("Credentials addition failed: "+str(e))
         else:
-            print("Credentials added.")
+            print("Credentials #"+str(credsId)+" added.")
 
     def creds_help(self,stmt):
         self.do_help("creds")

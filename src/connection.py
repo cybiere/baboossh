@@ -1,12 +1,11 @@
 import sqlite3
-from fabric import Connection as FabConnection
 from src.params import dbConn,Extensions
 from src.host import Host
 from src.endpoint import Endpoint
 from src.user import User
 from src.creds import Creds
 from src.path import Path
-import sys
+import asyncio, asyncssh, sys
 
 class Connection():
     def __init__(self,endpoint,user,cred,brute=False):
@@ -169,64 +168,58 @@ class Connection():
                 raise ValueError("No working connection for supplied endpoint")
             return connection
         return None
-
-    def initConnect(self,target=True,gw=None,retry=True):
-        kwargs = {} #Add default values here
+    
+    async def async_openConnection(self,gw=None):
         authArgs = self.getCred().getKwargs()
-        if target and not self.brute:
-            print("Establishing connection to \033[1;32;40m"+str(self.getUser())+"@"+str(self.getEndpoint())+"\033[0m (with creds "+str(self.getCred())+")",end="...")
-            sys.stdout.flush()
-        if gw is not None:
-            c = FabConnection(host=self.getEndpoint().getIp(),port=self.getEndpoint().getPort(),user=self.getUser().getName(),connect_kwargs={**kwargs, **authArgs},gateway=gw)
-        else:
-            if Path.hasDirectPath(self.getEndpoint()):
-                #Direct connect
-                c = FabConnection(host=self.getEndpoint().getIp(),port=self.getEndpoint().getPort(),user=self.getUser().getName(),connect_kwargs={**kwargs, **authArgs})
-            else:
-                #Get previous hop
+        try:
+            conn = await asyncssh.connect(self.getEndpoint().getIp(), port=self.getEndpoint().getPort(), tunnel=gw, known_hosts=None, username=self.getUser().getName(),**authArgs)
+        except Exception as e:
+            if not self.brute:
+                print("Error occured: "+str(e))
+            return None
+        return conn
+
+    
+    def initConnect(self,gw=None,retry=True):
+        if gw is None:
+            if not Path.hasDirectPath(self.getEndpoint()):
                 prevHop = Path.getPath(None,self.getEndpoint())[-1].getSrc()
                 gateway = Connection.findWorkingByEndpoint(prevHop)
-                c = FabConnection(host=self.getEndpoint().getIp(),port=self.getEndpoint().getPort(),user=self.getUser().getName(),connect_kwargs={**kwargs, **authArgs},gateway=gateway.initConnect(False))
+                gw = gateway.initConnect()
+        return asyncio.get_event_loop().run_until_complete(self.async_openConnection(gw))
+
+    def connect(self,gw=None,silent=False):
+        if self.brute:
+            silent=True
+        if not silent:
+            print("Establishing connection to \033[1;32;40m"+str(self.getUser())+"@"+str(self.getEndpoint())+"\033[0m (with creds "+str(self.getCred())+")",end="...")
+            sys.stdout.flush()
+        c = self.initConnect(gw)
         self.setTested(True)
-        try:
-            c.open()
-        except Exception as e:
-            if self.brute:
-                return None
-            if "Error reading SSH protocol banner" in str(e):
-                if retry:
-                    print("\033[1;33;40mTimeout\033[0m, retrying...")
-                    return self.initConnect(target,gw,False)
-                else:
-                    print("> Retry failed")
-            else:
-                print("> "+str(e))
-            self.setWorking(False)
-            self.save()
-            return None
-        if target and not self.brute:
-            print("> \033[1;31;40mPWND\033[0m")
-        self.setWorking(True)
+        self.setWorking(c is not None)
         if not self.brute:
             self.save()
+        if c is not None and not silent:
+            print("> \033[1;31;40mPWND\033[0m")
         return c
 
-    def connect(self,gw=None):
-        c = self.initConnect(True,gw)
-        if c == None:
+    def testConnect(self,gw=None):
+        c = self.connect(gw)
+        if c is None:
             return False
         c.close()
         return True
+
+    async def async_run(self,c,payload,wspaceFolder):
+        return await payload.run(c,self,wspaceFolder)
 
     def run(self,payload,wspaceFolder,gw=None):
-        c = self.initConnect(True,gw)
-        if c == None:
+        c = self.connect(gw)
+        if c is None:
             return False
-        ret = payload.run(c,self,wspaceFolder)
+        asyncio.get_event_loop().run_until_complete(self.async_run(c,payload,wspaceFolder))
         c.close()
         return True
-
-
 
     def toList(self):
         return str(self)
