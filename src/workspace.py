@@ -11,6 +11,7 @@ from src.creds import Creds
 from src.connection import Connection
 from src.path import Path
 from src.wordlist import Wordlist
+from src.tunnel import Tunnel
 
 
 
@@ -63,6 +64,7 @@ class Workspace():
             raise ValueError("Workspace "+name+" does not exist")
         dbConn.connect(name)
         self.name = name
+        self.tunnels = {}
         self.options = {
             "endpoint":None,
             "user":None,
@@ -294,7 +296,40 @@ class Workspace():
         for path in chain:
             print(path)
 
+#################################################################
+###################          TUNNELS          ###################
+#################################################################
 
+    def getTunnels(self):
+        return list(self.tunnels.values())
+
+    def getTunnelsPort(self):
+        return list(self.tunnels.keys())
+
+    def getTunnelsList(self):
+        return [ str(t) for t in list(self.tunnels.values()) ]
+
+    def openTunnel(self,target,port=None):
+        if port is not None and port in self.tunnels.keys():
+            print("A tunnel is already opened at port "+str(port))
+            return False
+        connection = Connection.fromTarget(target)
+        try:
+            t = Tunnel(connection,port)
+        except Exception as e:
+            print("Error opening tunnel: "+str(e))
+            return False
+        self.tunnels[t.getPort()] = t
+        return True
+
+    def closeTunnel(self,port):
+        if port not in self.tunnels.keys():
+            print("No tunnel on port "+str(port))
+        t = self.tunnels.pop(port)
+        try:
+            t.close()
+        except Exception as e:
+            print("Error closing tunnel: "+str(e))
 
 #################################################################
 ###################          GETTERS          ###################
@@ -381,6 +416,8 @@ class Workspace():
         return self.options[key]
 
     def close(self):
+        for tunnel in self.tunnels.values():
+            tunnel.close()
         dbConn.close()
         print("Closing workspace "+self.name)
 

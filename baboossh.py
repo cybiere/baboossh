@@ -688,6 +688,61 @@ Available commands:
                         break;
 
 #################################################################
+###################          TUNNELS          ###################
+#################################################################
+
+    def tunnel_help(self,stmt):
+        self.do_help('tunnel')
+
+    def tunnel_list(self,stmt):
+        print("Current tunnels in workspace:")
+        tunnels = self.workspace.getTunnels()
+        if not tunnels:
+            print("No tunnels in current workspace")
+            return
+        for tunnel in tunnels:
+            print(tunnel.toList())
+
+    def tunnel_open(self,stmt):
+        connectionStr = getattr(stmt, 'connection', None)
+        port = getattr(stmt, 'port', None)
+        self.workspace.openTunnel(connectionStr,port)
+
+    def tunnel_close(self,stmt):
+        port = getattr(stmt, 'port', None)
+        self.workspace.closeTunnel(port)
+
+    def getOpenTunnels(self):
+        return self.workspace.getTunnelsPort()
+
+    parser_tunnel = argparse.ArgumentParser(prog="tunnel")
+    subparser_tunnel = parser_tunnel.add_subparsers(title='Actions',help='Available actions')
+    parser_tunnel_help = subparser_tunnel.add_parser("help",help='Show tunnel help')
+    parser_tunnel_list = subparser_tunnel.add_parser("list",help='List tunnels')
+    parser_tunnel_open = subparser_tunnel.add_parser("open",help='Open tunnel')
+    parser_tunnel_open.add_argument('connection',help='Connection string',choices_method=getOptionValidConnection)
+    parser_tunnel_open.add_argument('port',help='Tunnel entry port', type=int, nargs='?')
+    parser_tunnel_close = subparser_tunnel.add_parser("close",help='Close tunnel')
+    parser_tunnel_close.add_argument('port',help='Tunnel entry port', type=int,choices_method=getOpenTunnels)
+
+    parser_tunnel_help.set_defaults(func=tunnel_help)
+    parser_tunnel_list.set_defaults(func=tunnel_list)
+    parser_tunnel_open.set_defaults(func=tunnel_open)
+    parser_tunnel_close.set_defaults(func=tunnel_close)
+
+    @cmd2.with_argparser(parser_tunnel)
+    def do_tunnel(self, stmt):
+        '''Manage tunnels'''
+        func = getattr(stmt, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, stmt)
+        else:
+            # No subcommand was provided, so call help
+            self.tunnel_list(None)
+
+
+#################################################################
 ###################            CMD            ###################
 #################################################################
 
