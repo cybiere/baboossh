@@ -248,6 +248,30 @@ class Workspace():
         for path in chain:
             print(path)
 
+    def addPath(self,src,dst):
+        if src.lower() != "local":
+            try:
+                src = Endpoint.findByIpPort(src)
+            except:
+                print("Please specify valid source endpoint in the IP:PORT form or 'local'")
+            if src is None:
+                print("The source endpoint provided doesn't exist in this workspace")
+                return
+        else:
+            src = None
+        try:
+            dst = Endpoint.findByIpPort(dst)
+        except:
+            print("Please specify valid destination endpoint in the IP:PORT form")
+        if dst is None:
+            print("The destination endpoint provided doesn't exist in this workspace")
+            return
+        p = Path(src,dst)
+        p.save()
+        print("Path saved")
+
+
+
 #################################################################
 ###################          TUNNELS          ###################
 #################################################################

@@ -192,7 +192,7 @@ class Connection():
         if self.brute:
             silent=True
         if not silent:
-            print("Establishing connection to \033[1;32;40m"+str(self.getUser())+"@"+str(self.getEndpoint())+"\033[0m (with creds "+str(self.getCred())+")",end="...")
+            print("Establishing connection to \033[1;34;40m"+str(self.getUser())+"@"+str(self.getEndpoint())+"\033[0m (with creds "+str(self.getCred())+")",end="...")
             sys.stdout.flush()
         c = self.initConnect(gw)
         self.setTested(True)
@@ -200,7 +200,7 @@ class Connection():
         if not self.brute:
             self.save()
         if c is not None and not silent:
-            print("> \033[1;31;40mPWND\033[0m")
+            print("> \033[1;32;40mOK\033[0m")
         return c
 
     def testConnect(self,gw=None):
