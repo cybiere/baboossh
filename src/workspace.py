@@ -10,7 +10,6 @@ from src.user import User
 from src.creds import Creds
 from src.connection import Connection
 from src.path import Path
-from src.wordlist import Wordlist
 from src.tunnel import Tunnel
 
 
@@ -70,7 +69,6 @@ class Workspace():
             "user":None,
             "creds":None,
             "payload":None,
-            "wordlist":None,
                 }
 
 #################################################################
@@ -108,22 +106,6 @@ class Workspace():
     def addUser_Manual(self,name):
         newUser = User(name)
         newUser.save()
-
-#################################################################
-###################         WORDLISTS         ###################
-#################################################################
-
-    #Manually add a wordlist
-    def addWordlist_Manual(self,name,filename):
-        newWordlist = Wordlist(name,filename)
-        newWordlist.save()
-
-    def bruteWordlist(self,name,credsId):
-        if credsId[0] == '#':
-            credsId = credsId[1:]
-        creds = Creds.find(credsId)
-        wordlist = Wordlist.findByName(name)
-        creds.bruteforce(wordlist)
 
 #################################################################
 ###################           CREDS           ###################
@@ -191,11 +173,6 @@ class Workspace():
                 if user is None:
                     raise ValueError
                 value = user
-            elif option == "wordlist":
-                wordlist = Wordlist.findByName(value)
-                if wordlist is None:
-                    raise ValueError
-                value = wordlist
             elif option == "creds":
                 if value[0] == '#':
                     credId = value[1:]
@@ -231,31 +208,6 @@ class Workspace():
                         break;
             if gateway is not None:
                 gateway.close()
-
-    def bruteforce(self,endpoint,user,wordlist):
-        if Path.hasDirectPath(endpoint):
-            gateway = None
-        else:
-            prevHop = Path.getPath(None,endpoint)[-1].getSrc()
-            gateway = Connection.findWorkingByEndpoint(prevHop).connect(gw=None,silent=True)
-        found = False
-        with open(wordlist.getFile(),"r") as f:
-            for w in f:
-                password = w.rstrip()
-                cred = Creds("password",password)
-                connection = Connection(endpoint,user,cred,brute=True)
-                if connection.testConnect(gateway):
-                    cred.save()
-                    connection.save()
-                    found=True
-                    print("Password found for user "+str(user)+"@"+str(endpoint)+" : "+password)
-                    break;
-                print(".",end="")
-                sys.stdout.flush()
-        if gateway is not None:
-            gateway.close()
-        if not found:
-            print("Password not found for user "+str(user)+"@"+str(endpoint))
 
     def connect(self,endpoint,user,cred):
         connection = Connection(endpoint,user,cred)
@@ -340,12 +292,6 @@ class Workspace():
 
     def getHosts(self):
         return Host.findAll()
-
-    def getWordlist(self):
-        wordlists = []
-        for wordlist in Wordlist.findAll():
-            wordlists.append(wordlist)
-        return wordlists
 
     def getEndpoints(self):
         endpoints = []
