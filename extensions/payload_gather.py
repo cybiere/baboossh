@@ -57,17 +57,22 @@ class BaboosshExt(object,metaclass=ExtStr):
         endpoints = []
         #Check if hostname is IP or Hostname :
         try:
-            ipaddress.ip_address(hostname)
+            ipobj = ipaddress.ip_address(hostname)
         except ValueError:
             res = await self.socket.run("getent hosts "+hostname+" | awk '{ print $1 }'")
             ips = res.stdout.splitlines()
             for ip in ips:
+                ipobj = ipaddress.ip_address(ip)
+                if ipobj.is_loopback:
+                    continue
                 endpoint = Endpoint(ip,port if port is not None else 22)
                 endpoint.save()
                 path = Path(self.connection.getEndpoint(),endpoint)
                 path.save()
                 endpoints.append(endpoint)
         else:
+            if ipobj.is_loopback:
+                return []
             endpoint = Endpoint(hostname,port if port is not None else 22)
             endpoint.save()
             path = Path(self.connection.getEndpoint(),endpoint)
