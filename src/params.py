@@ -88,6 +88,7 @@ class dbConn():
 class Extensions():
     auths = {}
     payloads = {}
+    exports = {}
 
     @classmethod
     def load(cls):
@@ -113,8 +114,10 @@ class Extensions():
                         dico = cls.auths
                     elif modType == "payload":
                         dico = cls.payloads
+                    elif modType == "export":
+                        dico = cls.exports
                     else:
-                        print(mod+"> module Type Invalid")
+                        print(mod+"> module type Invalid")
                         continue
                     if data.getKey() in dico.keys():
                         print(mod+"> "+modType+' method "'+data.getKey()+'" already registered')
@@ -143,4 +146,13 @@ class Extensions():
     def payloadsAvail(cls):
         return cls.payloads.keys()
 
+    @classmethod
+    def getExport(cls,key):
+        if key not in cls.exports.keys():
+            raise IndexError("Extension "+key+" not found")
+        return cls.exports[key]
+
+    @classmethod
+    def exportAvail(cls):
+        return cls.exports.keys()
 

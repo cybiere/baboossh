@@ -506,8 +506,18 @@ Available commands:
         endpoint = vars(stmt)['endpoint']
         self.workspace.getPathToDst(endpoint)
 
+    def path_add(self,stmt):
+        src = vars(stmt)['src']
+        dst = vars(stmt)['dst']
+        self.workspace.addPath(src,dst)
+
     def path_help(self,stmt):
         self.do_help('path')
+
+    def getEndpointOrLocal(self):
+        endpoints = self.workspace.getEndpoints()
+        endpoints.append("local")
+        return endpoints
 
     parser_path = argparse.ArgumentParser(prog="path")
     subparser_path = parser_path.add_subparsers(title='Actions',help='Available actions')
@@ -515,10 +525,14 @@ Available commands:
     parser_path_list = subparser_path.add_parser("list",help='List paths')
     parser_path_get = subparser_path.add_parser("get",help='Get path to endpoint')
     parser_path_get.add_argument('endpoint',help='Endpoint',choices_method=getOptionEndpoint)
+    parser_path_add = subparser_path.add_parser("add",help='Add path to endpoint')
+    parser_path_add.add_argument('src',help='Source endpoint',choices_method=getEndpointOrLocal)
+    parser_path_add.add_argument('dst',help='Destination endpoint',choices_method=getOptionEndpoint)
 
     parser_path_help.set_defaults(func=path_help)
     parser_path_list.set_defaults(func=path_list)
     parser_path_get.set_defaults(func=path_get)
+    parser_path_add.set_defaults(func=path_add)
 
     @cmd2.with_argparser(parser_path)
     def do_path(self, stmt):
@@ -661,6 +675,32 @@ Available commands:
             # No subcommand was provided, so call help
             self.tunnel_list(None)
 
+#################################################################
+###################          EXPORTS          ###################
+#################################################################
+
+
+    parser_export = argparse.ArgumentParser(prog="export")
+    subparser_export = parser_export.add_subparsers(title='Actions',help='Available exporters')
+    for key in Extensions.exportAvail():
+        export = Extensions.getExport(key)
+        parser_method = subparser_export.add_parser(key,help=export.descr())
+        parser_method.set_defaults(exporter=key)
+        export.buildParser(parser_method)
+
+    @cmd2.with_argparser(parser_export)
+    def do_export(self,stmt):
+        '''Export workspace info'''
+        key = getattr(stmt,'exporter',None)
+        if key is None:
+            print("You must specify an exporter to use")
+            return
+        try:
+            exporter = Extensions.getExport(key)
+        except Exception as e:
+            print("Error: "+str(e))
+            return
+        exporter.run(stmt,self.workspace)
 
 #################################################################
 ###################            CMD            ###################
@@ -673,7 +713,7 @@ Available commands:
         return True
     
     def initPrompt(self):
-        newPrompt = ""
+        newPrompt = "\033[1;33;40m"
         newPrompt = newPrompt+"["+self.workspace.getName()+"]"
         if self.workspace.getOption("endpoint"):
             if self.workspace.getOption("user"):
@@ -689,7 +729,7 @@ Available commands:
             newPrompt = newPrompt+"@..."
         if self.workspace.getOption("payload"):
             newPrompt = newPrompt+"("+str(self.workspace.getOption("payload"))+")"
-        self.prompt = newPrompt+"> "
+        self.prompt = newPrompt+">\033[0m "
 
     def emptyline(self):
         pass
