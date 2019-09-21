@@ -23,6 +23,17 @@ class BaboosshExt(object,metaclass=ExtStr):
         self.connection = connection
         self.wspaceFolder = wspaceFolder
 
+        self.keysHash = {}
+        for c in Creds.findAll():
+            if c.credsType != "privkey":
+                continue
+            path = c.obj.keypath
+            p = subprocess.run(["sha1sum",path], stdout=subprocess.PIPE)
+            out = p.stdout.decode("utf-8")
+            h = out.split(" ",1)[0]
+            self.keysHash[h] = path
+
+
     @classmethod
     def getModType(cls):
         return "payload"
@@ -144,6 +155,8 @@ class BaboosshExt(object,metaclass=ExtStr):
                 elif key == "hostname":
                     curHost['host'] = val
                 elif key == "identityfile":
+                    if val[:2] == '~/':
+                        val = val[2:]
                     curHost['identity'] = val
         if curHost != None:
             if "host" in curHost.keys():
@@ -170,7 +183,7 @@ class BaboosshExt(object,metaclass=ExtStr):
                 for endpoint in endpoints:
                     conn = Connection(endpoint,user,identity)
                     conn.save()
-        print("Found "+str(nbEndpoints)+" enpoints, "+str(nbUsers)+" users and "+str(nbCreds)+" creds in config file")
+        print("Found "+str(nbEndpoints)+" endpoints, "+str(nbUsers)+" users and "+str(nbCreds)+" creds in config file")
 
     async def gatherFromKnown(self):
         lootFolder = os.path.join(self.wspaceFolder,"loot")
@@ -219,8 +232,16 @@ class BaboosshExt(object,metaclass=ExtStr):
             print(e)
             return None
         subprocess.run(["chmod","600",filepath])
+        p = subprocess.run(["sha1sum",filepath], stdout=subprocess.PIPE)
+        output = p.stdout.decode("utf-8")
+        output = output.split(" ",1)[0]
+        if output in self.keysHash.keys():
+            if filepath != self.keysHash[output]:
+                os.remove(filepath)
+            return None
         valid,haspass = Extensions.getAuthMethod("privkey").checkKeyfile(filepath)
         if valid:
+            self.keysHash[output] = filepath
             c= { "passphrase":"","keypath":filepath,"haspass":haspass}
             cred = Creds("privkey",json.dumps(c))
             cred.save()
@@ -256,6 +277,8 @@ class BaboosshExt(object,metaclass=ExtStr):
                     if option != "":
                         if option == "identity":
                             identity = words[i]
+                            if identity[:2] == '~/':
+                                identity = identity[2:]
                         elif option == "port":
                             port = words[i]
                         option = ""
@@ -289,6 +312,6 @@ class BaboosshExt(object,metaclass=ExtStr):
                         conn = Connection(endpoint,user,identity)
                         conn.save()
 
-        print("Found "+str(nbEndpoints)+" enpoints, "+str(nbUsers)+" users and "+str(nbCreds)+" creds in "+historyFile)
+        print("Found "+str(nbEndpoints)+" endpoints, "+str(nbUsers)+" users and "+str(nbCreds)+" creds in "+historyFile)
 
 
