@@ -194,6 +194,24 @@ class Workspace():
 ###################        CONNECTIONS        ###################
 #################################################################
 
+    def parseOptionsTarget(self):
+        user = self.getOption("user")
+        if user is None:
+            users = self.getUsers()
+        else:
+            users = [User.find(user.getId())]
+        endpoint = self.getOption("endpoint")
+        if endpoint is None:
+            endpoints = self.getEndpoints()
+        else:
+            endpoints = [Endpoint.find(endpoint.getId())]
+        cred = self.getOption("creds")
+        if cred is None:
+            creds = self.getCreds()
+        else:
+            creds = [Creds.find(cred.getId())]
+        return (endpoints,users,creds)
+
     def massConnect(self,endpoints,users,creds):
         for endpoint in endpoints:
             if Path.hasDirectPath(endpoint):

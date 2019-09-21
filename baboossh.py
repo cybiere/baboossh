@@ -549,28 +549,6 @@ Available commands:
 ###################          CONNECT          ###################
 #################################################################
 
-    def parseOptionsTarget(self):
-        user = self.workspace.getOption("user")
-        if user is None:
-            users = self.workspace.getUsers()
-        else:
-            users = [user]
-        endpoint = self.workspace.getOption("endpoint")
-        if endpoint is None:
-            endpoints = self.workspace.getEndpoints()
-        else:
-            endpoints = [endpoint]
-        cred = self.workspace.getOption("creds")
-        if cred is None:
-            creds = self.workspace.getCreds()
-        else:
-            creds = [cred]
-        nbIter = len(endpoints)*len(users)*len(creds)
-        if nbIter > 1:
-            if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?",False):
-                raise ValueError
-        return (endpoints,users,creds)
-
     parser_connect = argparse.ArgumentParser(prog="connect")
     parser_connect.add_argument('connection',help='Connection string',nargs="?",choices_method=getOptionConnection)
 
@@ -584,9 +562,13 @@ Available commands:
                 print("Targeted connect failed : "+str(e))
             return
         try:
-            endpoints,users,creds = self.parseOptionsTarget()
+            endpoints,users,creds = self.workspace.parseOptionsTarget()
         except:
             return
+        nbIter = len(endpoints)*len(users)*len(creds)
+        if nbIter > 1:
+            if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?",False):
+                raise ValueError
         if len(endpoints)*len(users)*len(creds) > 1:
             self.workspace.massConnect(endpoints,users,creds)
         else:
@@ -612,9 +594,13 @@ Available commands:
             print("Error : No payload specified")
             return
         try:
-            endpoints,users,creds = self.parseOptionsTarget()
+            endpoints,users,creds = self.workspace.parseOptionsTarget()
         except:
             return
+        nbIter = len(endpoints)*len(users)*len(creds)
+        if nbIter > 1:
+            if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?",False):
+                raise ValueError
         for endpoint in endpoints:
             for user in users:
                 for cred in creds:
