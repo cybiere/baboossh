@@ -66,18 +66,26 @@ class BaboosshExt(object,metaclass=ExtStr):
                 if ipobj.is_loopback:
                     continue
                 endpoint = Endpoint(ip,port if port is not None else 22)
-                endpoint.save()
-                path = Path(self.connection.getEndpoint(),endpoint)
-                path.save()
-                endpoints.append(endpoint)
+                try:
+                    path = Path(self.connection.getEndpoint(),endpoint)
+                except ValueError:
+                    pass
+                else:
+                    endpoint.save()
+                    path.save()
+                    endpoints.append(endpoint)
         else:
             if ipobj.is_loopback:
                 return []
             endpoint = Endpoint(hostname,port if port is not None else 22)
-            endpoint.save()
-            path = Path(self.connection.getEndpoint(),endpoint)
-            path.save()
-            endpoints.append(endpoint)
+            try:
+                path = Path(self.connection.getEndpoint(),endpoint)
+            except ValueError:
+                pass
+            else:
+                endpoint.save()
+                path.save()
+                endpoints.append(endpoint)
         return endpoints
 
     async def gatherFromConfig(self):

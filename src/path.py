@@ -4,6 +4,8 @@ from src.endpoint import Endpoint
 
 class Path():
     def __init__(self,src,dst):
+        if str(src) == str(dst):
+            raise ValueError("Can't create path to self")
         self.src = src
         self.dst = dst
         self.id = None

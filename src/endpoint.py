@@ -117,6 +117,6 @@ class Endpoint():
         return Endpoint(row[0],row[1])
 
     def __str__(self):
-        return self.ip+":"+self.port
+        return self.ip+":"+str(self.port)
 
 
