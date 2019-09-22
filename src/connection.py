@@ -172,7 +172,10 @@ class Connection():
     async def async_openConnection(self,gw=None):
         authArgs = self.getCred().getKwargs()
         try:
-            conn = await asyncssh.connect(self.getEndpoint().getIp(), port=self.getEndpoint().getPort(), tunnel=gw, known_hosts=None, username=self.getUser().getName(),**authArgs)
+            conn = await asyncio.wait_for(asyncssh.connect(self.getEndpoint().getIp(), port=self.getEndpoint().getPort(), tunnel=gw, known_hosts=None, username=self.getUser().getName(),**authArgs), timeout=5)
+        except asyncio.TimeoutError:
+            print("> \033[1;31;40mTimeout\033[0m")
+            return None
         except Exception as e:
             if not self.brute:
                 print("Error occured: "+str(e))
