@@ -72,9 +72,6 @@ class Creds():
             return None
         return Creds(row[0],row[1])
 
-    def toList(self):
-        return " #"+str(self.id)+" <"+self.obj.getKey()+"> "+self.obj.toList()
-
     def show(self):
         self.obj.show()
 

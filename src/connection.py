@@ -224,9 +224,6 @@ class Connection():
         c.close()
         return True
 
-    def toList(self):
-        return str(self)
-
     def __str__(self):
         return str(self.user)+":"+str(self.cred)+"@"+str(self.endpoint)
 

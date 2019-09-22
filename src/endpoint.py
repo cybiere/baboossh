@@ -65,12 +65,6 @@ class Endpoint():
         c.close()
         dbConn.get().commit()
 
-    def toList(self):
-        connection = self.getConnection()
-        if connection is None:
-            return str(self.ip)+":"+str(self.port)
-        return str(self.ip)+":"+str(self.port)+"\tConnect with "+str(connection)
-
     @classmethod
     def findAll(cls):
         ret = []

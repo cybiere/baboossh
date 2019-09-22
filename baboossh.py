@@ -170,8 +170,14 @@ Available commands:
         if not endpoints:
             print("No endpoints in current workspace")
             return
+        data = []
         for endpoint in endpoints:
-            print(endpoint.toList())
+            c = endpoint.getConnection()
+            if c is None:
+                data.append([endpoint,""])
+            else:
+                data.append([endpoint,c])
+        print(tabulate(data,headers=["Endpoint","Working connection"]))
     
     def endpoint_add(self,stmt):
         ip = vars(stmt)['ip']
@@ -217,8 +223,10 @@ Available commands:
         if not users:
             print("No users in current workspace")
             return
+        data = []
         for user in users:
-            print(user.toList())
+            data.append([user])
+        print(tabulate(data,headers=["Username"]))
     
     def user_add(self,stmt):
         name = vars(stmt)['name']
@@ -260,16 +268,20 @@ Available commands:
 
     def creds_types(self,stmt):
         print("Supported credential types:")
+        data = []
         for key in Extensions.authMethodsAvail():
-            print("    - "+key+": "+Extensions.getAuthMethod(key).descr())
+            data.append([key,Extensions.getAuthMethod(key).descr()])
+        print(tabulate(data,headers=["Key","Description"]))
     
     def creds_list(self,stmt):
         creds = self.workspace.getCreds()
         if not creds:
             print("No creds in current workspace")
             return
+        data = []
         for cred in creds:
-            print(cred.toList())
+            data.append(["#"+str(cred.getId()),cred.obj.getKey(),cred.obj.toList()])
+        print(tabulate(data,headers=["ID","Type","Value"]))
 
     def creds_show(self,stmt):
         credsId = vars(stmt)['id']
@@ -337,8 +349,10 @@ Available commands:
 
     def payload_list(self,stmt):
         print("Available payloads:")
+        data = []
         for key in Extensions.payloadsAvail():
-            print("    - "+key+": "+Extensions.getPayload(key).descr())
+            data.append([key,Extensions.getPayload(key).descr()])
+        print(tabulate(data,headers=["Key","Description"]))
     
     def payload_help(self,stmt):
         self.do_help("payload")
@@ -499,8 +513,13 @@ Available commands:
         if not paths:
             print("No paths in current workspace")
             return
+        data = []
         for path in paths:
-            print(path.toList())
+            src = path.src
+            if src == None:
+                src = "Local"
+            data.append([src,path.dst])
+        print(tabulate(data,headers=["Source","Destination"]))
     
     def path_get(self,stmt):
         endpoint = vars(stmt)['endpoint']
@@ -568,7 +587,7 @@ Available commands:
         nbIter = len(endpoints)*len(users)*len(creds)
         if nbIter > 1:
             if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?",False):
-                raise ValueError
+                return
         if len(endpoints)*len(users)*len(creds) > 1:
             self.workspace.massConnect(endpoints,users,creds)
         else:
@@ -600,7 +619,7 @@ Available commands:
         nbIter = len(endpoints)*len(users)*len(creds)
         if nbIter > 1:
             if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?",False):
-                raise ValueError
+                return
         for endpoint in endpoints:
             for user in users:
                 for cred in creds:
@@ -620,8 +639,10 @@ Available commands:
         if not tunnels:
             print("No tunnels in current workspace")
             return
+        data = []
         for tunnel in tunnels:
-            print(tunnel.toList())
+            data.append([tunnel.port,tunnel.connection])
+        print(tabulate(data,headers=["Local port","Destination"]))
 
     def tunnel_open(self,stmt):
         connectionStr = getattr(stmt, 'connection', None)

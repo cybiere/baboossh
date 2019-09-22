@@ -69,9 +69,6 @@ class User():
         return User(row[0])
 
 
-    def toList(self):
-        return "<"+self.name+">"
-
     def __str__(self):
         return self.name
 

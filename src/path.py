@@ -137,9 +137,6 @@ class Path():
             chain.append(Path(Endpoint.find(chainId[i]),Endpoint.find(chainId[i+1])))
         return chain
 
-    def toList(self):
-        return str(self)
-
     def __str__(self):
         if self.src is not None:
             src = str(self.src)

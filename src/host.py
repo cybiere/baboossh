@@ -64,12 +64,6 @@ class Host():
             return None
         return Host(row[0])
 
-    def toList(self):
-        listStr = "<"+self.name+">"
-        for endpoint in self.endpoints:
-            listStr = listStr+"\n\t- "+endpoint.toList()
-        return listStr
-    
     def __str__(self):
         return self.name
 

@@ -42,9 +42,6 @@ class Tunnel():
         self.socket.close()
         print("Tunnel port "+str(self.port)+" closed")
 
-    def toList(self):
-        return str(self)
-
     def __str__(self):
         return str(self.port)+"->"+str(self.connection)
 
