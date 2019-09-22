@@ -1,4 +1,5 @@
 import asyncio, asyncssh, sys
+from os import dup
 
 class ExtStr(type):
     def __str__(self):
@@ -27,8 +28,11 @@ class BaboosshExt(object,metaclass=ExtStr):
     @classmethod
     async def run(cls,socket, connection,wspaceFolder):
         try:
-            result = await socket.create_process(term_type="xterm", stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
-            await result.wait_closed()
+            sout = dup(sys.stdout.fileno())
+            sin = dup(sys.stdin.fileno())
+            result = await socket.run(term_type="xterm", stdin=sin, stdout=sout, stderr=sout)
+        except OSError as e:
+            print(e.errno)
         except Exception as e:
             print("Error : "+str(e))
             return False
