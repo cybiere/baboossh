@@ -721,7 +721,7 @@ Available commands:
     
     def initPrompt(self):
         newPrompt = "\033[1;33;40m"
-        newPrompt = newPrompt+"["+self.workspace.getName()+"]"
+        newPrompt = newPrompt+"["+self.workspace.getName()+"]\033[1;34m"
         if self.workspace.getOption("endpoint"):
             if self.workspace.getOption("user"):
                 newPrompt = newPrompt+str(self.workspace.getOption("user"))
@@ -735,8 +735,8 @@ Available commands:
                 newPrompt = newPrompt+":"+str(self.workspace.getOption("creds"))
             newPrompt = newPrompt+"@..."
         if self.workspace.getOption("payload"):
-            newPrompt = newPrompt+"("+str(self.workspace.getOption("payload"))+")"
-        self.prompt = newPrompt+">\033[0m "
+            newPrompt = newPrompt+"\033[1;31;40m("+str(self.workspace.getOption("payload"))+")\033[0m"
+        self.prompt = newPrompt+"\033[1;33;40m>\033[0m "
 
     def emptyline(self):
         pass
