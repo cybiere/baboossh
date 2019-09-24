@@ -233,6 +233,9 @@ class Workspace():
 
     def run(self,endpoint,user,cred,payload):
         connection = Connection(endpoint,user,cred)
+        if not connection.working:
+            print("Please check connection "+str(connection)+" with connect first")
+            return False
         return connection.run(payload,self.workspaceFolder)
 
     def connectTarget(self,arg):
@@ -241,6 +244,9 @@ class Workspace():
 
     def runTarget(self,arg,payloadName):
         connection = Connection.fromTarget(arg)
+        if not connection.working:
+            print("Please check connection "+str(connection)+" with connect first")
+            return False
         payload = Extensions.getPayload(payloadName)
         return connection.run(payload,self.workspaceFolder)
 
