@@ -195,7 +195,7 @@ class Connection():
         if self.brute:
             silent=True
         if not silent:
-            print("Establishing connection to \033[1;34;40m"+str(self.getUser())+"@"+str(self.getEndpoint())+"\033[0m (with creds "+str(self.getCred())+")",end="...")
+            print("Establishing connection to \033[1;34;40m"+str(self)+"\033[0m",end="...")
             sys.stdout.flush()
         c = self.initConnect(gw)
         self.setTested(True)
