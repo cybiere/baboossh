@@ -462,6 +462,8 @@ Available commands:
     parser_option_payload.add_argument('payload',nargs="?",help='Payload name',choices_method=getOptionPayload)
     parser_option_connection = subparser_option.add_parser("connection",help='Set target connection')
     parser_option_connection.add_argument('connection',nargs="?",help='Connection string',choices_method=getOptionConnection)
+    parser_option_params = subparser_option.add_parser("params",help='Set payload params')
+    parser_option_params.add_argument('params',nargs="*",help='Payload params')
 
     parser_option_help.set_defaults(option="help")
     parser_option_list.set_defaults(option="list")
@@ -470,6 +472,7 @@ Available commands:
     parser_option_endpoint.set_defaults(option="endpoint")
     parser_option_payload.set_defaults(option="payload")
     parser_option_connection.set_defaults(option="connection")
+    parser_option_params.set_defaults(option="params")
 
     @cmd2.with_argparser(parser_option)
     def do_set(self,stmt):
@@ -495,6 +498,8 @@ Available commands:
                 value = vars(stmt)['payload']
             elif option == "connection":
                 value = vars(stmt)['connection']
+            elif option == "params":
+                value = " ".join(vars(stmt)['params'])
             try:
                 self.workspace.setOption(option,value)
             except ValueError:
@@ -595,16 +600,21 @@ Available commands:
 
     parser_run = argparse.ArgumentParser(prog="run")
     parser_run.add_argument('connection',help='Connection string',nargs="?",choices_method=getOptionValidConnection)
-    parser_run.add_argument('payload',help='Payload name',nargs="?",choices_method=getOptionPayload)
+    subparser_run = parser_run.add_subparsers(title='Actions',help='Available actions')
+    for payloadName in Extensions.payloadsAvail():
+        payload = Extensions.getPayload(payloadName)
+        parser_payload = subparser_run.add_parser(payloadName,help=payload.descr())
+        parser_payload.set_defaults(type=payloadName)
+        payload.buildParser(parser_payload)
 
     @cmd2.with_argparser(parser_run)
     def do_run(self,stmt):
-        connect = vars(stmt)['connection']
-        payload = vars(stmt)['payload']
+        connect = getattr(stmt,'connection',None)
+        payload = getattr(stmt,'type',None)
         self._reset_completion_defaults()
         if connect != None and payload != None:
             try:
-                self.workspace.runTarget(connect,payload)
+                self.workspace.runTarget(connect,payload,stmt)
             except Exception as e:
                 print("Run failed : "+str(e))
             return
@@ -612,6 +622,12 @@ Available commands:
         if payload is None:
             print("Error : No payload specified")
             return
+        params = self.workspace.getOption("params")
+
+        parser = argparse.ArgumentParser(description='Params parser')
+        payload.buildParser(parser)
+        stmt = parser.parse_args(params.split())
+
         try:
             endpoints,users,creds = self.workspace.parseOptionsTarget()
         except:
@@ -623,7 +639,7 @@ Available commands:
         for endpoint in endpoints:
             for user in users:
                 for cred in creds:
-                    if self.workspace.run(endpoint,user,cred,payload):
+                    if self.workspace.run(endpoint,user,cred,payload,stmt):
                         break;
 
 #################################################################

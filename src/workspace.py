@@ -69,6 +69,7 @@ class Workspace():
             "user":None,
             "creds":None,
             "payload":None,
+            "params":None,
                 }
 
 #################################################################
@@ -184,10 +185,9 @@ class Workspace():
                 value = creds
             elif option == "payload":
                 value = Extensions.getPayload(value)
+            self.options[option] = value
         else:
             self.options[option] = None
-    
-        self.options[option] = value
         print(option+" => "+str(self.getOption(option)))
 
 #################################################################
@@ -231,24 +231,24 @@ class Workspace():
         connection = Connection(endpoint,user,cred)
         return connection.testConnect()
 
-    def run(self,endpoint,user,cred,payload):
+    def run(self,endpoint,user,cred,payload,stmt):
         connection = Connection(endpoint,user,cred)
         if not connection.working:
             print("Please check connection "+str(connection)+" with connect first")
             return False
-        return connection.run(payload,self.workspaceFolder)
+        return connection.run(payload,self.workspaceFolder,stmt)
 
     def connectTarget(self,arg):
         connection = Connection.fromTarget(arg)
         return connection.testConnect()
 
-    def runTarget(self,arg,payloadName):
+    def runTarget(self,arg,payloadName,stmt):
         connection = Connection.fromTarget(arg)
         if not connection.working:
             print("Please check connection "+str(connection)+" with connect first")
             return False
         payload = Extensions.getPayload(payloadName)
-        return connection.run(payload,self.workspaceFolder)
+        return connection.run(payload,self.workspaceFolder,stmt)
 
 #################################################################
 ###################           PATHS           ###################

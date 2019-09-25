@@ -213,14 +213,14 @@ class Connection():
         c.close()
         return True
 
-    async def async_run(self,c,payload,wspaceFolder):
-        return await payload.run(c,self,wspaceFolder)
+    async def async_run(self,c,payload,wspaceFolder,stmt):
+        return await payload.run(c,self,wspaceFolder,stmt)
 
-    def run(self,payload,wspaceFolder,gw=None):
+    def run(self,payload,wspaceFolder,stmt,gw=None):
         c = self.connect(gw)
         if c is None:
             return False
-        asyncio.get_event_loop().run_until_complete(self.async_run(c,payload,wspaceFolder))
+        asyncio.get_event_loop().run_until_complete(self.async_run(c,payload,wspaceFolder,stmt))
         c.close()
         return True
 

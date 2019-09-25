@@ -11,16 +11,21 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     @classmethod
     def getKey(cls):
-        return "hostname"
+        return "exec"
 
     @classmethod
     def descr(cls):
-        return "Print target hostname"
+        return "Exec command on target"
 
     @classmethod
-    async def run(cls,conn, connection, wspaceFolder):
+    def buildParser(cls,parser):
+        parser.add_argument('cmd',nargs="+",help='Command to execute on target')
+
+    @classmethod
+    async def run(cls,conn, connection, wspaceFolder, stmt):
+        command = " ".join(getattr(stmt,"cmd",["hostname"]))
         try:
-            result = await conn.run("hostname")
+            result = await conn.run(command)
             print(result.stdout,end='')
         except Exception as e:
             print("Error : "+str(e))

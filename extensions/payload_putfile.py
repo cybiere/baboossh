@@ -20,7 +20,11 @@ class BaboosshExt(object,metaclass=ExtStr):
         return "Copy file to target"
     
     @classmethod
-    async def run(cls,socket, connection, wspaceFolder):
+    def buildParser(cls,parser):
+        pass
+
+    @classmethod
+    async def run(cls,socket, connection, wspaceFolder, stmt):
         try:
             e = cls(socket,connection, wspaceFolder)
             await e.start()

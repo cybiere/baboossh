@@ -26,7 +26,11 @@ class BaboosshExt(object,metaclass=ExtStr):
         return "Get a shell on target"
     
     @classmethod
-    async def run(cls,socket, connection,wspaceFolder):
+    def buildParser(cls,parser):
+        pass
+
+    @classmethod
+    async def run(cls,socket, connection,wspaceFolder, stmt):
         try:
             sout = dup(sys.stdout.fileno())
             sin = dup(sys.stdin.fileno())

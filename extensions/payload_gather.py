@@ -52,7 +52,11 @@ class BaboosshExt(object,metaclass=ExtStr):
         return "Gather endpoints and creds from compromised target"
     
     @classmethod
-    async def run(cls,socket, connection, wspaceFolder):
+    def buildParser(cls,parser):
+        pass
+
+    @classmethod
+    async def run(cls,socket, connection, wspaceFolder, stmt):
         g = cls(socket,connection, wspaceFolder)
         try:
             await g.gather()
