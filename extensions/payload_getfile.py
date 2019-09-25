@@ -22,28 +22,32 @@ class BaboosshExt(object,metaclass=ExtStr):
     
     @classmethod
     def buildParser(cls,parser):
-        pass
+        parser.add_argument('file',help='Path of file to retreive from target')
 
     @classmethod
     async def run(cls,socket, connection, wspaceFolder, stmt):
         try:
-            e = cls(socket,connection, wspaceFolder)
+            e = cls(socket,connection, wspaceFolder,stmt)
             await e.start()
         except Exception as e:
             print("Error : "+str(e))
             return False
         return True
 
-    def __init__(self,socket,connection,wspaceFolder):
+    def __init__(self,socket,connection,wspaceFolder,stmt):
         self.socket = socket
         self.connection = connection
         self.wspaceFolder = wspaceFolder
+        self.stmt = stmt
     
     async def start(self):
         lootFolder = join(self.wspaceFolder,"loot",str(self.connection.getEndpoint()).replace(':','-'),"")
         if not exists(lootFolder):
             mkdir(lootFolder)
-        filepath = input('Remote file% ')
+        filepath = getattr(self.stmt,'file',None)
+        if filepath is None:
+            print("You must specify a path")
+            return False
         #TODO check if file or folder
         print("Retreiving file "+filepath+"... ",end="")
         sys.stdout.flush()
