@@ -1,4 +1,5 @@
 import getpass
+import sys
 import os
 import re
 import glob
@@ -22,6 +23,10 @@ class BaboosshExt(object,metaclass=ExtStr):
         self.socket = socket
         self.connection = connection
         self.wspaceFolder = wspaceFolder
+        self.newCreds = []
+        self.newUsers = []
+        self.newEndpoints = []
+        self.newConnections = []
 
         self.keysHash = {}
         for c in Creds.findAll():
@@ -57,12 +62,28 @@ class BaboosshExt(object,metaclass=ExtStr):
         return True
     
     async def gather(self):
+        print("Starting gathering... ",end="")
+        sys.stdout.flush()
+
         await self.gatherFromConfig()
         historyFiles = await self.listHistoryFiles()
         for historyFile in historyFiles:
             await self.gatherFromHistory(historyFile)
         await self.gatherKeys()
         await self.gatherFromKnown()
+        print("Done !")
+        print("Users :")
+        for user in self.newUsers:
+            print(" - "+str(user))
+        print("\nCreds :")
+        for creds in self.newCreds:
+            print(" - "+str(creds))
+        print("\nEndpoints :")
+        for endpoint in self.newEndpoints:
+            print(" - "+str(endpoint))
+        print("\nConnections :")
+        for connection in self.newConnections:
+            print(" - "+str(connection))
 
     async def hostnameToIP(self,hostname,port=None):
         endpoints = []
@@ -89,12 +110,14 @@ class BaboosshExt(object,metaclass=ExtStr):
             if ipobj.is_loopback:
                 return []
             endpoint = Endpoint(hostname,port if port is not None else 22)
+            if endpoint.getId() is None:
+                endpoint.save()
+                self.newEndpoints.append(endpoint)
             try:
                 path = Path(self.connection.getEndpoint(),endpoint)
             except ValueError:
                 pass
             else:
-                endpoint.save()
                 path.save()
                 endpoints.append(endpoint)
         return endpoints
@@ -110,9 +133,6 @@ class BaboosshExt(object,metaclass=ExtStr):
         with open(filepath,'r',errors='replace') as f:
             data = f.read()
         lines = data.split('\n')
-        nbEndpoints = 0
-        nbUsers = 0
-        nbCreds = 0
         curHost = None
         for line in lines:
             if line == '':
@@ -128,21 +148,20 @@ class BaboosshExt(object,metaclass=ExtStr):
                     else:
                         port=None
                     endpoints = await self.hostnameToIP(host,port)
-                    nbEndpoints = nbEndpoints + len(endpoints)
                     user = None
                     identity = None
                     if "user" in curHost.keys():
                         user = User(curHost["user"])
-                        user.save()
-                        nbUsers = nbUsers + 1
+                        if user.getId() is None:
+                            user.save()
+                            self.newUsers.append(user)
                     if "identity" in curHost.keys():
                         identity = await self.getKeyToCreds(curHost["identity"],".")
-                        if identity != None:
-                            nbCreds = nbCreds+1
                     if user is not None and identity is not None:
                         for endpoint in endpoints:
                             conn = Connection(endpoint,user,identity)
                             conn.save()
+                            self.newConnections.append(conn)
                 curHost = {}
                 curHost["name"] = line.split()[1]
             else:
@@ -168,22 +187,20 @@ class BaboosshExt(object,metaclass=ExtStr):
             else:
                 port=None
             endpoints = await self.hostnameToIP(host,port)
-            nbEndpoints = nbEndpoints + len(endpoints)
             user = None
             identity = None
             if "user" in curHost.keys():
                 user = User(curHost["user"])
-                user.save()
-                nbUsers = nbUsers + 1
+                if user.getId() is None:
+                    self.newUsers.append(user)
+                    user.save()
             if "identity" in curHost.keys():
                 identity = await self.getKeyToCreds(curHost["identity"],".")
-                if identity != None:
-                    nbCreds = nbCreds+1
             if user is not None and identity is not None:
                 for endpoint in endpoints:
                     conn = Connection(endpoint,user,identity)
                     conn.save()
-        print("Found "+str(nbEndpoints)+" endpoints, "+str(nbUsers)+" users and "+str(nbCreds)+" creds in config file")
+                    self.newConnections.append(conn)
 
     async def gatherFromKnown(self):
         lootFolder = os.path.join(self.wspaceFolder,"loot")
@@ -196,15 +213,13 @@ class BaboosshExt(object,metaclass=ExtStr):
         with open(filepath,'r',errors='replace') as f:
             data = f.read()
         lines = data.split('\n')
-        endpoints = []
         for line in lines:
             if "|" in line:
                 #The entry is hashed, and should be ignored
                 continue
             targets = line.partition(' ')[0]
             for target in targets.split(','):
-                endpoints = endpoints + await self.hostnameToIP(target)
-        print("Found "+str(len(endpoints))+" hosts in known_hosts")
+                await self.hostnameToIP(target)
 
     async def gatherKeys(self):
         files = []
@@ -215,9 +230,6 @@ class BaboosshExt(object,metaclass=ExtStr):
                 files.append(line)
         for keyfile in files:
             c = await self.getKeyToCreds(keyfile)
-            if c != None:
-                ret.append(c)
-        print("Found "+str(len(ret))+" private keys")
 
     async def getKeyToCreds(self,keyfile,basePath=".ssh"):
         if basePath != ".":
@@ -244,7 +256,9 @@ class BaboosshExt(object,metaclass=ExtStr):
             self.keysHash[output] = filepath
             c= { "passphrase":"","keypath":filepath,"haspass":haspass}
             cred = Creds("privkey",json.dumps(c))
-            cred.save()
+            if cred.getId() is None:
+                cred.save()
+                self.newCreds.append(cred)
             return cred
         else:
             os.remove(filepath)
@@ -261,9 +275,6 @@ class BaboosshExt(object,metaclass=ExtStr):
     async def gatherFromHistory(self,historyFile):
         result = await self.socket.run("cat "+historyFile)
         lines = result.stdout.splitlines()
-        nbEndpoints = 0
-        nbUsers = 0
-        nbCreds = 0
         for line in lines:
             if re.search(r'^ *ssh ',line):
                 option = ""
@@ -298,20 +309,16 @@ class BaboosshExt(object,metaclass=ExtStr):
                 if not host:
                     continue
                 endpoints = await self.hostnameToIP(hostname,port)
-                nbEndpoints = nbEndpoints + len(endpoints)
                 if user is not None:
                     user = User(user)
-                    user.save()
-                    nbUsers = nbUsers + 1
+                    if user.getId() is None:
+                        user.save()
+                        self.newUsers.append(user)
                 if identity is not None:
                     identity = await self.getKeyToCreds(identity,".")
-                    if identity != None:
-                        nbCreds = nbCreds+1
                 if user is not None and identity is not None:
                     for endpoint in endpoints:
                         conn = Connection(endpoint,user,identity)
                         conn.save()
-
-        print("Found "+str(nbEndpoints)+" endpoints, "+str(nbUsers)+" users and "+str(nbCreds)+" creds in "+historyFile)
-
+                        self.newConnections.append(conn)
 
