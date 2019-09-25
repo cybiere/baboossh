@@ -630,7 +630,7 @@ Available commands:
         payload.buildParser(parser)
         if params is None:
             params = ""
-        stmt = parser.parse_args(params.split())
+        stmt,unk= parser.parse_known_args(params.split())
 
         try:
             endpoints,users,creds = self.workspace.parseOptionsTarget()
