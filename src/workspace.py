@@ -212,24 +212,24 @@ class Workspace():
             creds = [Creds.find(cred.getId())]
         return (endpoints,users,creds)
 
-    def massConnect(self,endpoints,users,creds):
+    def massConnect(self,endpoints,users,creds,verbose):
         for endpoint in endpoints:
             if Path.hasDirectPath(endpoint):
                 gateway = None
             else:
                 prevHop = Path.getPath(None,endpoint)[-1].getSrc()
-                gateway = Connection.findWorkingByEndpoint(prevHop).connect(gw=None,silent=True)
+                gateway = Connection.findWorkingByEndpoint(prevHop).connect(gw=None,silent=True,verbose=verbose)
             for user in users:
                 for cred in creds:
                     connection = Connection(endpoint,user,cred)
-                    if connection.testConnect(gateway):
+                    if connection.testConnect(gw=gateway):
                         break;
             if gateway is not None:
                 gateway.close()
 
-    def connect(self,endpoint,user,cred):
+    def connect(self,endpoint,user,cred,verbose):
         connection = Connection(endpoint,user,cred)
-        return connection.testConnect()
+        return connection.testConnect(verbose=verbose)
 
     def run(self,endpoint,user,cred,payload,stmt):
         connection = Connection(endpoint,user,cred)
@@ -238,9 +238,9 @@ class Workspace():
             return False
         return connection.run(payload,self.workspaceFolder,stmt)
 
-    def connectTarget(self,arg):
+    def connectTarget(self,arg,verbose):
         connection = Connection.fromTarget(arg)
-        return connection.testConnect()
+        return connection.testConnect(verbose=verbose)
 
     def runTarget(self,arg,payloadName,stmt):
         connection = Connection.fromTarget(arg)

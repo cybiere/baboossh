@@ -461,7 +461,7 @@ Available commands:
     parser_option_payload = subparser_option.add_parser("payload",help='Set target payload')
     parser_option_payload.add_argument('payload',nargs="?",help='Payload name',choices_method=getOptionPayload)
     parser_option_connection = subparser_option.add_parser("connection",help='Set target connection')
-    parser_option_connection.add_argument('connection',nargs="?",help='Connection string',choices_method=getOptionConnection)
+    parser_option_connection.add_argument('connection',nargs="?",help='Connection string',choices_method=getOptionValidConnection)
     parser_option_params = subparser_option.add_parser("params",help='Set payload params')
     parser_option_params.add_argument('params',nargs="*",help='Payload params')
 
@@ -574,14 +574,16 @@ Available commands:
 #################################################################
 
     parser_connect = argparse.ArgumentParser(prog="connect")
+    parser_connect.add_argument("-v", "--verbose", help="increase output verbosity",action="store_true")
     parser_connect.add_argument('connection',help='Connection string',nargs="?",choices_method=getOptionConnection)
 
     @cmd2.with_argparser(parser_connect)
     def do_connect(self,stmt):
         connect = vars(stmt)['connection']
+        verbose = vars(stmt)['verbose']
         if connect != None:
             try:
-                self.workspace.connectTarget(connect)
+                self.workspace.connectTarget(connect,verbose)
             except Exception as e:
                 print("Targeted connect failed : "+str(e))
             return
@@ -594,9 +596,9 @@ Available commands:
             if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?",False):
                 return
         if len(endpoints)*len(users)*len(creds) > 1:
-            self.workspace.massConnect(endpoints,users,creds)
+            self.workspace.massConnect(endpoints,users,creds,verbose)
         else:
-            self.workspace.connect(endpoints[0],users[0],creds[0])
+            self.workspace.connect(endpoints[0],users[0],creds[0],verbose)
 
     parser_run = argparse.ArgumentParser(prog="run")
     parser_run.add_argument('connection',help='Connection string',nargs="?",choices_method=getOptionValidConnection)
@@ -626,6 +628,8 @@ Available commands:
 
         parser = argparse.ArgumentParser(description='Params parser')
         payload.buildParser(parser)
+        if params is None:
+            params = ""
         stmt = parser.parse_args(params.split())
 
         try:

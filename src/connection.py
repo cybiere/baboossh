@@ -183,21 +183,24 @@ class Connection():
         return conn
 
     
-    def initConnect(self,gw=None,retry=True):
+    def initConnect(self,gw=None,retry=True,verbose=False):
         if gw is None:
             if not Path.hasDirectPath(self.getEndpoint()):
                 prevHop = Path.getPath(None,self.getEndpoint())[-1].getSrc()
                 gateway = Connection.findWorkingByEndpoint(prevHop)
-                gw = gateway.initConnect()
+                gw = gateway.initConnect(verbose=verbose)
+        if verbose:
+            print("> "+str(self)+"...",end="")
+            sys.stdout.flush()
         return asyncio.get_event_loop().run_until_complete(self.async_openConnection(gw))
 
-    def connect(self,gw=None,silent=False):
+    def connect(self,gw=None,silent=False,verbose=False):
         if self.brute:
             silent=True
         if not silent:
             print("Establishing connection to \033[1;34;40m"+str(self)+"\033[0m",end="...")
             sys.stdout.flush()
-        c = self.initConnect(gw)
+        c = self.initConnect(gw,verbose=verbose)
         self.setTested(True)
         self.setWorking(c is not None)
         if not self.brute:
@@ -206,8 +209,8 @@ class Connection():
             print("> \033[1;32;40mOK\033[0m")
         return c
 
-    def testConnect(self,gw=None):
-        c = self.connect(gw)
+    def testConnect(self,gw=None,verbose=False):
+        c = self.connect(gw=gw,verbose=verbose)
         if c is None:
             return False
         c.close()
