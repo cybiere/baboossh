@@ -175,7 +175,7 @@ class Connection():
             conn = await asyncio.wait_for(asyncssh.connect(self.getEndpoint().getIp(), port=self.getEndpoint().getPort(), tunnel=gw, known_hosts=None, username=self.getUser().getName(),**authArgs), timeout=5)
         except asyncio.TimeoutError:
             print("> \033[1;31;40mTimeout\033[0m")
-            return None
+            raise
         except Exception as e:
             if not self.brute:
                 print("Error occured: "+str(e))
@@ -200,11 +200,15 @@ class Connection():
         if not silent:
             print("Establishing connection to \033[1;34;40m"+str(self)+"\033[0m",end="...")
             sys.stdout.flush()
-        c = self.initConnect(gw,verbose=verbose)
-        self.setTested(True)
-        self.setWorking(c is not None)
-        if not self.brute:
-            self.save()
+        try:
+            c = self.initConnect(gw,verbose=verbose)
+        except asyncio.TimeoutError:
+            return None
+        else:
+            self.setTested(True)
+            self.setWorking(c is not None)
+            if not self.brute:
+                self.save()
         if c is not None and not silent:
             print("> \033[1;32;40mOK\033[0m")
         return c
