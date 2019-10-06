@@ -160,6 +160,8 @@ class Connection():
                 raise ValueError("Supplied credentials aren't in workspace")
             return Connection(endpoint,user,cred)
         else:    
+            if ':' not in arg:
+                arg = arg+':22'
             endpoint = Endpoint.findByIpPort(arg)
             if endpoint is None:
                 raise ValueError("Supplied endpoint isn't in workspace")
