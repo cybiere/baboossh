@@ -238,9 +238,22 @@ class Workspace():
             return False
         return connection.run(payload,self.workspaceFolder,stmt)
 
-    def connectTarget(self,arg,verbose):
+    def connectTarget(self,arg,verbose,gw):
+        if gw is not None:
+            e = Endpoint.findByIpPort(gw)
+            if e is None:
+                print("Could not find provided gateway")
+                return False
+            gwconn = Connection.findWorkingByEndpoint(e)
+            gw = gwconn.connect(silent=True)
         connection = Connection.fromTarget(arg)
-        return connection.testConnect(verbose=verbose)
+        working = connection.testConnect(gw=gw,verbose=verbose)
+        if gw is not None:
+            gw.close()
+            if working:
+                p = Path(gwconn.getEndpoint(),connection.getEndpoint())
+                p.save()
+        return working
 
     def runTarget(self,arg,payloadName,stmt):
         connection = Connection.fromTarget(arg)

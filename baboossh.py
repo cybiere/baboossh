@@ -575,15 +575,17 @@ Available commands:
 
     parser_connect = argparse.ArgumentParser(prog="connect")
     parser_connect.add_argument("-v", "--verbose", help="increase output verbosity",action="store_true")
+    parser_connect.add_argument("-g", "--gateway", help="force specific gateway",choices_method=getOptionEndpoint)
     parser_connect.add_argument('connection',help='Connection string',nargs="?",choices_method=getOptionConnection)
 
     @cmd2.with_argparser(parser_connect)
     def do_connect(self,stmt):
         connect = vars(stmt)['connection']
         verbose = vars(stmt)['verbose']
+        gw = getattr(stmt,'gateway',None)
         if connect != None:
             try:
-                self.workspace.connectTarget(connect,verbose)
+                self.workspace.connectTarget(connect,verbose,gw)
             except Exception as e:
                 print("Targeted connect failed : "+str(e))
             return
