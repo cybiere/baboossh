@@ -119,43 +119,45 @@ class BaboosshShell(cmd2.Cmd):
 #################################################################
 ###################           HOSTS           ###################
 #################################################################
-    """
-    def do_host(self, arg):
-        '''HOST: Manage hosts
-Available commands:
-    - host help                 show this help
-    - host list                 list existing hosts
-'''
-        command,sep,params = arg.partition(" ")
-        if command == "list" or command == "":
-            self.host_list()
-        else:
-            if command != "help" and command != "?":
-                print("Unrecognized command.")
-            self.host_help()
-    
-    def host_list(self):
+
+    def host_help(self, stmt):
+        self.do_help("host")
+
+    def host_list(self,stmt):
         print("Current hosts in workspace:")
         hosts = self.workspace.getHosts()
         if not hosts:
             print("No hosts in current workspace")
             return
+        data = []
         for host in hosts:
-            print(host.toList())
+            endpoints = ""
+            for e in host.getEndpoints():
+                if endpoints == "":
+                    endpoints = str(e)
+                else:
+                    endpoints = endpoints + ", "+str(e)
+            data.append([host.getName(),endpoints])
+        print(tabulate(data,headers=["Hostname","Endpoints"]))
+ 
+    parser_host = argparse.ArgumentParser(prog="host")
+    subparser_host = parser_host.add_subparsers(title='Actions',help='Available actions')
+    parser_host_help = subparser_host.add_parser("help",help='Show host help')
+    parser_host_list = subparser_host.add_parser("list",help='List hosts')
 
-    def host_help(self):
-        print('''Available commands:
-    - host help                 show this help
-    - host list                 list existing hosts''')
+    parser_host_help.set_defaults(func=host_help)
+    parser_host_list.set_defaults(func=host_list)
 
-    def complete_host(self, text, line, begidx, endidx):
-        matches = []
-        n = len(text)
-        for word in ['list','help']:
-            if word[:n] == text:
-                matches.append(word)
-        return matches
-    """
+    @cmd2.with_argparser(parser_host)
+    def do_host(self, stmt):
+        '''Manage hosts'''
+        func = getattr(stmt, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, stmt)
+        else:
+            # No subcommand was provided, so call help
+            self.host_list(None)
 
 #################################################################
 ###################         ENDPOINTS         ###################
@@ -174,10 +176,12 @@ Available commands:
         for endpoint in endpoints:
             c = endpoint.getConnection()
             if c is None:
-                data.append([endpoint,""])
-            else:
-                data.append([endpoint,c])
-        print(tabulate(data,headers=["Endpoint","Working connection"]))
+                c = ""
+            h = endpoint.getHost()
+            if h is None:
+                h = ""
+            data.append([endpoint,h,c])
+        print(tabulate(data,headers=["Endpoint","Host","Working connection"]))
     
     def endpoint_add(self,stmt):
         ip = vars(stmt)['ip']

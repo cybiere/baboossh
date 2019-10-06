@@ -28,6 +28,9 @@ class Endpoint():
     def getHost(self):
         return self.host
 
+    def setHost(self,host):
+        self.host = host
+
     def getConnection(self,working=True):
         c = dbConn.get().cursor()
         if working:

@@ -28,7 +28,10 @@ class dbConn():
         c.execute('''CREATE TABLE hosts (
             id INTEGER PRIMARY KEY ASC,
             name TEXT NOT NULL,
-            identifier TEXT
+            uname TEXT,
+            issue TEXT,
+            machineid TEXT,
+            macs TEXT
             )''')
         c.execute('''CREATE TABLE endpoints (
             id INTEGER PRIMARY KEY ASC,
