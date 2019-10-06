@@ -461,7 +461,7 @@ Available commands:
     parser_option_payload = subparser_option.add_parser("payload",help='Set target payload')
     parser_option_payload.add_argument('payload',nargs="?",help='Payload name',choices_method=getOptionPayload)
     parser_option_connection = subparser_option.add_parser("connection",help='Set target connection')
-    parser_option_connection.add_argument('connection',nargs="?",help='Connection string',choices_method=getOptionValidConnection)
+    parser_option_connection.add_argument('connection',nargs="?",help='Connection string',choices_method=getOptionConnection)
     parser_option_params = subparser_option.add_parser("params",help='Set payload params')
     parser_option_params.add_argument('params',nargs="*",help='Payload params')
 
@@ -600,8 +600,14 @@ Available commands:
         else:
             self.workspace.connect(endpoints[0],users[0],creds[0],verbose)
 
+    def getRunTargets(self):
+        connections = self.getOptionValidConnection()
+        endpoints = self.getOptionEndpoint()
+        return connections + endpoints
+
+
     parser_run = argparse.ArgumentParser(prog="run")
-    parser_run.add_argument('connection',help='Connection string',nargs="?",choices_method=getOptionValidConnection)
+    parser_run.add_argument('connection',help='Connection string',nargs="?",choices_method=getRunTargets)
     subparser_run = parser_run.add_subparsers(title='Actions',help='Available actions')
     for payloadName in Extensions.payloadsAvail():
         payload = Extensions.getPayload(payloadName)
