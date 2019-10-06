@@ -256,6 +256,12 @@ class Workspace():
         return working
 
     def runTarget(self,arg,payloadName,stmt):
+        if arg in self.getHostsNames():
+            hosts = Host.findByName(arg)
+            if len(hosts) > 1:
+                print("Several hosts corresponding. Please target endpoint.")
+                return False
+            arg = str(hosts[0].getClosestEndpoint())
         connection = Connection.fromTarget(arg)
         if not connection.working:
             print("Please check connection "+str(connection)+" with connect first")
@@ -351,6 +357,9 @@ class Workspace():
 
     def getHosts(self):
         return Host.findAll()
+
+    def getHostsNames(self):
+        return Host.findAllNames()
 
     def getEndpoints(self):
         endpoints = []

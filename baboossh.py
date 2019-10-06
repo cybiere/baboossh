@@ -137,8 +137,8 @@ class BaboosshShell(cmd2.Cmd):
                     endpoints = str(e)
                 else:
                     endpoints = endpoints + ", "+str(e)
-            data.append([host.getName(),endpoints])
-        print(tabulate(data,headers=["Hostname","Endpoints"]))
+            data.append([host.getId(),host.getName(),endpoints])
+        print(tabulate(data,headers=["ID","Hostname","Endpoints"]))
  
     parser_host = argparse.ArgumentParser(prog="host")
     subparser_host = parser_host.add_subparsers(title='Actions',help='Available actions')
@@ -609,7 +609,8 @@ class BaboosshShell(cmd2.Cmd):
     def getRunTargets(self):
         connections = self.getOptionValidConnection()
         endpoints = self.getOptionEndpoint()
-        return connections + endpoints
+        hosts = self.workspace.getHostsNames()
+        return connections + endpoints + hosts
 
 
     parser_run = argparse.ArgumentParser(prog="run")

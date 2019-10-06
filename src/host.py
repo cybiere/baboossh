@@ -36,6 +36,20 @@ class Host():
     def getMacs(self):
         return self.macs
 
+    def getClosestEndpoint(self):
+        from src.path import Path
+        endpoints = self.getEndpoints()
+        shortestLen = None
+        shortest = None
+        for endpoint in endpoints:
+            if Path.hasDirectPath(endpoint):
+                return endpoint
+            chain = Path.getPath(None,endpoint)
+            if shortestLen is None or len(chain) < shortestLen:
+                shortest = endpoint
+                shortestLen = len(chain)
+        return shortest
+
     def getEndpoints(self):
         from src.endpoint import Endpoint
         endpoints = []
@@ -97,6 +111,16 @@ class Host():
             hosts.append(Host.find(row[0]))
         c.close()
         return hosts
+
+    @classmethod
+    def findAllNames(cls):
+        ret = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT name FROM hosts'):
+            ret.append(row[0])
+        c.close()
+        return ret
+
 
     def __str__(self):
         return self.name
