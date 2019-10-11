@@ -1,19 +1,12 @@
 #!/usr/bin/env python3
 
-from src.params import Extensions
+from src.params import Extensions, workspacesDir
 from src.workspace import Workspace
 from tabulate import tabulate
-import configparser
 import cmd2, sys, os
 import re
 import argparse
 from cmd2 import with_argparser
-
-config = configparser.ConfigParser()
-config.read('config.ini')
-if "DEFAULT" not in config or "workspaces" not in config['DEFAULT']:
-    print("Invalid config file")
-    exit()
 
 Extensions.load()
 
@@ -45,8 +38,8 @@ class BaboosshShell(cmd2.Cmd):
 
     def workspace_list(self, params):
         print("Existing workspaces :")
-        workspaces = [name for name in os.listdir(config['DEFAULT']['workspaces'])
-            if os.path.isdir(os.path.join(config['DEFAULT']['workspaces'], name))]
+        workspaces = [name for name in os.listdir(workspacesDir)
+            if os.path.isdir(os.path.join(workspacesDir, name))]
         for workspace in workspaces:
             if workspace == self.workspace.getName():
                 print(" -["+workspace+"]")
@@ -60,7 +53,7 @@ class BaboosshShell(cmd2.Cmd):
             print('Invalid characters in workspace name. Allowed characters are letters, numbers and ._-')
             return
         #Check if workspace already exists
-        if os.path.exists(os.path.join(config['DEFAULT']['workspaces'],name)):
+        if os.path.exists(os.path.join(workspacesDir,name)):
             print("Workspace already exists")
             return
         try:
@@ -73,7 +66,7 @@ class BaboosshShell(cmd2.Cmd):
     def workspace_use(self,stmt):
         name = vars(stmt)['name']
         #Check if workspace already exists
-        if not os.path.exists(os.path.join(config['DEFAULT']['workspaces'],name)):
+        if not os.path.exists(os.path.join(workspacesDir,name)):
             print("Workspace does not exist")
         try:
             newWorkspace = Workspace(name)
@@ -86,7 +79,7 @@ class BaboosshShell(cmd2.Cmd):
         raise NotImplementedError
 
     def getArgWorkspaces(self):
-        return [name for name in os.listdir(config['DEFAULT']['workspaces']) if os.path.isdir(os.path.join(config['DEFAULT']['workspaces'], name))]
+        return [name for name in os.listdir(workspacesDir) if os.path.isdir(os.path.join(workspacesDir, name))]
 
     parser_wspace = argparse.ArgumentParser(prog="workspace")
     subparser_wspace = parser_wspace.add_subparsers(title='Actions',help='Available actions')
@@ -798,12 +791,12 @@ class BaboosshShell(cmd2.Cmd):
 
 
 if __name__ == '__main__':
-    if not os.path.exists(config['DEFAULT']['workspaces']):
+    if not os.path.exists(workspacesDir):
         print("> First run ? Creating workspaces directory")
-        os.makedirs(config['DEFAULT']['workspaces'])
+        os.makedirs(workspacesDir)
 
     #Create default workspace if not exists
-    if not os.path.exists(os.path.join(config['DEFAULT']['workspaces'],'default')):
+    if not os.path.exists(os.path.join(workspacesDir,'default')):
         Workspace.create('default')
 
     BaboosshShell().cmdloop()

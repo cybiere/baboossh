@@ -1,15 +1,11 @@
 import sqlite3
 import importlib
 import inspect
-import configparser
-from os.path import join,exists,isfile
+from os.path import join,exists,isfile,expanduser
 from os import listdir
 
-config = configparser.ConfigParser()
-config.read('config.ini')
-if "DEFAULT" not in config or "workspaces" not in config['DEFAULT']:
-    print("Invalid config file")
-    exit()
+home = expanduser("~")
+workspacesDir = join(home,".baboossh")
 
 
 class dbConn():
@@ -23,7 +19,7 @@ class dbConn():
 
     @classmethod
     def build(cls,workspace):
-        dbPath = join(config['DEFAULT']['workspaces'],workspace,"workspace.db")
+        dbPath = join(workspacesDir,workspace,"workspace.db")
         c = sqlite3.connect(dbPath)
         c.execute('''CREATE TABLE hosts (
             id INTEGER PRIMARY KEY ASC,
@@ -78,7 +74,7 @@ class dbConn():
     def connect(cls,workspace):
         if cls.__conn is not None:
             cls.__conn.close()
-        dbPath = join(config['DEFAULT']['workspaces'],workspace,"workspace.db")
+        dbPath = join(workspacesDir,workspace,"workspace.db")
         if not exists(dbPath):
             raise ValueError("Workspace database not found, the workspace must be corrupted !")
         cls.__conn = sqlite3.connect(dbPath)

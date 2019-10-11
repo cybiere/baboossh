@@ -1,9 +1,8 @@
 import os
 import re
-import configparser
 import ipaddress
 import sys
-from src.params import dbConn,Extensions
+from src.params import dbConn,Extensions,workspacesDir
 from src.host import Host
 from src.endpoint import Endpoint
 from src.user import User
@@ -11,14 +10,6 @@ from src.creds import Creds
 from src.connection import Connection
 from src.path import Path
 from src.tunnel import Tunnel
-
-
-
-config = configparser.ConfigParser()
-config.read('config.ini')
-if "DEFAULT" not in config or "workspaces" not in config['DEFAULT']:
-    print("Invalid config file")
-    exit()
 
 
 class Workspace():
@@ -35,7 +26,7 @@ class Workspace():
         if re.match('^[\w_\.-]+$', name) is None:
             print('Invalid characters in workspace name. Allowed characters are letters, numbers and ._-')
             raise ValueError
-        workspaceFolder = os.path.join(config['DEFAULT']['workspaces'],name)
+        workspaceFolder = os.path.join(workspacesDir,name)
         if not os.path.exists(workspaceFolder):
             try:
                 os.mkdir(workspaceFolder)
@@ -58,7 +49,7 @@ class Workspace():
         if re.match('^[\w_\.-]+$', name) is None:
             print('Invalid characters in workspace name. Allowed characters are letters, numbers and ._-')
             raise ValueError
-        self.workspaceFolder = os.path.join(config['DEFAULT']['workspaces'],name)
+        self.workspaceFolder = os.path.join(workspacesDir,name)
         if not os.path.exists(self.workspaceFolder):
             raise ValueError("Workspace "+name+" does not exist")
         dbConn.connect(name)
