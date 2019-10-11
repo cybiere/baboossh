@@ -540,12 +540,17 @@ class BaboosshShell(cmd2.Cmd):
         endpoints.append("local")
         return endpoints
 
+    def getEndpointOrHost(self):
+        endpoints = self.workspace.getEndpoints()
+        hosts = self.workspace.getHostsNames()
+        return endpoints + hosts
+
     parser_path = argparse.ArgumentParser(prog="path")
     subparser_path = parser_path.add_subparsers(title='Actions',help='Available actions')
     parser_path_help = subparser_path.add_parser("help",help='Show path help')
     parser_path_list = subparser_path.add_parser("list",help='List paths')
     parser_path_get = subparser_path.add_parser("get",help='Get path to endpoint')
-    parser_path_get.add_argument('endpoint',help='Endpoint',choices_method=getOptionEndpoint)
+    parser_path_get.add_argument('endpoint',help='Endpoint',choices_method=getEndpointOrHost)
     parser_path_add = subparser_path.add_parser("add",help='Add path to endpoint')
     parser_path_add.add_argument('src',help='Source endpoint',choices_method=getEndpointOrLocal)
     parser_path_add.add_argument('dst',help='Destination endpoint',choices_method=getOptionEndpoint)

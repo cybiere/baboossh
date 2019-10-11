@@ -265,6 +265,12 @@ class Workspace():
 #################################################################
 
     def getPathToDst(self,dst):
+        if dst in self.getHostsNames():
+            hosts = Host.findByName(dst)
+            if len(hosts) > 1:
+                print("Several hosts corresponding. Please target endpoint.")
+                return False
+            dst = str(hosts[0].getClosestEndpoint())
         try:
             dst = Endpoint.findByIpPort(dst)
         except:
