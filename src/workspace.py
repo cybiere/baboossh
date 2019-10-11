@@ -269,6 +269,7 @@ class Workspace():
             dst = Endpoint.findByIpPort(dst)
         except:
             print("Please specify a valid endpoint in the IP:PORT form")
+            return
         if dst is None:
             print("The endpoint provided doesn't exist in this workspace")
             return
