@@ -33,9 +33,6 @@ class BaboosshShell(cmd2.Cmd):
 ###################         WORKSPACE         ###################
 #################################################################
 
-    def workspace_help(self, params):
-        self.do_help("workspace")
-
     def workspace_list(self, params):
         print("Existing workspaces :")
         workspaces = [name for name in os.listdir(workspacesDir)
@@ -75,28 +72,20 @@ class BaboosshShell(cmd2.Cmd):
         else:
             self.workspace = newWorkspace
 
-    def workspace_del(self, params):
-        raise NotImplementedError
-
     def getArgWorkspaces(self):
         return [name for name in os.listdir(workspacesDir) if os.path.isdir(os.path.join(workspacesDir, name))]
 
     parser_wspace = argparse.ArgumentParser(prog="workspace")
     subparser_wspace = parser_wspace.add_subparsers(title='Actions',help='Available actions')
-    parser_wspace_help = subparser_wspace.add_parser("help",help='Show workspace help')
     parser_wspace_list = subparser_wspace.add_parser("list",help='List workspaces')
     parser_wspace_add = subparser_wspace.add_parser("add",help='Add a new workspace')
     parser_wspace_add.add_argument('name',help='New workspace name')
     parser_wspace_use = subparser_wspace.add_parser("use",help='Change current workspace')
     use_arg = parser_wspace_use.add_argument('name', help='Name of workspace to use', choices_method=getArgWorkspaces)
-    parser_wspace_del = subparser_wspace.add_parser("del",help='Delete workspace')
-    del_arg = parser_wspace_del.add_argument('name', help='Name of workspace to delete', choices_method=getArgWorkspaces)
 
-    parser_wspace_help.set_defaults(func=workspace_help)
     parser_wspace_list.set_defaults(func=workspace_list)
     parser_wspace_add.set_defaults(func=workspace_add)
     parser_wspace_use.set_defaults(func=workspace_use)
-    parser_wspace_del.set_defaults(func=workspace_del)
 
     @cmd2.with_argparser(parser_wspace)
     def do_workspace(self, stmt):
@@ -106,15 +95,11 @@ class BaboosshShell(cmd2.Cmd):
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            # No subcommand was provided, so call help
             self.workspace_list(None)
 
 #################################################################
 ###################           HOSTS           ###################
 #################################################################
-
-    def host_help(self, stmt):
-        self.do_help("host")
 
     def host_list(self,stmt):
         print("Current hosts in workspace:")
@@ -135,10 +120,8 @@ class BaboosshShell(cmd2.Cmd):
  
     parser_host = argparse.ArgumentParser(prog="host")
     subparser_host = parser_host.add_subparsers(title='Actions',help='Available actions')
-    parser_host_help = subparser_host.add_parser("help",help='Show host help')
     parser_host_list = subparser_host.add_parser("list",help='List hosts')
 
-    parser_host_help.set_defaults(func=host_help)
     parser_host_list.set_defaults(func=host_list)
 
     @cmd2.with_argparser(parser_host)
@@ -149,16 +132,12 @@ class BaboosshShell(cmd2.Cmd):
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            # No subcommand was provided, so call help
             self.host_list(None)
 
 #################################################################
 ###################         ENDPOINTS         ###################
 #################################################################
    
-    def endpoint_help(self, stmt):
-        self.do_help("endpoint")
-
     def endpoint_list(self,stmt):
         print("Current endpoints in workspace:")
         endpoints = self.workspace.getEndpoints()
@@ -189,13 +168,11 @@ class BaboosshShell(cmd2.Cmd):
 
     parser_endpoint = argparse.ArgumentParser(prog="endpoint")
     subparser_endpoint = parser_endpoint.add_subparsers(title='Actions',help='Available actions')
-    parser_endpoint_help = subparser_endpoint.add_parser("help",help='Show endpoint help')
     parser_endpoint_list = subparser_endpoint.add_parser("list",help='List endpoints')
     parser_endpoint_add = subparser_endpoint.add_parser("add",help='Add a new endpoint')
     parser_endpoint_add.add_argument('ip',help='New endpoint ip')
     parser_endpoint_add.add_argument('port',help='New endpoint port', type=int, default=22, nargs='?')
 
-    parser_endpoint_help.set_defaults(func=endpoint_help)
     parser_endpoint_list.set_defaults(func=endpoint_list)
     parser_endpoint_add.set_defaults(func=endpoint_add)
 
@@ -207,7 +184,6 @@ class BaboosshShell(cmd2.Cmd):
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            # No subcommand was provided, so call help
             self.endpoint_list(None)
 
 #################################################################
@@ -234,17 +210,12 @@ class BaboosshShell(cmd2.Cmd):
         else:
             print("User "+name+" added.")
 
-    def user_help(self,stmt):
-        self.do_help("user")
-
     parser_user = argparse.ArgumentParser(prog="user")
     subparser_user = parser_user.add_subparsers(title='Actions',help='Available actions')
-    parser_user_help = subparser_user.add_parser("help",help='Show user help')
     parser_user_list = subparser_user.add_parser("list",help='List users')
     parser_user_add = subparser_user.add_parser("add",help='Add a new user')
     parser_user_add.add_argument('name',help='New user name')
 
-    parser_user_help.set_defaults(func=user_help)
     parser_user_list.set_defaults(func=user_list)
     parser_user_add.set_defaults(func=user_add)
 
@@ -256,7 +227,6 @@ class BaboosshShell(cmd2.Cmd):
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            # No subcommand was provided, so call help
             self.user_list(None)
 
 #################################################################
@@ -299,15 +269,11 @@ class BaboosshShell(cmd2.Cmd):
         else:
             print("Credentials #"+str(credsId)+" added.")
 
-    def creds_help(self,stmt):
-        self.do_help("creds")
-
     def getOptionCreds(self):
         return self.workspace.getCreds()
 
     parser_creds = argparse.ArgumentParser(prog="creds")
     subparser_creds = parser_creds.add_subparsers(title='Actions',help='Available actions')
-    parser_creds_help = subparser_creds.add_parser("help",help='Show credentials help')
     parser_creds_list = subparser_creds.add_parser("list",help='List saved credentials')
     parser_creds_types = subparser_creds.add_parser("types",help='List available credentials types')
     parser_creds_show = subparser_creds.add_parser("show",help='Show credentials details')
@@ -322,7 +288,6 @@ class BaboosshShell(cmd2.Cmd):
         parser_method.set_defaults(type=methodName)
         method.buildParser(parser_method)
 
-    parser_creds_help.set_defaults(func=creds_help)
     parser_creds_list.set_defaults(func=creds_list)
     parser_creds_types.set_defaults(func=creds_types)
     parser_creds_show.set_defaults(func=creds_show)
@@ -337,7 +302,6 @@ class BaboosshShell(cmd2.Cmd):
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            # No subcommand was provided, so call help
             self.creds_list(None)
 
 #################################################################
@@ -351,15 +315,10 @@ class BaboosshShell(cmd2.Cmd):
             data.append([key,Extensions.getPayload(key).descr()])
         print(tabulate(data,headers=["Key","Description"]))
     
-    def payload_help(self,stmt):
-        self.do_help("payload")
-
     parser_payload = argparse.ArgumentParser(prog="payload")
     subparser_payload = parser_payload.add_subparsers(title='Actions',help='Available actions')
-    parser_payload_help = subparser_payload.add_parser("help",help='Show payload help')
     parser_payload_list = subparser_payload.add_parser("list",help='List payloads')
 
-    parser_payload_help.set_defaults(func=payload_help)
     parser_payload_list.set_defaults(func=payload_list)
 
     @cmd2.with_argparser(parser_payload)
@@ -370,7 +329,6 @@ class BaboosshShell(cmd2.Cmd):
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            # No subcommand was provided, so call help
             self.payload_list(None)
 
 #################################################################
@@ -394,16 +352,11 @@ class BaboosshShell(cmd2.Cmd):
             data.append([connection.getEndpoint(),connection.getUser(),connection.getCred(),connection.isTested(),connection.isWorking()])
         print(tabulate(data,headers=["Endpoint","User","Creds","Tested","Working"]))
     
-    def connection_help(self,stmt):
-        self.do_help("connection")
-
     parser_connection = argparse.ArgumentParser(prog="connection")
     subparser_connection = parser_connection.add_subparsers(title='Actions',help='Available actions')
-    parser_connection_help = subparser_connection.add_parser("help",help='Show connection help')
     parser_connection_list = subparser_connection.add_parser("list",help='List connections')
     parser_connection_list.add_argument('opt',help='Filter options',nargs=argparse.REMAINDER,choices=["working","tested"])
 
-    parser_connection_help.set_defaults(func=connection_help)
     parser_connection_list.set_defaults(func=connection_list)
 
     @cmd2.with_argparser(parser_connection)
@@ -414,7 +367,6 @@ class BaboosshShell(cmd2.Cmd):
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            # No subcommand was provided, so call help
             self.connection_list(None)
 
 
@@ -447,7 +399,6 @@ class BaboosshShell(cmd2.Cmd):
 
     parser_option = argparse.ArgumentParser(prog="option")
     subparser_option = parser_option.add_subparsers(title='Actions',help='Available actions')
-    parser_option_help = subparser_option.add_parser("help",help='Show option help')
     parser_option_list = subparser_option.add_parser("list",help='List options')
     parser_option_user = subparser_option.add_parser("user",help='Set target user')
     parser_option_user.add_argument('username',help='User name',nargs="?",choices_method=getOptionUser)
@@ -462,7 +413,6 @@ class BaboosshShell(cmd2.Cmd):
     parser_option_params = subparser_option.add_parser("params",help='Set payload params')
     parser_option_params.add_argument('params',nargs="*",help='Payload params')
 
-    parser_option_help.set_defaults(option="help")
     parser_option_list.set_defaults(option="list")
     parser_option_user.set_defaults(option="user")
     parser_option_creds.set_defaults(option="creds")
@@ -482,9 +432,6 @@ class BaboosshShell(cmd2.Cmd):
             if option == "list":
                 self.options_list()
                 return
-            elif option == "help":
-                self.do_help("set")
-                return
             elif option == "user":
                 value = vars(stmt)['username']
             elif option == "creds":
@@ -502,7 +449,6 @@ class BaboosshShell(cmd2.Cmd):
             except ValueError:
                 print("Invalid value for "+option)
         else:
-            # No subcommand was provided, so call help
             self.options_list()
 
 #################################################################
@@ -532,9 +478,6 @@ class BaboosshShell(cmd2.Cmd):
         dst = vars(stmt)['dst']
         self.workspace.addPath(src,dst)
 
-    def path_help(self,stmt):
-        self.do_help('path')
-
     def getEndpointOrLocal(self):
         endpoints = self.workspace.getEndpoints()
         endpoints.append("local")
@@ -547,7 +490,6 @@ class BaboosshShell(cmd2.Cmd):
 
     parser_path = argparse.ArgumentParser(prog="path")
     subparser_path = parser_path.add_subparsers(title='Actions',help='Available actions')
-    parser_path_help = subparser_path.add_parser("help",help='Show path help')
     parser_path_list = subparser_path.add_parser("list",help='List paths')
     parser_path_get = subparser_path.add_parser("get",help='Get path to endpoint')
     parser_path_get.add_argument('endpoint',help='Endpoint',choices_method=getEndpointOrHost)
@@ -555,7 +497,6 @@ class BaboosshShell(cmd2.Cmd):
     parser_path_add.add_argument('src',help='Source endpoint',choices_method=getEndpointOrLocal)
     parser_path_add.add_argument('dst',help='Destination endpoint',choices_method=getOptionEndpoint)
 
-    parser_path_help.set_defaults(func=path_help)
     parser_path_list.set_defaults(func=path_list)
     parser_path_get.set_defaults(func=path_get)
     parser_path_add.set_defaults(func=path_add)
@@ -568,7 +509,6 @@ class BaboosshShell(cmd2.Cmd):
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            # No subcommand was provided, so call help
             self.path_list(None)
 
 #################################################################
@@ -661,9 +601,6 @@ class BaboosshShell(cmd2.Cmd):
 ###################          TUNNELS          ###################
 #################################################################
 
-    def tunnel_help(self,stmt):
-        self.do_help('tunnel')
-
     def tunnel_list(self,stmt):
         print("Current tunnels in workspace:")
         tunnels = self.workspace.getTunnels()
@@ -689,7 +626,6 @@ class BaboosshShell(cmd2.Cmd):
 
     parser_tunnel = argparse.ArgumentParser(prog="tunnel")
     subparser_tunnel = parser_tunnel.add_subparsers(title='Actions',help='Available actions')
-    parser_tunnel_help = subparser_tunnel.add_parser("help",help='Show tunnel help')
     parser_tunnel_list = subparser_tunnel.add_parser("list",help='List tunnels')
     parser_tunnel_open = subparser_tunnel.add_parser("open",help='Open tunnel')
     parser_tunnel_open.add_argument('connection',help='Connection string',choices_method=getOptionValidConnection)
@@ -697,7 +633,6 @@ class BaboosshShell(cmd2.Cmd):
     parser_tunnel_close = subparser_tunnel.add_parser("close",help='Close tunnel')
     parser_tunnel_close.add_argument('port',help='Tunnel entry port', type=int,choices_method=getOpenTunnels)
 
-    parser_tunnel_help.set_defaults(func=tunnel_help)
     parser_tunnel_list.set_defaults(func=tunnel_list)
     parser_tunnel_open.set_defaults(func=tunnel_open)
     parser_tunnel_close.set_defaults(func=tunnel_close)
@@ -710,7 +645,6 @@ class BaboosshShell(cmd2.Cmd):
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            # No subcommand was provided, so call help
             self.tunnel_list(None)
 
 #################################################################
