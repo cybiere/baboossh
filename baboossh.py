@@ -345,7 +345,7 @@ class BaboosshShell(cmd2.Cmd):
             working = "working" in opt
         connections = self.workspace.getConnections(tested=tested,working=working)
         if not connections:
-            print("No connetions in current workspace")
+            print("No connections in current workspace")
             return
         data = []
         for connection in connections:

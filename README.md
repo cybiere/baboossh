@@ -1,47 +1,15 @@
-# Baboossh
+# BabooSSH
 
-SSH spreader
+SSH spreading made easy for red teams in a hurry.
 
-# Features
+BabooSSH allows you, from a simple SSH connection to a compromised host, to quickly gather info on other SSH endpoints to pivot and compromise them.
 
-## Implemented
+# Licence
 
-- Workspaces
-- Endpoint connection
-- Creds management
-- Endpoint pivoting
-- Payload executions
+BabooSSH is developped by [Akerva](https://akerva.com/) and provided for free under the GNU/GPLv3.
 
-## Planned
+# Install and documentation
 
-- Exportation plugins
-- Host management
-- Importation plugins
-- Uninteractive mode
-
-# Payloads
-
-## Implemented
-
-- Gather (partial)
-- Hostname
-- Getfile
-- Putfile
-- Shell
-
-## Planned
-
-- ?
-
-# Supported authentication methods
-
-## Implemented
-
-- Password auth
-- Private key (+facultative passphrase)
-
-## Planned
-
-- GSSAPI (Kerberos)
+Have a look on the [wiki](https://github.com/cybiere/BabooSSH/wiki).
 
 
