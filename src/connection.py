@@ -184,6 +184,33 @@ class Connection():
             return None
         return conn
 
+    async def identify(self,socket):
+        try:
+            result = await socket.run("hostname")
+            hostname = result.stdout.rstrip()
+            result = await socket.run("uname -a")
+            uname = result.stdout.rstrip()
+            result = await socket.run("cat /etc/issue")
+            issue = result.stdout.rstrip()
+            result = await socket.run("cat /etc/machine-id")
+            machineId = result.stdout.rstrip()
+            result = await socket.run("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done")
+            macStr = result.stdout.rstrip()
+            macs = macStr.split()
+            newHost = Host(hostname,uname,issue,machineId,macs)
+            if newHost.getId() is None:
+                print("> New host "+hostname+" !")
+            else:
+                print("> Existing host.")
+            newHost.save()
+            e = self.getEndpoint()
+            e.setHost(newHost)
+            e.save()
+        except Exception as e:
+            print("Error : "+str(e))
+            return False
+        return True
+    
     
     def initConnect(self,gw=None,retry=True,verbose=False):
         if gw is None:
@@ -219,6 +246,10 @@ class Connection():
         c = self.connect(gw=gw,verbose=verbose)
         if c is None:
             return False
+        if self.getEndpoint().getHost() is None:
+            print("Endpoint is not linked to host, will now identify",end="...")
+            sys.stdout.flush()
+            asyncio.get_event_loop().run_until_complete(self.identify(c))
         c.close()
         return True
 
