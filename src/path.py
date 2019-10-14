@@ -135,7 +135,12 @@ class Path():
             return None
         chain = []
         for i in range(0,len(chainId)-1):
-            chain.append(Path(Host.find(chainId[i]),Endpoint.find(chainId[i+1])))
+            if chainId[i] == 0:
+                srcHost = None
+            else:
+                srcEndpoint=Endpoint.find(chainId[i])
+                srcHost=srcEndpoint.getHost()
+            chain.append(Path(srcHost,Endpoint.find(chainId[i+1])))
         return chain
 
     def __str__(self):
@@ -146,6 +151,6 @@ class Path():
         if self.dst.getHost() is not None:
             dst = str(self.dst.getHost())
         else:
-            dst = str(dst)
+            dst = str(self.dst)
         return src+" -> "+dst
 
