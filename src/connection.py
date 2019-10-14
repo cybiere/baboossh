@@ -5,6 +5,7 @@ from src.endpoint import Endpoint
 from src.user import User
 from src.creds import Creds
 from src.path import Path
+from src.host import Host
 import asyncio, asyncssh, sys
 
 class Connection():
@@ -171,19 +172,6 @@ class Connection():
             return connection
         return None
     
-    async def async_openConnection(self,gw=None):
-        authArgs = self.getCred().getKwargs()
-        try:
-            conn = await asyncio.wait_for(asyncssh.connect(self.getEndpoint().getIp(), port=self.getEndpoint().getPort(), tunnel=gw, known_hosts=None, username=self.getUser().getName(),**authArgs), timeout=5)
-        except asyncio.TimeoutError:
-            print("> \033[1;31;40mTimeout\033[0m")
-            raise
-        except Exception as e:
-            if not self.brute:
-                print("Error occured: "+str(e))
-            return None
-        return conn
-
     async def identify(self,socket):
         try:
             result = await socket.run("hostname")
@@ -199,9 +187,9 @@ class Connection():
             macs = macStr.split()
             newHost = Host(hostname,uname,issue,machineId,macs)
             if newHost.getId() is None:
-                print("> New host "+hostname+" !")
+                print("> New host: "+hostname)
             else:
-                print("> Existing host.")
+                print("> Existing host: "+hostname)
             newHost.save()
             e = self.getEndpoint()
             e.setHost(newHost)
@@ -210,12 +198,28 @@ class Connection():
             print("Error : "+str(e))
             return False
         return True
-    
-    
+
+    async def async_openConnection(self,gw=None):
+        authArgs = self.getCred().getKwargs()
+        try:
+            conn = await asyncio.wait_for(asyncssh.connect(self.getEndpoint().getIp(), port=self.getEndpoint().getPort(), tunnel=gw, known_hosts=None, username=self.getUser().getName(),**authArgs), timeout=5)
+        except asyncio.TimeoutError:
+            print("> \033[1;31;40mTimeout\033[0m")
+            raise
+        except Exception as e:
+            if not self.brute:
+                print("Error occured: "+str(e))
+            return None
+        return conn
+
     def initConnect(self,gw=None,retry=True,verbose=False):
         if gw is None:
             if not Path.hasDirectPath(self.getEndpoint()):
-                prevHop = Path.getPath(None,self.getEndpoint())[-1].getSrc()
+                paths = Path.getPath(None,self.getEndpoint())
+                if paths is None:
+                    print("> Could not find path to "+str(self.getEndpoint()))
+                    return None
+                prevHop = paths[-1].getSrc().getClosestEndpoint()
                 gateway = Connection.findWorkingByEndpoint(prevHop)
                 gw = gateway.initConnect(verbose=verbose)
         if verbose:
