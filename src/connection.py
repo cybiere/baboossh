@@ -215,7 +215,11 @@ class Connection():
     def initConnect(self,gw=None,retry=True,verbose=False):
         if gw is None:
             if not Path.hasDirectPath(self.getEndpoint()):
-                prevHop = Path.getPath(None,self.getEndpoint())[-1].getSrc().getClosestEndpoint()
+                paths = Path.getPath(None,self.getEndpoint())
+                if paths is None:
+                    print("> Could not find path to "+str(self.getEndpoint()))
+                    return None
+                prevHop = paths[-1].getSrc().getClosestEndpoint()
                 gateway = Connection.findWorkingByEndpoint(prevHop)
                 gw = gateway.initConnect(verbose=verbose)
         if verbose:

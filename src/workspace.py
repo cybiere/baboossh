@@ -208,7 +208,11 @@ class Workspace():
             if Path.hasDirectPath(endpoint):
                 gateway = None
             else:
-                prevHop = Path.getPath(None,endpoint)[-1].getSrc().getClosestEndpoint()
+                paths = Path.getPath(None,endpoint)
+                if paths is None:
+                    print("Could not find path to "+str(endpoint))
+                    return False
+                prevHop = paths[-1].getSrc().getClosestEndpoint()
                 gateway = Connection.findWorkingByEndpoint(prevHop).connect(gw=None,silent=True,verbose=verbose)
             for user in users:
                 for cred in creds:
