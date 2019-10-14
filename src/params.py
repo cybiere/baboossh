@@ -88,6 +88,7 @@ class Extensions():
     auths = {}
     payloads = {}
     exports = {}
+    imports = {}
 
     @classmethod
     def load(cls):
@@ -115,6 +116,8 @@ class Extensions():
                         dico = cls.payloads
                     elif modType == "export":
                         dico = cls.exports
+                    elif modType == "import":
+                        dico = cls.imports
                     else:
                         print(mod+"> module type Invalid")
                         continue
@@ -152,6 +155,16 @@ class Extensions():
         return cls.exports[key]
 
     @classmethod
-    def exportAvail(cls):
+    def exportsAvail(cls):
         return cls.exports.keys()
+
+    @classmethod
+    def getImport(cls,key):
+        if key not in cls.imports.keys():
+            raise IndexError("Extension "+key+" not found")
+        return cls.imports[key]
+
+    @classmethod
+    def importsAvail(cls):
+        return cls.imports.keys()
 

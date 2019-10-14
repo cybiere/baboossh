@@ -654,7 +654,8 @@ class BaboosshShell(cmd2.Cmd):
 
     parser_export = argparse.ArgumentParser(prog="export")
     subparser_export = parser_export.add_subparsers(title='Actions',help='Available exporters')
-    for key in Extensions.exportAvail():
+    parser_method = subparser_export.add_parser('list',help='List available exporters')
+    for key in Extensions.exportsAvail():
         export = Extensions.getExport(key)
         parser_method = subparser_export.add_parser(key,help=export.descr())
         parser_method.set_defaults(exporter=key)
@@ -663,9 +664,13 @@ class BaboosshShell(cmd2.Cmd):
     @cmd2.with_argparser(parser_export)
     def do_export(self,stmt):
         '''Export workspace info'''
-        key = getattr(stmt,'exporter',None)
-        if key is None:
-            print("You must specify an exporter to use")
+        key = getattr(stmt,'exporter','list')
+        if key == 'list':
+            print("Available exporters:")
+            data = []
+            for key in Extensions.exportsAvail():
+                data.append([key,Extensions.getExport(key).descr()])
+            print(tabulate(data,headers=["Key","Description"]))
             return
         try:
             exporter = Extensions.getExport(key)
@@ -673,6 +678,37 @@ class BaboosshShell(cmd2.Cmd):
             print("Error: "+str(e))
             return
         exporter.run(stmt,self.workspace)
+
+#################################################################
+###################          IMPORTS          ###################
+#################################################################
+    
+    parser_import = argparse.ArgumentParser(prog="import")
+    subparser_import = parser_import.add_subparsers(title='Actions',help='Available importers')
+    parser_method = subparser_import.add_parser('list',help='List available importers')
+    for key in Extensions.importsAvail():
+        importer = Extensions.getImport(key)
+        parser_method = subparser_import.add_parser(key,help=importer.descr())
+        parser_method.set_defaults(importer=key)
+        importer.buildParser(parser_method)
+
+    @cmd2.with_argparser(parser_import)
+    def do_import(self,stmt):
+        '''Import workspace info'''
+        key = getattr(stmt,'importer','list')
+        if key == 'list':
+            print("Available importers:")
+            data = []
+            for key in Extensions.importsAvail():
+                data.append([key,Extensions.getImport(key).descr()])
+            print(tabulate(data,headers=["Key","Description"]))
+            return
+        try:
+            importer = Extensions.getImport(key)
+        except Exception as e:
+            print("Error: "+str(e))
+            return
+        importer.run(stmt,self.workspace)
 
 #################################################################
 ###################            CMD            ###################
