@@ -1,6 +1,7 @@
 import sqlite3
 from src.params import dbConn
 from src.endpoint import Endpoint
+from src.host import Host
 
 class Path():
     def __init__(self,src,dst):
@@ -52,7 +53,7 @@ class Path():
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT src,dst FROM paths'):
-            ret.append(Path(Endpoint.find(row[0]),Endpoint.find(row[1])))
+            ret.append(Path(Host.find(row[0]),Endpoint.find(row[1])))
         c.close()
         return ret
 
@@ -64,14 +65,14 @@ class Path():
         c.close()
         if row == None:
             return None
-        return Path(Endpoint.find(row[0]),Endpoint.find(row[1]))
+        return Path(Host.find(row[0]),Endpoint.find(row[1]))
 
     @classmethod
     def findByDst(cls,dst):
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT src,dst FROM paths WHERE dst=?',(dst.getId(), )):
-            ret.append(Path(Endpoint.find(row[0]),Endpoint.find(row[1])))
+            ret.append(Path(Host.find(row[0]),Endpoint.find(row[1])))
         c.close()
         return ret
 
@@ -95,7 +96,7 @@ class Path():
         for endpoint in Endpoint.findAllWorking():
             adj[endpoint.getId()] = []
             c = dbConn.get().cursor()
-            for row in c.execute('SELECT dst FROM paths WHERE src=?',(endpoint.getId(), )):
+            for row in c.execute('SELECT dst FROM paths WHERE src=?',(endpoint.getHost().getId(), )):
                 adj[endpoint.getId()].append(row[0])
             c.close()
         return adj
@@ -134,7 +135,7 @@ class Path():
             return None
         chain = []
         for i in range(0,len(chainId)-1):
-            chain.append(Path(Endpoint.find(chainId[i]),Endpoint.find(chainId[i+1])))
+            chain.append(Path(Host.find(chainId[i]),Endpoint.find(chainId[i+1])))
         return chain
 
     def __str__(self):
@@ -142,5 +143,9 @@ class Path():
             src = str(self.src)
         else:
             src = "local"
-        return src+" -> "+str(self.dst)
+        if self.dst.getHost() is not None:
+            dst = str(self.dst.getHost())
+        else:
+            dst = str(dst)
+        return src+" -> "+dst
 

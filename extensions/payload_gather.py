@@ -103,7 +103,7 @@ class BaboosshExt(object,metaclass=ExtStr):
                     continue
                 endpoint = Endpoint(ip,port if port is not None else 22)
                 try:
-                    path = Path(self.connection.getEndpoint(),endpoint)
+                    path = Path(self.connection.getEndpoint().getHost(),endpoint)
                 except ValueError:
                     pass
                 else:
@@ -118,7 +118,7 @@ class BaboosshExt(object,metaclass=ExtStr):
                 endpoint.save()
                 self.newEndpoints.append(endpoint)
             try:
-                path = Path(self.connection.getEndpoint(),endpoint)
+                path = Path(self.connection.getEndpoint().getHost(),endpoint)
             except ValueError:
                 pass
             else:

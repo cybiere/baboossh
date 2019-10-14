@@ -18,7 +18,7 @@ def yesNo(prompt,default=None):
     else:
         choices = "[y,N]"
     a = ""
-    while a not in ["y","n"]:
+    while a.lower() not in ["y","n"]:
         a = input(prompt+" "+choices+" ")
         if a == "" and default is not None:
             a = "y" if default else "n"
