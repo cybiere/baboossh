@@ -1,10 +1,8 @@
-# BabooSSH
-
 <p align="center">
-[[https://raw.githubusercontent.com/wiki/cybiere/baboossh/img/logo.png]]
+<img src="https://raw.githubusercontent.com/wiki/cybiere/baboossh/img/logo.png" /><br />
+SSH spreading made easy for red teams in a hurry.
 </p>
 
-SSH spreading made easy for red teams in a hurry.
 
 BabooSSH allows you, from a simple SSH connection to a compromised host, to quickly gather info on other SSH endpoints to pivot and compromise them.
 
