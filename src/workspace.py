@@ -76,7 +76,7 @@ class Workspace():
         return True
 
     #Manually add a endpoint
-    def addEndpoint_Manual(self,ip,port,directPath=True):
+    def addEndpoint_Manual(self,ip,port):
         if not self.checkIsIP(ip):
             print("The address given isn't a valid IP")
             raise ValueError
@@ -86,9 +86,6 @@ class Workspace():
 
         newEndpoint = Endpoint(ip,port)
         newEndpoint.save()
-        if directPath:
-            newPath = Path(None,newEndpoint)
-            newPath.save()
 
 #################################################################
 ###################           USERS           ###################

@@ -78,12 +78,30 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         #Check if workspace already exists
         if not os.path.exists(os.path.join(workspacesDir,name)):
             print("Workspace does not exist")
+            return
         try:
             newWorkspace = Workspace(name)
         except:
             print("Workspace change failed")
         else:
             self.workspace = newWorkspace
+
+    def workspace_del(self,stmt):
+        name = vars(stmt)['name']
+        #Check if workspace already exists
+        if not os.path.exists(os.path.join(workspacesDir,name)):
+            print("Workspace does not exist")
+            return
+        if self.workspace.name == name:
+            print("Cannot delete current workspace, please change workspace first.")
+            return
+        if not yesNo("Are you sure you want to delete workspace "+name+"?",default=False):
+            return
+        from shutil import rmtree
+        rmtree(os.path.join(workspacesDir,name))
+        print("Workspace deleted !")
+        
+        
 
     def getArgWorkspaces(self):
         return [name for name in os.listdir(workspacesDir) if os.path.isdir(os.path.join(workspacesDir, name))]
@@ -95,10 +113,13 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     parser_wspace_add.add_argument('name',help='New workspace name')
     parser_wspace_use = subparser_wspace.add_parser("use",help='Change current workspace')
     use_arg = parser_wspace_use.add_argument('name', help='Name of workspace to use', choices_method=getArgWorkspaces)
+    parser_wspace_del = subparser_wspace.add_parser("delete",help='Delete workspace')
+    del_arg = parser_wspace_del.add_argument('name', help='Name of workspace to delete', choices_method=getArgWorkspaces)
 
     parser_wspace_list.set_defaults(func=workspace_list)
     parser_wspace_add.set_defaults(func=workspace_add)
     parser_wspace_use.set_defaults(func=workspace_use)
+    parser_wspace_del.set_defaults(func=workspace_del)
 
     @cmd2.with_argparser(parser_wspace)
     def do_workspace(self, stmt):
@@ -171,9 +192,8 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     def endpoint_add(self,stmt):
         ip = vars(stmt)['ip']
         port = str(vars(stmt)['port'])
-        addDirectPath = yesNo("Add path from local host ?",True)
         try:
-            self.workspace.addEndpoint_Manual(ip,port,addDirectPath)
+            self.workspace.addEndpoint_Manual(ip,port)
         except Exception as e:
             print("Endpoint addition failed: "+str(e))
         else:
