@@ -1,13 +1,13 @@
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(
-    name="BabooSSH",
-    version="0.9",
-    packages=find_packages(),
-    scripts=['baboossh.py'],
+    name="baboossh",
+    version="0.9.1",
+    packages=find_namespace_packages(include=['baboossh*']),
+    scripts=['bin/baboossh'],
 
     install_requires=['cmd2','tabulate','asyncssh','python-libnmap'],
 

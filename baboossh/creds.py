@@ -1,5 +1,5 @@
 import sqlite3
-from src.params import dbConn,Extensions
+from baboossh.params import dbConn,Extensions
 
 
 class Creds():

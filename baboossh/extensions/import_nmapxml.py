@@ -1,8 +1,8 @@
 import cmd2
 from libnmap.parser import NmapParser, NmapParserException
-from src.host import Host
-from src.endpoint import Endpoint
-from src.path import Path
+from baboossh.host import Host
+from baboossh.endpoint import Endpoint
+from baboossh.path import Path
 
 class ExtStr(type):
     def __str__(self):

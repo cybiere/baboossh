@@ -2,14 +2,14 @@ import os
 import re
 import ipaddress
 import sys
-from src.params import dbConn,Extensions,workspacesDir
-from src.host import Host
-from src.endpoint import Endpoint
-from src.user import User
-from src.creds import Creds
-from src.connection import Connection
-from src.path import Path
-from src.tunnel import Tunnel
+from baboossh.params import dbConn,Extensions,workspacesDir
+from baboossh.host import Host
+from baboossh.endpoint import Endpoint
+from baboossh.user import User
+from baboossh.creds import Creds
+from baboossh.connection import Connection
+from baboossh.path import Path
+from baboossh.tunnel import Tunnel
 
 
 class Workspace():

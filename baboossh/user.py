@@ -1,5 +1,5 @@
 import sqlite3
-from src.params import dbConn
+from baboossh.params import dbConn
 
 
 class User():

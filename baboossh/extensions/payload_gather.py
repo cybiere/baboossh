@@ -7,11 +7,11 @@ import ipaddress
 import json
 import subprocess
 import asyncio, asyncssh
-from src.endpoint import Endpoint
-from src.user import User
-from src.path import Path
-from src.creds import Creds
-from src.connection import Connection
+from baboossh.endpoint import Endpoint
+from baboossh.user import User
+from baboossh.path import Path
+from baboossh.creds import Creds
+from baboossh.connection import Connection
 
 class ExtStr(type):
     def __str__(self):
@@ -240,7 +240,7 @@ class BaboosshExt(object,metaclass=ExtStr):
     async def getKeyToCreds(self,keyfile,basePath=".ssh"):
         if basePath != ".":
             keyfile = os.path.join(basePath,keyfile)
-        from src.params import Extensions
+        from baboossh.params import Extensions
         keysFolder = os.path.join(self.wspaceFolder,"keys")
         filename = str(self.connection.getEndpoint()).replace(":","-")+"_"+str(self.connection.getUser())+"_"+keyfile.replace("/","_")
         filepath = os.path.join(keysFolder,filename)

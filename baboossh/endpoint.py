@@ -1,6 +1,6 @@
 import sqlite3
-from src.params import dbConn
-from src.host import Host
+from baboossh.params import dbConn
+from baboossh.host import Host
 
 class Endpoint():
     def __init__(self,ip,port):
@@ -42,7 +42,7 @@ class Endpoint():
         if ret is None:
             return None
 
-        from src.connection import Connection
+        from baboossh.connection import Connection
         return Connection.find(ret[0])
 
     def save(self):

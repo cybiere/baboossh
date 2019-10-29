@@ -1,7 +1,7 @@
 import sqlite3
-from src.params import dbConn
-from src.endpoint import Endpoint
-from src.host import Host
+from baboossh.params import dbConn
+from baboossh.endpoint import Endpoint
+from baboossh.host import Host
 
 class Path():
     def __init__(self,src,dst):

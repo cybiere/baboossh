@@ -1,7 +1,7 @@
 import sqlite3
 import importlib
 import inspect
-from os.path import join,exists,isfile,expanduser
+from os.path import join,exists,isfile,expanduser,dirname
 from os import listdir
 
 home = expanduser("~")
@@ -91,10 +91,10 @@ class Extensions():
     @classmethod
     def load(cls):
         nbExt = 0
-        extensionsFolder = 'extensions'
+        extensionsFolder = join(dirname(__file__),'extensions')
         files = [f.split('.')[0] for f in listdir(extensionsFolder) if isfile(join(extensionsFolder,f)) and f[0] != '.']
         for mod in files:
-            moduleName = extensionsFolder+"."+mod
+            moduleName = "baboossh.extensions."+mod
             try:
                 newMod = importlib.import_module(moduleName)
             except Exception as e:

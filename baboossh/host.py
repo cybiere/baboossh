@@ -1,6 +1,6 @@
 import sqlite3
 import json
-from src.params import dbConn
+from baboossh.params import dbConn
 
 
 class Host():
@@ -37,7 +37,7 @@ class Host():
         return self.macs
 
     def getClosestEndpoint(self):
-        from src.path import Path
+        from baboossh.path import Path
         endpoints = self.getEndpoints()
         shortestLen = None
         shortest = None
@@ -51,7 +51,7 @@ class Host():
         return shortest
 
     def getEndpoints(self):
-        from src.endpoint import Endpoint
+        from baboossh.endpoint import Endpoint
         endpoints = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT ip,port FROM endpoints WHERE host=?',(self.id,)):
