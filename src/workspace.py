@@ -374,7 +374,7 @@ class Workspace():
     
     def getTargetsValidList(self):
         connections = []
-        for connection in Connection.findByWorking(True):
+        for connection in Connection.findWorking():
             connections.append(str(connection))
         return connections
 

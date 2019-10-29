@@ -51,11 +51,9 @@ class dbConn():
             tested INTEGER NOT NULL,
             working INTEGER NOT NULL,
             root INTEGER NOT NULL,
-            host INTEGER,
             endpoint INTEGER NOT NULL,
             user INTEGER NOT NULL,
             cred INTEGER,
-            FOREIGN KEY(host) REFERENCES hosts(id)
             FOREIGN KEY(endpoint) REFERENCES endpoints(id)
             FOREIGN KEY(user) REFERENCES users(id)
             FOREIGN KEY(cred) REFERENCES creds(id)

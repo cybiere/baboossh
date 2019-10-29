@@ -1,6 +1,5 @@
 import sqlite3
 from src.params import dbConn,Extensions
-from src.host import Host
 from src.endpoint import Endpoint
 from src.user import User
 from src.creds import Creds
@@ -10,7 +9,6 @@ import asyncio, asyncssh, sys
 
 class Connection():
     def __init__(self,endpoint,user,cred,brute=False):
-        self.host = None
         self.endpoint = endpoint
         self.user = user
         self.cred = cred
@@ -22,7 +20,7 @@ class Connection():
         if brute:
             return
         c = dbConn.get().cursor()
-        c.execute('SELECT id,tested,working,root,host FROM connections WHERE endpoint=? AND user=? AND cred=?',(self.endpoint.getId(),self.user.getId(),self.cred.getId()))
+        c.execute('SELECT id,tested,working,root FROM connections WHERE endpoint=? AND user=? AND cred=?',(self.endpoint.getId(),self.user.getId(),self.cred.getId()))
         savedEndpoint = c.fetchone()
         c.close()
         if savedEndpoint is not None:
@@ -30,7 +28,6 @@ class Connection():
             self.tested = savedEndpoint[1] != 0
             self.working = savedEndpoint[2] != 0
             self.root = savedEndpoint[3] != 0
-            self.host = Host.find(savedEndpoint[4]) if savedEndpoint[4] is not None else None
 
     def getId(self):
         return self.id
@@ -40,9 +37,6 @@ class Connection():
 
     def getEndpoint(self):
         return self.endpoint
-
-    def getHost(self):
-        return self.host
 
     def getCred(self):
         return self.cred
@@ -68,7 +62,6 @@ class Connection():
             #If we have an ID, the endpoint is already saved in the database : UPDATE
             c.execute('''UPDATE connections 
                 SET
-                    host = ?,
                     endpoint= ?,
                     user = ?,
                     cred = ?,
@@ -76,26 +69,18 @@ class Connection():
                     working = ?,
                     root = ?
                 WHERE id = ?''',
-                (self.host.getId() if self.host is not None else None, self.endpoint.getId(), self.user.getId(), self.cred.getId(), 1 if self.tested else 0, 1 if self.working else 0, 1 if self.root else 0, self.id))
+                (self.endpoint.getId(), self.user.getId(), self.cred.getId(), self.tested,self.working,self.root, self.id))
         else:
             #The endpoint doesn't exists in database : INSERT
-            c.execute('''INSERT INTO connections(host,endpoint,user,cred,tested,working,root)
-                VALUES (?,?,?,?,?,?,?) ''',
-                (self.host.getId() if self.host is not None else None, self.endpoint.getId(), self.user.getId(), self.cred.getId(), 1 if self.tested else 0, 1 if self.working else 0, 1 if self.root else 0))
+            c.execute('''INSERT INTO connections(endpoint,user,cred,tested,working,root)
+                VALUES (?,?,?,?,?,?) ''',
+                (self.endpoint.getId(), self.user.getId(), self.cred.getId(), self.tested , self.working , self.root ))
             c.close()
             c = dbConn.get().cursor()
             c.execute('SELECT id FROM connections WHERE endpoint=? AND user=? AND cred=?',(self.endpoint.getId(),self.user.getId(),self.cred.getId()))
             self.id  = c.fetchone()[0]
         c.close()
         dbConn.get().commit()
-
-    @classmethod
-    def findByWorking(cls,working):
-        ret = []
-        c = dbConn.get().cursor()
-        for row in c.execute('SELECT endpoint,user,cred FROM connections WHERE working=?',(1 if working else 0,)):
-            ret.append(Connection(Endpoint.find(row[0]),User.find(row[1]),Creds.find(row[2])))
-        return ret
 
     @classmethod
     def find(cls,connectionId):
@@ -213,6 +198,7 @@ class Connection():
         return conn
 
     def initConnect(self,gw=None,verbose=False):
+        addLocalPath = False
         if gw is None:
             if not Path.hasDirectPath(self.getEndpoint()):
                 paths = Path.getPath(None,self.getEndpoint())
@@ -220,6 +206,7 @@ class Connection():
                     print("> No path to "+str(self.getEndpoint())+", trying direct...",end="")
                     sys.stdout.flush()
                     gw = None
+                    addLocalPath = True
                 else:
                     prevHop = paths[-1].getSrc().getClosestEndpoint()
                     gateway = Connection.findWorkingByEndpoint(prevHop)
@@ -227,7 +214,14 @@ class Connection():
         if verbose:
             print("> "+str(self)+"...",end="")
             sys.stdout.flush()
-        return asyncio.get_event_loop().run_until_complete(self.async_openConnection(gw))
+        try:
+            c = asyncio.get_event_loop().run_until_complete(self.async_openConnection(gw))
+        except:
+            raise
+        if addLocalPath:
+            newPath = Path(src=None,dst=self.getEndpoint())
+            newPath.save()
+        return c
 
     def connect(self,gw=None,silent=False,verbose=False):
         if self.brute:
@@ -237,22 +231,7 @@ class Connection():
             sys.stdout.flush()
         try:
             addLocalPath = False
-            if gw is None:
-                if not Path.hasDirectPath(self.getEndpoint()):
-                    paths = Path.getPath(None,self.getEndpoint())
-                    if paths is None:
-                        print("> No path to "+str(self.getEndpoint())+", trying direct...",end="")
-                        sys.stdout.flush()
-                        gw = None
-                        addLocalPath = True
-                    else:
-                        prevHop = paths[-1].getSrc().getClosestEndpoint()
-                        gateway = Connection.findWorkingByEndpoint(prevHop)
-                        gw = gateway.initConnect(verbose=verbose)
-            if verbose:
-                print("> "+str(self)+"...",end="")
-                sys.stdout.flush()
-            c = asyncio.get_event_loop().run_until_complete(self.async_openConnection(gw))
+            c = self.initConnect(gw,verbose)
         except asyncio.TimeoutError:
             return None
         else:
@@ -261,9 +240,6 @@ class Connection():
             if not self.brute:
                 self.save()
         if c is not None:
-            if addLocalPath:
-                newPath = Path(src=None,dst=self.getEndpoint())
-                newPath.save()
             if not silent:
                 print("> \033[1;32;40mOK\033[0m")
         return c
