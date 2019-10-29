@@ -159,15 +159,15 @@ class Connection():
     
     async def identify(self,socket):
         try:
-            result = await socket.run("hostname")
+            result = await asyncio.wait_for(socket.run("hostname"), timeout=3.0)
             hostname = result.stdout.rstrip()
-            result = await socket.run("uname -a")
+            result = await asyncio.wait_for(socket.run("uname -a"), timeout=3.0)
             uname = result.stdout.rstrip()
-            result = await socket.run("cat /etc/issue")
+            result = await asyncio.wait_for(socket.run("cat /etc/issue"), timeout=3.0)
             issue = result.stdout.rstrip()
-            result = await socket.run("cat /etc/machine-id")
+            result = await asyncio.wait_for(socket.run("cat /etc/machine-id"), timeout=3.0)
             machineId = result.stdout.rstrip()
-            result = await socket.run("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done")
+            result = await asyncio.wait_for(socket.run("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done"), timeout=3.0)
             macStr = result.stdout.rstrip()
             macs = macStr.split()
             newHost = Host(hostname,uname,issue,machineId,macs)

@@ -224,6 +224,8 @@ class BaboosshExt(object,metaclass=ExtStr):
             targets = line.partition(' ')[0]
             for target in targets.split(','):
                 await self.hostnameToIP(target)
+        os.remove(filepath)
+
 
     async def gatherKeys(self):
         files = []
