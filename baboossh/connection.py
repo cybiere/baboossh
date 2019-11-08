@@ -21,13 +21,13 @@ class Connection():
             return
         c = dbConn.get().cursor()
         c.execute('SELECT id,tested,working,root FROM connections WHERE endpoint=? AND user=? AND cred=?',(self.endpoint.getId(),self.user.getId(),self.cred.getId()))
-        savedEndpoint = c.fetchone()
+        savedConnection = c.fetchone()
         c.close()
-        if savedEndpoint is not None:
-            self.id = savedEndpoint[0]
-            self.tested = savedEndpoint[1] != 0
-            self.working = savedEndpoint[2] != 0
-            self.root = savedEndpoint[3] != 0
+        if savedConnection is not None:
+            self.id = savedConnection[0]
+            self.tested = savedConnection[1] != 0
+            self.working = savedConnection[2] != 0
+            self.root = savedConnection[3] != 0
 
     def getId(self):
         return self.id
@@ -82,6 +82,16 @@ class Connection():
         c.close()
         dbConn.get().commit()
 
+    def delete(self):
+        if self.id is None:
+            return
+        c = dbConn.get().cursor()
+        c.execute('DELETE FROM connections WHERE id = ?',(self.id,))
+        c.close()
+        dbConn.get().commit()
+        return
+
+
     @classmethod
     def find(cls,connectionId):
         c = dbConn.get().cursor()
@@ -91,6 +101,33 @@ class Connection():
         if row is None:
             return None
         return Connection(Endpoint.find(row[0]),User.find(row[1]),Creds.find(row[2]))
+
+    @classmethod
+    def findByEndpoint(cls,endpoint):
+        ret = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT user,cred FROM connections WHERE endpoint=?',(endpoint.getId(),)):
+            ret.append(Connection(endpoint,User.find(row[0]),Creds.find(row[1])))
+        c.close()
+        return ret
+
+    @classmethod
+    def findByUser(cls,user):
+        ret = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT endpoint,cred FROM connections WHERE user=?',(user.getId(),)):
+            ret.append(Connection(Endpoint.find(row[0]),user,Creds.find(row[1])))
+        c.close()
+        return ret
+
+    @classmethod
+    def findByCreds(cls,creds):
+        ret = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT endpoint,user FROM connections WHERE cred=?',(creds.getId(),)):
+            ret.append(Connection(Endpoint.find(row[0]),User.find(row[1]),creds))
+        c.close()
+        return ret
 
     @classmethod
     def findWorkingByEndpoint(cls,endpoint):

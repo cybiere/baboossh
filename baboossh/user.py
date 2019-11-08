@@ -40,6 +40,18 @@ class User():
         c.close()
         dbConn.get().commit()
 
+    def delete(self):
+        from baboossh.connection import Connection
+        if self.id is None:
+            return
+        for connection in Connection.findByUser(self):
+            connection.delete()
+        c = dbConn.get().cursor()
+        c.execute('DELETE FROM users WHERE id = ?',(self.id,))
+        c.close()
+        dbConn.get().commit()
+        return
+
     @classmethod
     def findAll(cls):
         ret = []

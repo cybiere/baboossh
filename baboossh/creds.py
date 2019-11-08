@@ -41,6 +41,20 @@ class Creds():
         c.close()
         dbConn.get().commit()
 
+    def delete(self):
+        from baboossh.connection import Connection
+        if self.id is None:
+            return
+        for connection in Connection.findByCreds(self):
+            connection.delete()
+        self.obj.delete()
+        c = dbConn.get().cursor()
+        c.execute('DELETE FROM creds WHERE id = ?',(self.id,))
+        c.close()
+        dbConn.get().commit()
+        return
+
+
     def getKwargs(self):
         return self.obj.getKwargs()
 

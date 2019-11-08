@@ -1,6 +1,7 @@
 import json
 import readline
 from os.path import join,exists,basename
+from os import remove
 import sys
 import subprocess
 import cmd2
@@ -100,8 +101,8 @@ class BaboosshExt():
     def toList(self):
         if self.haspass:
             if self.passphrase == "":
-                return self.keypath+" [?]"
-            return self.keypath+" [✔]"
+                return self.keypath+" > [?]"
+            return self.keypath+" > "+self.passphrase
         return self.keypath
 
     def show(self):
@@ -130,4 +131,8 @@ class BaboosshExt():
                 print("Working passphrase already defined")
         else:
             print("Private key doesn't have a passphrase")
+
+    def delete(self):
+        remove(self.keypath)
+        return
 

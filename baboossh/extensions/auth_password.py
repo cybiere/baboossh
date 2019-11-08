@@ -39,3 +39,6 @@ class BaboosshExt():
 
     def edit(self):
         print("Nothing to edit")
+    
+    def delete(self):
+        return

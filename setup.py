@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="baboossh",
-    version="0.9.1",
+    version="0.9.2",
     packages=find_namespace_packages(include=['baboossh*']),
     scripts=['bin/baboossh'],
 

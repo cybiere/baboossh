@@ -68,6 +68,25 @@ class Endpoint():
         c.close()
         dbConn.get().commit()
 
+    def delete(self):
+        from baboossh.path import Path
+        from baboossh.connection import Connection
+        if self.id is None:
+            return
+        if self.host is not None:
+            endpoints = self.host.getEndpoints()
+            if len(endpoints) == 1:
+                self.host.delete()
+        for connection in Connection.findByEndpoint(self):
+            connection.delete()
+        for path in Path.findByDst(self):
+            path.delete()
+        c = dbConn.get().cursor()
+        c.execute('DELETE FROM endpoints WHERE id = ?',(self.id,))
+        c.close()
+        dbConn.get().commit()
+        return
+
     @classmethod
     def findAll(cls):
         ret = []

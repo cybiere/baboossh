@@ -48,6 +48,15 @@ class Path():
         c.close()
         dbConn.get().commit()
 
+    def delete(self):
+        if self.id is None:
+            return
+        c = dbConn.get().cursor()
+        c.execute('DELETE FROM paths WHERE id = ?',(self.id,))
+        c.close()
+        dbConn.get().commit()
+        return
+
     @classmethod
     def findAll(cls):
         ret = []
@@ -66,13 +75,22 @@ class Path():
         if row == None:
             return None
         return Path(Host.find(row[0]),Endpoint.find(row[1]))
-
+    
     @classmethod
     def findByDst(cls,dst):
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT src,dst FROM paths WHERE dst=?',(dst.getId(), )):
             ret.append(Path(Host.find(row[0]),Endpoint.find(row[1])))
+        c.close()
+        return ret
+
+    @classmethod
+    def findBySrc(cls,src):
+        ret = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT dst FROM paths WHERE src=?',(src.getId(), )):
+            ret.append(Path(src,Endpoint.find(row[0])))
         c.close()
         return ret
 

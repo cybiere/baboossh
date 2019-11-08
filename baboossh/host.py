@@ -84,6 +84,21 @@ class Host():
         c.close()
         dbConn.get().commit()
 
+    def delete(self):
+        from baboossh.path import Path
+        if self.id is None:
+            return
+        for path in Path.findBySrc(self):
+            path.delete()
+        for endpoint in self.getEndpoints():
+            endpoint.setHost(None)
+            endpoint.save()
+        c = dbConn.get().cursor()
+        c.execute('DELETE FROM hosts WHERE id = ?',(self.id,))
+        c.close()
+        dbConn.get().commit()
+        return
+
     @classmethod
     def findAll(cls):
         ret = []
@@ -120,7 +135,6 @@ class Host():
             ret.append(row[0])
         c.close()
         return ret
-
 
     def __str__(self):
         return self.name
