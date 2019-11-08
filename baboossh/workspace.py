@@ -76,7 +76,7 @@ class Workspace():
         return True
 
     #Manually add a endpoint
-    def addEndpoint_Manual(self,ip,port):
+    def addEndpoint(self,ip,port):
         if not self.checkIsIP(ip):
             print("The address given isn't a valid IP")
             raise ValueError
@@ -87,14 +87,31 @@ class Workspace():
         newEndpoint = Endpoint(ip,port)
         newEndpoint.save()
 
+    def delEndpoint(self,endpoint):
+        try:
+            endpoint = Endpoint.findByIpPort(endpoint)
+        except ValueError:
+            print("Could not find endpoint.")
+            return False
+        if endpoint is None:
+            print("Could not find endpoint.")
+            return False
+        return self.delete(endpoint)
+
 #################################################################
 ###################           USERS           ###################
 #################################################################
 
-    #Manually add a user
-    def addUser_Manual(self,name):
+    def addUser(self,name):
         newUser = User(name)
         newUser.save()
+
+    def delUser(self,name):
+        user = User.findByUsername(name)
+        if user is None:
+            print("Could not find user.")
+            return False
+        return self.delete(user)
 
 #################################################################
 ###################           HOSTS           ###################
@@ -109,16 +126,14 @@ class Workspace():
         if len(hosts) > 1:
             print("Several hosts corresponding. Please delete endpoints.")
             return False
-        self.delete(hosts[0])
-
-        return True
+        return self.delete(hosts[0])
 
 
 #################################################################
 ###################           CREDS           ###################
 #################################################################
 
-    def addCreds_Manual(self,credsType,stmt):
+    def addCreds(self,credsType,stmt):
         credsContent = Extensions.getAuthMethod(credsType).fromStatement(stmt)
         newCreds = Creds(credsType,credsContent)
         newCreds.save()
@@ -141,6 +156,15 @@ class Workspace():
             print("Specified creds not found")
             return
         creds.edit()
+
+    def delCreds(self,credsId):
+        if credsId[0] == '#':
+            credsId = credsId[1:]
+        creds = Creds.find(credsId)
+        if creds == None:
+            print("Specified creds not found")
+            return False
+        return self.delete(creds)
 
 #################################################################
 ###################          OPTIONS          ###################
@@ -315,14 +339,48 @@ class Workspace():
         for path in chain:
             print(path)
 
+    def delPath(self,src,dst):
+        if src.lower() != "local":
+            if src not in self.getHostsNames():
+                print("Not a known Host name.")
+                return False
+            
+            hosts = Host.findByName(src)
+            if len(hosts) > 1:
+                print("Several hosts corresponding. Add failed")
+                return False
+            src = hosts[0]
+            if src is None:
+                print("The source Host provided doesn't exist in this workspace")
+                return False
+        else:
+            src = None
+        try:
+            dst = Endpoint.findByIpPort(dst)
+        except:
+            print("Please specify valid destination endpoint in the IP:PORT form")
+        if dst is None:
+            print("The destination endpoint provided doesn't exist in this workspace")
+            return False
+        p = Path(src,dst)
+        if p.getId() is None:
+            print("The specified Path doesn't exist in this workspace.")
+            return False
+        return self.delete(p)
+
     def addPath(self,src,dst):
         if src.lower() != "local":
-            try:
-                src = Endpoint.findByIpPort(src)
-            except:
-                print("Please specify valid source endpoint in the IP:PORT form or 'local'")
+            if src not in self.getHostsNames():
+                print("Not a known Host name.")
+                return
+            
+            hosts = Host.findByName(src)
+            if len(hosts) > 1:
+                print("Several hosts corresponding. Add failed")
+                return
+            src = hosts[0]
             if src is None:
-                print("The source endpoint provided doesn't exist in this workspace")
+                print("The source Host provided doesn't exist in this workspace")
                 return
         else:
             src = None

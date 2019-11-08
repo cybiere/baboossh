@@ -81,10 +81,10 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         hosts = self.workspace.getHostsNames()
         return connections + endpoints + hosts
 
-    def getEndpointOrLocal(self):
-        endpoints = self.workspace.getEndpoints()
-        endpoints.append("local")
-        return endpoints
+    def getHostOrLocal(self):
+        hosts = self.workspace.getHostsNames()
+        hosts.append("local")
+        return hosts
 
     def getEndpointOrHost(self):
         endpoints = self.workspace.getEndpoints()
@@ -246,11 +246,15 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         ip = vars(stmt)['ip']
         port = str(vars(stmt)['port'])
         try:
-            self.workspace.addEndpoint_Manual(ip,port)
+            self.workspace.addEndpoint(ip,port)
         except Exception as e:
             print("Endpoint addition failed: "+str(e))
         else:
             print("Endpoint "+ip+":"+port+" added.")
+
+    def endpoint_del(self,stmt):
+        endpoint = vars(stmt)['endpoint']
+        return self.workspace.delEndpoint(endpoint)
 
     parser_endpoint = argparse.ArgumentParser(prog="endpoint")
     subparser_endpoint = parser_endpoint.add_subparsers(title='Actions',help='Available actions')
@@ -258,9 +262,12 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     parser_endpoint_add = subparser_endpoint.add_parser("add",help='Add a new endpoint')
     parser_endpoint_add.add_argument('ip',help='New endpoint ip')
     parser_endpoint_add.add_argument('port',help='New endpoint port', type=int, default=22, nargs='?')
+    parser_endpoint_del = subparser_endpoint.add_parser("delete",help='Set target endpoint')
+    parser_endpoint_del.add_argument('endpoint',help='Endpoint',choices_method=getOptionEndpoint)
 
     parser_endpoint_list.set_defaults(func=endpoint_list)
     parser_endpoint_add.set_defaults(func=endpoint_add)
+    parser_endpoint_del.set_defaults(func=endpoint_del)
 
     @cmd2.with_argparser(parser_endpoint)
     def do_endpoint(self, stmt):
@@ -290,20 +297,27 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     def user_add(self,stmt):
         name = vars(stmt)['name']
         try:
-            self.workspace.addUser_Manual(name)
+            self.workspace.addUser(name)
         except Exception as e:
             print("User addition failed: "+str(e))
         else:
             print("User "+name+" added.")
+
+    def user_del(self,stmt):
+        name = vars(stmt)['name']
+        return self.workspace.delUser(name)
 
     parser_user = argparse.ArgumentParser(prog="user")
     subparser_user = parser_user.add_subparsers(title='Actions',help='Available actions')
     parser_user_list = subparser_user.add_parser("list",help='List users')
     parser_user_add = subparser_user.add_parser("add",help='Add a new user')
     parser_user_add.add_argument('name',help='New user name')
+    parser_user_del = subparser_user.add_parser("delete",help='Delete a user')
+    parser_user_del.add_argument('name',help='User name',choices_method=getOptionUser)
 
     parser_user_list.set_defaults(func=user_list)
     parser_user_add.set_defaults(func=user_add)
+    parser_user_del.set_defaults(func=user_del)
 
     @cmd2.with_argparser(parser_user)
     def do_user(self, stmt):
@@ -346,10 +360,15 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         self.workspace.editCreds(credsId)
         pass
 
+    def creds_del(self,stmt):
+        credsId = vars(stmt)['id']
+        self.workspace.delCreds(credsId)
+        pass
+
     def creds_add(self,stmt):
         credsType = vars(stmt)['type']
         try:
-            credsId = self.workspace.addCreds_Manual(credsType,stmt)
+            credsId = self.workspace.addCreds(credsType,stmt)
         except Exception as e:
             print("Credentials addition failed: "+str(e))
         else:
@@ -370,12 +389,15 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         parser_method = subparser_creds_add.add_parser(methodName,help=method.descr())
         parser_method.set_defaults(type=methodName)
         method.buildParser(parser_method)
+    parser_creds_del = subparser_creds.add_parser("delete",help='Delete credentials from workspace')
+    parser_creds_del.add_argument('id',help='Creds identifier',choices_method=getOptionCreds)
 
     parser_creds_list.set_defaults(func=creds_list)
     parser_creds_types.set_defaults(func=creds_types)
     parser_creds_show.set_defaults(func=creds_show)
     parser_creds_edit.set_defaults(func=creds_edit)
     parser_creds_add.set_defaults(func=creds_add)
+    parser_creds_del.set_defaults(func=creds_del)
 
     @cmd2.with_argparser(parser_creds)
     def do_creds(self, stmt):
@@ -550,18 +572,27 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         dst = vars(stmt)['dst']
         self.workspace.addPath(src,dst)
 
+    def path_del(self,stmt):
+        src = vars(stmt)['src']
+        dst = vars(stmt)['dst']
+        self.workspace.delPath(src,dst)
+
     parser_path = argparse.ArgumentParser(prog="path")
     subparser_path = parser_path.add_subparsers(title='Actions',help='Available actions')
     parser_path_list = subparser_path.add_parser("list",help='List paths')
     parser_path_get = subparser_path.add_parser("get",help='Get path to endpoint')
     parser_path_get.add_argument('endpoint',help='Endpoint',choices_method=getEndpointOrHost)
     parser_path_add = subparser_path.add_parser("add",help='Add path to endpoint')
-    parser_path_add.add_argument('src',help='Source endpoint',choices_method=getEndpointOrLocal)
+    parser_path_add.add_argument('src',help='Source host',choices_method=getHostOrLocal)
     parser_path_add.add_argument('dst',help='Destination endpoint',choices_method=getOptionEndpoint)
+    parser_path_del = subparser_path.add_parser("delete",help='Delete path to endpoint')
+    parser_path_del.add_argument('src',help='Source host',choices_method=getHostOrLocal)
+    parser_path_del.add_argument('dst',help='Destination endpoint',choices_method=getOptionEndpoint)
 
     parser_path_list.set_defaults(func=path_list)
     parser_path_get.set_defaults(func=path_get)
     parser_path_add.set_defaults(func=path_add)
+    parser_path_del.set_defaults(func=path_del)
 
     @cmd2.with_argparser(parser_path)
     def do_path(self, stmt):
