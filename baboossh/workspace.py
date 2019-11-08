@@ -97,6 +97,24 @@ class Workspace():
         newUser.save()
 
 #################################################################
+###################           HOSTS           ###################
+#################################################################
+
+    def delHost(self,host):
+        if host not in self.getHostsNames():
+            print("Not a known Host name.")
+            return False
+        
+        hosts = Host.findByName(host)
+        if len(hosts) > 1:
+            print("Several hosts corresponding. Please delete endpoints.")
+            return False
+        self.delete(hosts[0])
+
+        return True
+
+
+#################################################################
 ###################           CREDS           ###################
 #################################################################
 
@@ -181,6 +199,13 @@ class Workspace():
 #################################################################
 ###################        CONNECTIONS        ###################
 #################################################################
+    
+    def delConnection(self,target):
+        connection = Connection.fromTarget(target)
+        if connection is None:
+            print("Connection not found.")
+            return false
+        return self.delete(connection)
 
     def parseOptionsTarget(self):
         user = self.getOption("user")
@@ -346,6 +371,51 @@ class Workspace():
             t.close()
         except Exception as e:
             print("Error closing tunnel: "+str(e))
+
+#################################################################
+###################          DELETE           ###################
+#################################################################
+
+    def delete(self,target):
+        if isinstance(target,Connection):
+            #Delete connection
+            print("Connection")
+            return True
+        if isinstance(target,Path):
+            #Delete path
+            print("Path")
+            return True
+        if isinstance(target,Host):
+            #Delete paths from host
+            #Delete host
+            print("Host")
+            return True
+        if isinstance(target,Creds):
+            #find connections
+            #delete connections
+            #delete CredsObject
+            #delete Creds
+            print("Creds")
+            return True
+        if isinstance(target,User):
+            #find connections
+            #delete connections
+            #delete user
+            print("User")
+            return True
+        if isinstance(target,Endpoint):
+            #find host
+            #if endpoint is last to host
+                #delete host
+            #find connections
+            #delete connections
+            #find paths to endpoint
+            #delete paths
+            #delete endpoint
+            print("Endpoint")
+            return True
+        print("Unknown object, couldn't delete.")
+        return False
 
 #################################################################
 ###################          GETTERS          ###################

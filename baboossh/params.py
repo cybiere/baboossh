@@ -62,7 +62,7 @@ class dbConn():
             id INTEGER PRIMARY KEY ASC,
             src INTEGER NOT NULL,
             dst INTEGER NOT NULL,
-            FOREIGN KEY(src) REFERENCES endpoints(id)
+            FOREIGN KEY(src) REFERENCES hosts(id)
             FOREIGN KEY(dst) REFERENCES endpoints(id)
             )''')
         c.commit()
