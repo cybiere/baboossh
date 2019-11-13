@@ -615,6 +615,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 
     @cmd2.with_argparser(parser_connect)
     def do_connect(self,stmt):
+        '''Try connection to endpoint and identify host'''
         connect = vars(stmt)['connection']
         verbose = vars(stmt)['verbose']
         gw = getattr(stmt,'gateway',None)
@@ -649,6 +650,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 
     @cmd2.with_argparser(parser_run)
     def do_run(self,stmt):
+        '''Run a payload on a connection'''
         connect = getattr(stmt,'connection',None)
         payload = getattr(stmt,'type',None)
         self._reset_completion_defaults()
