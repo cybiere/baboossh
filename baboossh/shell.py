@@ -578,6 +578,10 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         dst = vars(stmt)['dst']
         self.workspace.delPath(src,dst)
 
+    def path_find(self,stmt):
+        dst = vars(stmt)['dst']
+        self.workspace.findPath(dst)
+
     parser_path = argparse.ArgumentParser(prog="path")
     subparser_path = parser_path.add_subparsers(title='Actions',help='Available actions')
     parser_path_list = subparser_path.add_parser("list",help='List paths')
@@ -589,11 +593,14 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     parser_path_del = subparser_path.add_parser("delete",help='Delete path to endpoint')
     parser_path_del.add_argument('src',help='Source host',choices_method=getHostOrLocal)
     parser_path_del.add_argument('dst',help='Destination endpoint',choices_method=getOptionEndpoint)
+    parser_path_find = subparser_path.add_parser("find",help='Find shortest path to endpoint or host')
+    parser_path_find.add_argument('dst',help='Destination',choices_method=getEndpointOrHost)
 
     parser_path_list.set_defaults(func=path_list)
     parser_path_get.set_defaults(func=path_get)
     parser_path_add.set_defaults(func=path_add)
     parser_path_del.set_defaults(func=path_del)
+    parser_path_find.set_defaults(func=path_find)
 
     @cmd2.with_argparser(parser_path)
     def do_path(self, stmt):

@@ -395,6 +395,57 @@ class Workspace():
         p.save()
         print("Path saved")
 
+    def findPath(self,dst):
+        #DST is HOST
+        #if dst in self.getHostsNames():
+        #    hosts = Host.findByName(dst)
+        #    if len(hosts) > 1:
+        #        print("Several hosts corresponding. Please target endpoint.")
+        #        return False
+        #    dst = str(hosts[0].getClosestEndpoint())
+        try:
+            dst = Endpoint.findByIpPort(dst)
+        except:
+            print("Please specify a valid endpoint in the IP:PORT form")
+            return
+        if dst is None:
+            print("The endpoint provided doesn't exist in this workspace")
+            return
+        if Path.hasDirectPath(dst):
+            print("The destination should be reachable directly from the host.")
+            return
+
+        #Try direct connect
+        connection = Connection.findWorkingByEndpoint(dst)
+        if not connection:
+            #TODO we should be able to check connectivity without creds
+            print("Could not find working connection parameters for target.")
+            return 
+        #gwconn = Connection.findWorkingByEndpoint(e)
+        #gw = gwconn.connect(silent=True)
+        workingDirect = connection.testConnect(gw="local",silent=True)
+        if workingDirect:
+            p = Path(None,dst)
+            p.save()
+            print("Could reach target directly, path added.")
+            return
+
+        for h in Path.getHostsOrderedClosest():
+            e = h.getClosestEndpoint()
+            gateway = Connection.findWorkingByEndpoint(e)
+            gw = gateway.initConnect(verbose=False)
+            working = connection.testConnect(gw=gw,silent=True)
+            gw.close()
+            if working:
+                p = Path(h,dst)
+                p.save()
+                print("Working with gw "+str(e)+" (host "+str(h)+")")
+                return
+        return
+
+
+
+
 #################################################################
 ###################          TUNNELS          ###################
 #################################################################

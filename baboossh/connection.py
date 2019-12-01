@@ -248,6 +248,8 @@ class Connection():
                     prevHop = paths[-1].getSrc().getClosestEndpoint()
                     gateway = Connection.findWorkingByEndpoint(prevHop)
                     gw = gateway.initConnect(verbose=verbose)
+        elif gw == "local":
+            gw = None
         if verbose:
             print("> "+str(self)+"...",end="")
             sys.stdout.flush()
@@ -281,8 +283,8 @@ class Connection():
                 print("> \033[1;32;40mOK\033[0m")
         return c
 
-    def testConnect(self,gw=None,verbose=False):
-        c = self.connect(gw=gw,verbose=verbose)
+    def testConnect(self,gw=None,verbose=False,silent=False):
+        c = self.connect(gw=gw,verbose=verbose,silent=silent)
         if c is None:
             return False
         if self.getEndpoint().getHost() is None:

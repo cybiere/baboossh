@@ -2,6 +2,7 @@ import sqlite3
 from baboossh.params import dbConn
 from baboossh.endpoint import Endpoint
 from baboossh.host import Host
+from collections import deque
 
 class Path():
     def __init__(self,src,dst):
@@ -87,9 +88,13 @@ class Path():
 
     @classmethod
     def findBySrc(cls,src):
+        if src==None:
+            srcId = 0
+        else:
+            srcId = src.getId()
         ret = []
         c = dbConn.get().cursor()
-        for row in c.execute('SELECT dst FROM paths WHERE src=?',(src.getId(), )):
+        for row in c.execute('SELECT dst FROM paths WHERE src=?',(srcId, )):
             ret.append(Path(src,Endpoint.find(row[0])))
         c.close()
         return ret
@@ -160,6 +165,27 @@ class Path():
                 srcHost=srcEndpoint.getHost()
             chain.append(Path(srcHost,Endpoint.find(chainId[i+1])))
         return chain
+    
+    @classmethod
+    def getHostsOrderedClosest(cls):
+        ret = []
+        done = []
+        queue = deque([None])
+        try:
+            while True:
+                s = queue.popleft()
+                for p in cls.findBySrc(s):
+                    e = p.getDst()
+                    h = e.getHost()
+                    if h is not None:
+                        if h.getId() not in done:
+                            done.append(h.getId())
+                            ret.append(h)
+                            queue.append(h)
+        except IndexError:
+            #Queue is empty
+            pass
+        return ret
 
     def __str__(self):
         if self.src is not None:
