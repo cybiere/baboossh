@@ -8,6 +8,7 @@ import re
 import argparse
 from cmd2 import with_argparser
 
+Extensions.load()
 
 def yesNo(prompt,default=None):
     if default is None:
@@ -834,7 +835,6 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         
 
     def __init__(self):
-        Extensions.load()
 
         super().__init__()
 
