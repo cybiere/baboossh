@@ -1,6 +1,7 @@
 import sqlite3
 from baboossh.params import dbConn
 from baboossh.host import Host
+import asyncio, asyncssh, sys
 
 class Endpoint():
     def __init__(self,ip,port):
@@ -134,5 +135,55 @@ class Endpoint():
 
     def __str__(self):
         return self.ip+":"+str(self.port)
+
+    async def asyncScan(self,silent=False):
+
+        #This inner class access the endpoint through the "endpoint" var as "self" keywork is changed
+        endpoint = self
+        class ScanSSHClient(asyncssh.SSHClient):
+            def connection_made(self, conn):
+                print(endpoint)
+                print("Connection made")
+        
+            def auth_banner_received(self, msg, lang):
+                print(msg)
+        
+            def public_key_auth_requested(self):
+                print("Key")
+                return None
+        
+            def password_auth_requested(self):
+                print("Pass")
+                return None
+        
+            def kbdint_auth_requested(self):
+                print("Interact")
+                return None
+        
+            def auth_completed(self):
+                pass
+
+        try:
+            conn, client = await asyncio.wait_for(asyncssh.create_connection(ScanSSHClient, self.getIp(), port=self.getPort(),known_hosts=None,username="user"), timeout=3.0)
+        except asyncssh.Error as e:
+            #Permission denied => expected behaviour
+            if e.code == 14:
+                pass
+            else:
+                print("asyncssh Error: "+str(e))
+                return False
+        except asyncio.TimeoutError:
+            print("Timeout")
+            return False
+        try:
+            conn.close()
+        except:
+            pass
+        print("Done")
+        return True
+
+    def scan(self,silent=False):
+       return asyncio.get_event_loop().run_until_complete(self.asyncScan(silent))
+
 
 

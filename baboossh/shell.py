@@ -613,6 +613,34 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             self.path_list(None)
 
 #################################################################
+###################           SCAN            ###################
+#################################################################
+
+    parser_scan = argparse.ArgumentParser(prog="scan")
+    parser_scan.add_argument('endpoint',help='Endpoint',nargs="?",choices_method=getOptionEndpoint)
+
+    @cmd2.with_argparser(parser_scan)
+    def do_scan(self,stmt):
+        '''Scan endpoint to check connectivity and supported authentication methods'''
+        target = vars(stmt)['endpoint']
+        if target != None:
+            try:
+                self.workspace.scanTarget(target)
+            except Exception as e:
+                print("Targeted scan failed : "+str(e))
+            return
+        try:
+            endpoints,users,creds = self.workspace.parseOptionsTarget()
+        except:
+            return
+        nbIter = len(endpoints)
+        if nbIter > 1:
+            if not yesNo("This will attempt up to "+str(nbIter)+" scans. Proceed ?",False):
+                return
+        for endpoint in endpoints:
+            self.workspace.scanTarget(endpoint)
+
+#################################################################
 ###################          CONNECT          ###################
 #################################################################
 

@@ -279,6 +279,13 @@ class Workspace():
             return False
         return connection.run(payload,self.workspaceFolder,stmt)
 
+    def scanTarget(self,target):
+        if not isinstance(target,Endpoint):
+            target = Endpoint.findByIpPort(target)
+        working = target.scan()
+        return working
+
+
     def connectTarget(self,arg,verbose,gw):
         if gw is not None:
             e = Endpoint.findByIpPort(gw)
