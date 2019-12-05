@@ -55,6 +55,14 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     def getArgWorkspaces(self):
         return [name for name in os.listdir(workspacesDir) if os.path.isdir(os.path.join(workspacesDir, name))]
 
+    def getOptionGateway(self):
+        ret = ["local"]
+        endpoints = self.workspace.getEndpoints()
+        for e in endpoints:
+            if e.getConnection() is not None:
+                ret.append(e)
+        return ret
+
     def getOptionUser(self):
         return self.workspace.getUsers()
 
@@ -626,7 +634,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 #################################################################
 
     parser_scan = argparse.ArgumentParser(prog="scan")
-    parser_scan.add_argument("-g", "--gateway", help="force specific gateway",choices_method=getOptionValidConnection)
+    parser_scan.add_argument("-g", "--gateway", help="force specific gateway",choices_method=getOptionGateway)
     parser_scan.add_argument('endpoint',help='Endpoint',nargs="?",choices_method=getOptionEndpoint)
 
     @cmd2.with_argparser(parser_scan)
@@ -657,7 +665,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 
     parser_connect = argparse.ArgumentParser(prog="connect")
     parser_connect.add_argument("-v", "--verbose", help="increase output verbosity",action="store_true")
-    parser_connect.add_argument("-g", "--gateway", help="force specific gateway",choices_method=getOptionEndpoint)
+    parser_connect.add_argument("-g", "--gateway", help="force specific gateway",choices_method=getOptionGateway)
     parser_connect.add_argument('connection',help='Connection string',nargs="?",choices_method=getOptionConnection)
 
     @cmd2.with_argparser(parser_connect)

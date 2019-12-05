@@ -226,7 +226,7 @@ class Endpoint():
                 print("asyncssh Error: "+str(e))
                 return False
         except asyncio.TimeoutError:
-            #TODO remove path with used gw ?
+            #remove path with used gw ?
             self.setReachable(False)
             self.save()
             if not silent:
@@ -257,6 +257,19 @@ class Endpoint():
         except:
             pass
 
+        if gateway is None:
+            gwHost = None
+        else:
+            gwHost = gateway.getEndpoint().getHost()
+            if gwHost is None:
+                return done
+        from baboossh.path import Path
+        p = Path(gwHost,self)
+        if done:
+            p.save()
+        else:
+            if p.getId() is not None:
+                p.delete()
         return done 
 
 
