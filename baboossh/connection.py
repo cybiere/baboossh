@@ -237,17 +237,9 @@ class Connection():
     def initConnect(self,gw=None,verbose=False):
         addLocalPath = False
         if gw is None:
-            if not Path.hasDirectPath(self.getEndpoint()):
-                paths = Path.getPath(None,self.getEndpoint())
-                if paths is None:
-                    print("> No path to "+str(self.getEndpoint())+", trying direct...",end="")
-                    sys.stdout.flush()
-                    gw = None
-                    addLocalPath = True
-                else:
-                    prevHop = paths[-1].getSrc().getClosestEndpoint()
-                    gateway = Connection.findWorkingByEndpoint(prevHop)
-                    gw = gateway.initConnect(verbose=verbose)
+            gateway = self.getEndpoint().findGatewayConnection()
+            if gateway is not None:
+                gw = gateway.initConnect(verbose=verbose)
         elif gw == "local":
             gw = None
         if verbose:

@@ -176,7 +176,20 @@ class Endpoint():
     def __str__(self):
         return self.ip+":"+str(self.port)
 
-    async def asyncScan(self,silent=False):
+    def findGatewayConnection(self):
+        from baboossh.path import Path
+        from baboossh.connection import Connection
+        if not Path.hasDirectPath(self):
+            paths = Path.getPath(None,self)
+            if paths is None:
+                return None
+            else:
+                prevHop = paths[-1].getSrc().getClosestEndpoint()
+                return Connection.findWorkingByEndpoint(prevHop)
+        return None
+
+
+    async def asyncScan(self,gw,silent):
 
         #This inner class access the endpoint through the "endpoint" var as "self" keywork is changed
         endpoint = self
@@ -204,7 +217,7 @@ class Endpoint():
 
         self.setScanned(True)
         try:
-            conn, client = await asyncio.wait_for(asyncssh.create_connection(ScanSSHClient, self.getIp(), port=self.getPort(),known_hosts=None,username="user"), timeout=3.0)
+            conn, client = await asyncio.wait_for(asyncssh.create_connection(ScanSSHClient, self.getIp(), port=self.getPort(),tunnel=gw,known_hosts=None,username="user"), timeout=3.0)
         except asyncssh.Error as e:
             #Permission denied => expected behaviour
             if e.code == 14:
@@ -213,18 +226,36 @@ class Endpoint():
                 print("asyncssh Error: "+str(e))
                 return False
         except asyncio.TimeoutError:
-            print("Timeout")
+            #TODO remove path with used gw ?
+            self.setReachable(False)
+            self.save()
+            if not silent:
+                print("Timeout")
             return False
         try:
             conn.close()
         except:
             pass
-        print("Done")
+        if not silent:
+            print("Done")
+        #TODO if reachable create Path
         self.save()
         return True
 
-    def scan(self,silent=False):
-       return asyncio.get_event_loop().run_until_complete(self.asyncScan(silent))
+    def scan(self,gateway="auto",silent=False):
+        if gateway == "auto":
+            gateway = self.findGatewayConnection()
+        if gateway is not None:
+            gw = gateway.initConnect()
+        else:
+            gw = None
+        done = asyncio.get_event_loop().run_until_complete(self.asyncScan(gw,silent))
+        try:
+            gw.close()
+        except:
+            pass
+
+        return done 
 
 
 
