@@ -279,10 +279,17 @@ class Workspace():
             return False
         return connection.run(payload,self.workspaceFolder,stmt)
 
-    def scanTarget(self,target):
+    def scanTarget(self,target,gateway=None):
         if not isinstance(target,Endpoint):
             target = Endpoint.findByIpPort(target)
-        working = target.scan()
+        if gateway is not None:
+            if gateway == "local":
+                gateway = None
+            else:
+                gateway = Connection.fromTarget(gateway)
+        else:
+            gateway = "auto"
+        working = target.scan(gateway=gateway)
         return working
 
 

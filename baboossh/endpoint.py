@@ -244,8 +244,10 @@ class Endpoint():
 
     def scan(self,gateway="auto",silent=False):
         if gateway == "auto":
+            print("Auto gateway")
             gateway = self.findGatewayConnection()
         if gateway is not None:
+            print("Scanning with gateway "+str(gateway))
             gw = gateway.initConnect()
         else:
             gw = None

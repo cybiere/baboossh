@@ -626,15 +626,17 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 #################################################################
 
     parser_scan = argparse.ArgumentParser(prog="scan")
+    parser_scan.add_argument("-g", "--gateway", help="force specific gateway",choices_method=getOptionValidConnection)
     parser_scan.add_argument('endpoint',help='Endpoint',nargs="?",choices_method=getOptionEndpoint)
 
     @cmd2.with_argparser(parser_scan)
     def do_scan(self,stmt):
         '''Scan endpoint to check connectivity and supported authentication methods'''
         target = vars(stmt)['endpoint']
-        if target != None:
+        gateway = vars(stmt)['gateway']
+        if target is not None:
             try:
-                self.workspace.scanTarget(target)
+                self.workspace.scanTarget(target,gateway=gateway)
             except Exception as e:
                 print("Targeted scan failed : "+str(e))
             return
@@ -647,7 +649,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             if not yesNo("This will attempt up to "+str(nbIter)+" scans. Proceed ?",False):
                 return
         for endpoint in endpoints:
-            self.workspace.scanTarget(endpoint)
+            self.workspace.scanTarget(endpoint,gateway=gateway)
 
 #################################################################
 ###################          CONNECT          ###################
