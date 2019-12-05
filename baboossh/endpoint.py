@@ -226,7 +226,6 @@ class Endpoint():
                 print("asyncssh Error: "+str(e))
                 return False
         except asyncio.TimeoutError:
-            #remove path with used gw ?
             self.setReachable(False)
             self.save()
             if not silent:
@@ -238,16 +237,13 @@ class Endpoint():
             pass
         if not silent:
             print("Done")
-        #TODO if reachable create Path
         self.save()
         return True
 
     def scan(self,gateway="auto",silent=False):
         if gateway == "auto":
-            print("Auto gateway")
             gateway = self.findGatewayConnection()
         if gateway is not None:
-            print("Scanning with gateway "+str(gateway))
             gw = gateway.initConnect()
         else:
             gw = None

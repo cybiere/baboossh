@@ -429,15 +429,9 @@ class Workspace():
             print("The destination should be reachable directly from the host.")
             return
 
-        #Try direct connect
-        connection = Connection.findWorkingByEndpoint(dst)
-        if not connection:
-            #TODO we should be able to check connectivity without creds
-            print("Could not find working connection parameters for target.")
-            return 
         #gwconn = Connection.findWorkingByEndpoint(e)
         #gw = gwconn.connect(silent=True)
-        workingDirect = connection.testConnect(gw="local",silent=True)
+        workingDirect = dst.scan(gateway=None,silent=True)
         if workingDirect:
             p = Path(None,dst)
             p.save()
@@ -447,9 +441,7 @@ class Workspace():
         for h in Path.getHostsOrderedClosest():
             e = h.getClosestEndpoint()
             gateway = Connection.findWorkingByEndpoint(e)
-            gw = gateway.initConnect(verbose=False)
-            working = connection.testConnect(gw=gw,silent=True)
-            gw.close()
+            working = dst.scan(gateway=gateway,silent=True)
             if working:
                 p = Path(h,dst)
                 p.save()
