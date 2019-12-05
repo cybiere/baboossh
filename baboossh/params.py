@@ -34,6 +34,9 @@ class dbConn():
             host INTEGER,
             ip TEXT NOT NULL,
             port TEXT NOT NULL,
+            scanned INTEGER NOT NULL,
+            reachable INTEGER,
+            auth TEXT,
             FOREIGN KEY(host) REFERENCES hosts(id)
             )''')
         c.execute('''CREATE TABLE users (

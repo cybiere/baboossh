@@ -2,6 +2,7 @@ import sqlite3
 from baboossh.params import dbConn
 from baboossh.host import Host
 import asyncio, asyncssh, sys
+import json
 
 class Endpoint():
     def __init__(self,ip,port):
@@ -9,13 +10,23 @@ class Endpoint():
         self.port = port
         self.host = None
         self.id = None
+        self.scanned = False
+        self.reachable = None
+        self.auth = []
         c = dbConn.get().cursor()
-        c.execute('SELECT id,host FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
+        c.execute('SELECT id,host,scanned,reachable,auth FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
         savedEndpoint = c.fetchone()
         c.close()
         if savedEndpoint is not None:
             self.id = savedEndpoint[0]
             self.host = Host.find(savedEndpoint[1])
+            self.scanned = savedEndpoint[2] != 0
+            if savedEndpoint[3] is None:
+                self.reachable = None
+            else:
+                self.reachable = savedEndpoint[3] != 0
+            if savedEndpoint[4] is not None :
+                self.auth = json.loads(savedEndpoint[4])
 
     def getId(self):
         return self.id
@@ -31,6 +42,28 @@ class Endpoint():
 
     def setHost(self,host):
         self.host = host
+
+    def isScanned(self):
+        return self.scanned
+
+    def setScanned(self,scanned):
+        self.scanned = scanned
+
+    def isReachable(self):
+        return self.reachable
+
+    def setReachable(self,reachable):
+        self.reachable = reachable
+
+    def getAuth(self):
+        return self.auth
+
+    def hasAuth(self,auth):
+        return auth in self.auth
+
+    def addAuth(self,auth):
+        if auth not in self.auth:
+            self.auth.append(auth)
 
     def getConnection(self,working=True):
         c = dbConn.get().cursor()
@@ -48,20 +81,27 @@ class Endpoint():
 
     def save(self):
         c = dbConn.get().cursor()
+        if not self.auth:
+            jauth = None
+        else:
+            jauth = json.dumps(self.auth)
         if self.id is not None:
             #If we have an ID, the endpoint is already saved in the database : UPDATE
             c.execute('''UPDATE endpoints 
                 SET
                     ip = ?,
                     port = ?,
-                    host = ?
+                    host = ?,
+                    scanned = ?,
+                    reachable = ?,
+                    auth = ?
                 WHERE id = ?''',
-                (self.ip, self.port, self.host.getId() if self.host is not None else None, self.id))
+                (self.ip, self.port, self.host.getId() if self.host is not None else None, self.scanned, self.reachable, jauth, self.id))
         else:
             #The endpoint doesn't exists in database : INSERT
-            c.execute('''INSERT INTO endpoints(ip,port,host)
-                VALUES (?,?,?) ''',
-                (self.ip,self.port,self.host.getId() if self.host is not None else None))
+            c.execute('''INSERT INTO endpoints(ip,port,host,scanned,reachable,auth)
+                VALUES (?,?,?,?,?,?) ''',
+                (self.ip,self.port,self.host.getId() if self.host is not None else None, self.scanned, self.reachable, jauth))
             c.close()
             c = dbConn.get().cursor()
             c.execute('SELECT id FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
@@ -142,27 +182,27 @@ class Endpoint():
         endpoint = self
         class ScanSSHClient(asyncssh.SSHClient):
             def connection_made(self, conn):
-                print(endpoint)
-                print("Connection made")
+                endpoint.setReachable(True)
         
             def auth_banner_received(self, msg, lang):
                 print(msg)
         
             def public_key_auth_requested(self):
-                print("Key")
+                endpoint.addAuth("privkey")
                 return None
         
             def password_auth_requested(self):
-                print("Pass")
+                endpoint.addAuth("password")
                 return None
         
             def kbdint_auth_requested(self):
-                print("Interact")
+                endpoint.addAuth("kbdint")
                 return None
         
             def auth_completed(self):
                 pass
 
+        self.setScanned(True)
         try:
             conn, client = await asyncio.wait_for(asyncssh.create_connection(ScanSSHClient, self.getIp(), port=self.getPort(),known_hosts=None,username="user"), timeout=3.0)
         except asyncssh.Error as e:
@@ -180,6 +220,7 @@ class Endpoint():
         except:
             pass
         print("Done")
+        self.save()
         return True
 
     def scan(self,silent=False):

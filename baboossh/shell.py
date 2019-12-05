@@ -240,8 +240,17 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             h = endpoint.getHost()
             if h is None:
                 h = ""
-            data.append([endpoint,h,c])
-        print(tabulate(data,headers=["Endpoint","Host","Working connection"]))
+            s = str(endpoint.isScanned())
+            if endpoint.isReachable() is None:
+                r = "?"
+            else:
+                r = str(endpoint.isReachable())
+            if not endpoint.getAuth():
+                a = "?"
+            else:
+                a = str(endpoint.getAuth())
+            data.append([endpoint,h,s,r,a,c])
+        print(tabulate(data,headers=["Endpoint","Host","Scanned","Reachable","Authentication","Working connection"]))
     
     def endpoint_add(self,stmt):
         ip = vars(stmt)['ip']
