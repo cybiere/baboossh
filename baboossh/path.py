@@ -21,6 +21,11 @@ class Path():
     def getId(self):
         return self.id
 
+    def inScope(self):
+        if not self.dst.inScope():
+            return False
+        return self.src.inScope()
+
     def getSrc(self):
         return self.src
 

@@ -457,8 +457,10 @@ class Workspace():
 
     def identifyObject(self,target):
         if target[0] == "#":
-            target = target[1:]
-        creds = Creds.find(target)
+            credsId = target[1:]
+        else:
+            credsId = target
+        creds = Creds.find(credsId)
         if creds is not None:
             return creds
         user = User.findByUsername(target)
@@ -469,17 +471,27 @@ class Workspace():
             if dst is not None:
                 return dst
         except:
-            raise
+            pass
+        hosts = Host.findByName(target)
+        if len(hosts) > 1:
+            print("Multiple hosts matching, use endpoints")
+            return None
+        if len(hosts) == 1:
+            return hosts[0]
         print("Could not identify object.")
-        raise ValueError
+        return None
 
     def scope(self,target):
         obj = self.identifyObject(target)
+        if obj is None:
+            return False
         obj.rescope()
         obj.save()
 
     def unscope(self,target):
         obj = self.identifyObject(target)
+        if obj is None:
+            return False
         obj.unscope()
         obj.save()
 
@@ -600,7 +612,7 @@ class Workspace():
         return self.options[key]
     
     def getBaseObjects(self,scope=None):
-        return Endpoint.findAll(scope=scope) + Creds.findAll(scope=scope) + User.findAll(scope=scope)
+        return Endpoint.findAll(scope=scope) + Creds.findAll(scope=scope) + User.findAll(scope=scope) + Host.findAll(scope=scope)
 
     def close(self):
         for tunnel in self.tunnels.values():

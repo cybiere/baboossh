@@ -29,6 +29,9 @@ class Connection():
     def getId(self):
         return self.id
 
+    def inScope(self):
+        return self.user.inScope() and self.endpoint.inScope() and self.cred.inScope()
+
     def getUser(self):
         return self.user
 

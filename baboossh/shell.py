@@ -204,8 +204,9 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
                     endpoints = str(e)
                 else:
                     endpoints = endpoints + ", "+str(e)
-            data.append([host.getId(),host.getName(),endpoints])
-        print(tabulate(data,headers=["ID","Hostname","Endpoints"]))
+            scope = "o" if host.inScope() else ""
+            data.append([scope,host.getId(),host.getName(),endpoints])
+        print(tabulate(data,headers=["","ID","Hostname","Endpoints"]))
 
     def host_del(self,stmt):
         host = getattr(stmt,'host',None)

@@ -36,6 +36,22 @@ class Host():
     def getMacs(self):
         return self.macs
 
+    def inScope(self):
+        for e in self.getEndpoints():
+            if not e.inScope():
+                return False
+        return True
+
+    def rescope(self):
+        for e in self.getEndpoints():
+            e.rescope()
+            e.save()
+
+    def unscope(self):
+        for e in self.getEndpoints():
+            e.unscope()
+            e.save()
+
     def getClosestEndpoint(self):
         from baboossh.path import Path
         endpoints = self.getEndpoints()
@@ -100,11 +116,15 @@ class Host():
         return
 
     @classmethod
-    def findAll(cls):
+    def findAll(cls,scope=None):
         ret = []
         c = dbConn.get().cursor()
-        for row in c.execute('SELECT id FROM hosts'):
-            ret.append(Host.find(row[0]))
+        for row in c.execute('SELECT name,uname,issue,machineId,macs FROM hosts'):
+            h = Host(row[0],row[1],row[2],row[3],json.loads(row[4]))
+            if scope is None:
+                ret.append(h)
+            elif h.inScope() == scope:
+                ret.append(h)
         c.close()
         return ret
 
