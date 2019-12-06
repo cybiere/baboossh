@@ -47,36 +47,36 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 #################################################################
 
     def getOptionCreds(self):
-        return self.workspace.getCreds()
+        return self.workspace.getCreds(scope=True)
 
     def getHosts(self):
-        return self.workspace.getHostsNames()
+        return self.workspace.getHostsNames(scope=True)
  
     def getArgWorkspaces(self):
         return [name for name in os.listdir(workspacesDir) if os.path.isdir(os.path.join(workspacesDir, name))]
 
     def getOptionGateway(self):
         ret = ["local"]
-        endpoints = self.workspace.getEndpoints()
+        endpoints = self.workspace.getEndpoints(scope=True)
         for e in endpoints:
             if e.getConnection() is not None:
                 ret.append(e)
         return ret
 
     def getOptionUser(self):
-        return self.workspace.getUsers()
+        return self.workspace.getUsers(scope=True)
 
     def getOptionEndpoint(self):
-        return self.workspace.getEndpoints()
+        return self.workspace.getEndpoints(scope=True)
 
     def getOptionPayload(self):
         return Extensions.payloadsAvail()
 
     def getOptionValidConnection(self):
-        return self.workspace.getTargetsValidList()
+        return self.workspace.getTargetsValidList(scope=True)
 
     def getOptionConnection(self):
-        return self.workspace.getTargetsList()
+        return self.workspace.getTargetsList(scope=True)
 
     def getOpenTunnels(self):
         return self.workspace.getTunnelsPort()
@@ -84,17 +84,17 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     def getRunTargets(self):
         connections = self.getOptionValidConnection()
         endpoints = self.getOptionEndpoint()
-        hosts = self.workspace.getHostsNames()
+        hosts = self.workspace.getHostsNames(scope=True)
         return connections + endpoints + hosts
 
     def getHostOrLocal(self):
-        hosts = self.workspace.getHostsNames()
+        hosts = self.workspace.getHostsNames(scope=True)
         hosts.append("local")
         return hosts
 
     def getEndpointOrHost(self):
-        endpoints = self.workspace.getEndpoints()
-        hosts = self.workspace.getHostsNames()
+        endpoints = self.workspace.getEndpoints(scope=True)
+        hosts = self.workspace.getHostsNames(scope=True)
         return endpoints + hosts
 
 #################################################################
@@ -189,12 +189,15 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 
     def host_list(self,stmt):
         print("Current hosts in workspace:")
+        outScope = getattr(stmt,'all',False)
         hosts = self.workspace.getHosts()
         if not hosts:
             print("No hosts in current workspace")
             return
         data = []
         for host in hosts:
+            if not host.inScope() and not outScope:
+                continue
             endpoints = ""
             for e in host.getEndpoints():
                 if endpoints == "":
@@ -212,6 +215,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     parser_host = argparse.ArgumentParser(prog="host")
     subparser_host = parser_host.add_subparsers(title='Actions',help='Available actions')
     parser_host_list = subparser_host.add_parser("list",help='List hosts')
+    parser_host_list.add_argument("-a", "--all", help="Show out of scope objects",action="store_true")
     parser_host_del = subparser_host.add_parser("delete",help='Delete host')
     parser_host_del.add_argument('host',help='Host name',choices_method=getHosts)
 
@@ -226,7 +230,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            self.host_list(None)
+            self.host_list(stmt)
 
 #################################################################
 ###################         ENDPOINTS         ###################
@@ -234,12 +238,15 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
    
     def endpoint_list(self,stmt):
         print("Current endpoints in workspace:")
+        outScope = getattr(stmt,'all',False)
         endpoints = self.workspace.getEndpoints()
         if not endpoints:
             print("No endpoints in current workspace")
             return
         data = []
         for endpoint in endpoints:
+            if not endpoint.inScope() and not outScope:
+                continue
             scope = "o" if endpoint.inScope() else ""
             c = endpoint.getConnection()
             if c is None:
@@ -276,6 +283,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     parser_endpoint = argparse.ArgumentParser(prog="endpoint")
     subparser_endpoint = parser_endpoint.add_subparsers(title='Actions',help='Available actions')
     parser_endpoint_list = subparser_endpoint.add_parser("list",help='List endpoints')
+    parser_endpoint_list.add_argument("-a", "--all", help="Show out of scope objects",action="store_true")
     parser_endpoint_add = subparser_endpoint.add_parser("add",help='Add a new endpoint')
     parser_endpoint_add.add_argument('ip',help='New endpoint ip')
     parser_endpoint_add.add_argument('port',help='New endpoint port', type=int, default=22, nargs='?')
@@ -294,7 +302,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            self.endpoint_list(None)
+            self.endpoint_list(stmt)
 
 #################################################################
 ###################           USERS           ###################
@@ -302,12 +310,15 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 
     def user_list(self,stmt):
         print("Current users in workspace:")
+        outScope = getattr(stmt,'all',False)
         users = self.workspace.getUsers()
         if not users:
             print("No users in current workspace")
             return
         data = []
         for user in users:
+            if not user.inScope() and not outScope:
+                continue
             scope = "o" if user.inScope() else ""
             data.append([scope,user])
         print(tabulate(data,headers=["","Username"]))
@@ -328,6 +339,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     parser_user = argparse.ArgumentParser(prog="user")
     subparser_user = parser_user.add_subparsers(title='Actions',help='Available actions')
     parser_user_list = subparser_user.add_parser("list",help='List users')
+    parser_user_list.add_argument("-a", "--all", help="Show out of scope objects",action="store_true")
     parser_user_add = subparser_user.add_parser("add",help='Add a new user')
     parser_user_add.add_argument('name',help='New user name')
     parser_user_del = subparser_user.add_parser("delete",help='Delete a user')
@@ -345,7 +357,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            self.user_list(None)
+            self.user_list(stmt)
 
 #################################################################
 ###################           CREDS           ###################
@@ -359,12 +371,15 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         print(tabulate(data,headers=["Key","Description"]))
     
     def creds_list(self,stmt):
+        outScope = getattr(stmt,'all',False)
         creds = self.workspace.getCreds()
         if not creds:
             print("No creds in current workspace")
             return
         data = []
         for cred in creds:
+            if not cred.inScope() and not outScope:
+                continue
             scope = "o" if cred.inScope() else ""
             data.append([scope,"#"+str(cred.getId()),cred.obj.getKey(),cred.obj.toList()])
         print(tabulate(data,headers=["","ID","Type","Value"]))
@@ -396,6 +411,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     parser_creds = argparse.ArgumentParser(prog="creds")
     subparser_creds = parser_creds.add_subparsers(title='Actions',help='Available actions')
     parser_creds_list = subparser_creds.add_parser("list",help='List saved credentials')
+    parser_creds_list.add_argument("-a", "--all", help="Show out of scope objects",action="store_true")
     parser_creds_types = subparser_creds.add_parser("types",help='List available credentials types')
     parser_creds_show = subparser_creds.add_parser("show",help='Show credentials details')
     parser_creds_show.add_argument('id',help='Creds identifier',choices_method=getOptionCreds)
@@ -426,7 +442,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            self.creds_list(None)
+            self.creds_list(stmt)
 
 #################################################################
 ###################          PAYLOADS         ###################
@@ -461,10 +477,11 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 
     def connection_list(self,stmt):
         print("Available connections:")
+        outScope = getattr(stmt,'all',False)
         tested = False
         working = False
         if stmt is not None:
-            opt = vars(stmt)["opt"]
+            opt = getattr(stmt,"opt",[])
             tested = "tested" in opt
             working = "working" in opt
         connections = self.workspace.getConnections(tested=tested,working=working)
@@ -473,6 +490,8 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             return
         data = []
         for connection in connections:
+            if not connection.inScope() and not outScope:
+                continue
             data.append([connection.getEndpoint(),connection.getUser(),connection.getCred(),connection.isTested(),connection.isWorking()])
         print(tabulate(data,headers=["Endpoint","User","Creds","Tested","Working"]))
 
@@ -483,6 +502,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     parser_connection = argparse.ArgumentParser(prog="connection")
     subparser_connection = parser_connection.add_subparsers(title='Actions',help='Available actions')
     parser_connection_list = subparser_connection.add_parser("list",help='List connections')
+    parser_connection_list.add_argument("-a", "--all", help="Show out of scope objects",action="store_true")
     parser_connection_list.add_argument('opt',help='Filter options',nargs=argparse.REMAINDER,choices=["working","tested"])
     parser_connection_del = subparser_connection.add_parser("delete",help='Delete connection')
     parser_connection_del.add_argument('connection',help='Connection string',choices_method=getOptionConnection)
@@ -498,7 +518,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            self.connection_list(None)
+            self.connection_list(stmt)
 
 
 #################################################################
@@ -570,12 +590,15 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 
     def path_list(self,stmt):
         print("Current paths in workspace:")
+        outScope = getattr(stmt,'all',False)
         paths = self.workspace.getPaths()
         if not paths:
             print("No paths in current workspace")
             return
         data = []
         for path in paths:
+            if not path.inScope() and not outScope:
+                continue
             src = path.src
             if src == None:
                 src = "Local"
@@ -603,6 +626,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     parser_path = argparse.ArgumentParser(prog="path")
     subparser_path = parser_path.add_subparsers(title='Actions',help='Available actions')
     parser_path_list = subparser_path.add_parser("list",help='List paths')
+    parser_path_list.add_argument("-a", "--all", help="Show out of scope objects",action="store_true")
     parser_path_get = subparser_path.add_parser("get",help='Get path to endpoint')
     parser_path_get.add_argument('endpoint',help='Endpoint',choices_method=getEndpointOrHost)
     parser_path_add = subparser_path.add_parser("add",help='Add path to endpoint')
@@ -628,7 +652,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            self.path_list(None)
+            self.path_list(stmt)
 
 #################################################################
 ###################           SCAN            ###################

@@ -537,8 +537,8 @@ class Workspace():
     def getHosts(self,scope=None):
         return Host.findAll(scope=scope)
 
-    def getHostsNames(self):
-        return Host.findAllNames()
+    def getHostsNames(self,scope=None):
+        return Host.findAllNames(scope=scope)
 
     def getEndpoints(self,scope=None):
         endpoints = []
@@ -546,16 +546,22 @@ class Workspace():
             endpoints.append(endpoint)
         return endpoints
 
-    def getTargetsValidList(self):
+    def getTargetsValidList(self,scope=None):
         connections = []
         for connection in Connection.findWorking():
-            connections.append(str(connection))
+            if scope is None:
+                connections.append(str(connection))
+            elif connection.inScope() == scope:
+                connections.append(str(connection))
         return connections
 
     def getTargetsList(self):
         connections = []
         for connection in Connection.findAll():
-            connections.append(str(connection))
+            if scope is None:
+                connections.append(str(connection))
+            elif connection.inScope() == scope:
+                connections.append(str(connection))
         return connections
 
     def getPaths(self):

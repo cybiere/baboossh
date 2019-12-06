@@ -24,6 +24,8 @@ class Path():
     def inScope(self):
         if not self.dst.inScope():
             return False
+        if self.src is None:
+            return True
         return self.src.inScope()
 
     def getSrc(self):

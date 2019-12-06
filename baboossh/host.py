@@ -148,12 +148,11 @@ class Host():
         return hosts
 
     @classmethod
-    def findAllNames(cls):
+    def findAllNames(cls,scope=None):
         ret = []
-        c = dbConn.get().cursor()
-        for row in c.execute('SELECT name FROM hosts'):
-            ret.append(row[0])
-        c.close()
+        hosts = Host.findAll(scope=scope)
+        for host in hosts:
+            ret.append(host.getName())
         return ret
 
     def __str__(self):
