@@ -8,15 +8,26 @@ class Creds():
         self.credsContent = credsContent
         self.obj = Extensions.getAuthMethod(credsType)(credsContent)
         self.id = None
+        self.scope = True
         c = dbConn.get().cursor()
-        c.execute('SELECT id FROM creds WHERE type=? AND identifier=?',(self.credsType, self.obj.getIdentifier()))
+        c.execute('SELECT id,scope FROM creds WHERE type=? AND identifier=?',(self.credsType, self.obj.getIdentifier()))
         savedCreds = c.fetchone()
         c.close()
         if savedCreds is not None:
             self.id = savedCreds[0]
+            self.scope = savedCreds[1] != 0
 
     def getId(self):
         return self.id
+
+    def inScope(self):
+        return self.scope
+
+    def rescope(self):
+        self.scope = True
+
+    def unscope(self):
+        self.scope = False
 
     def save(self):
         c = dbConn.get().cursor()
@@ -26,14 +37,15 @@ class Creds():
                 SET
                     type = ?,
                     content = ?,
-                    identifier = ?
+                    identifier = ?,
+                    scope = ?
                 WHERE id = ?''',
-                (self.credsType, self.credsContent, self.obj.getIdentifier(), self.id))
+                (self.credsType, self.credsContent, self.obj.getIdentifier(), self.scope, self.id))
         else:
             #The creds doesn't exists in database : INSERT
-            c.execute('''INSERT INTO creds(type,content,identifier)
-                VALUES (?,?,?) ''',
-                (self.credsType, self.credsContent, self.obj.getIdentifier()))
+            c.execute('''INSERT INTO creds(type,content,identifier,scope)
+                VALUES (?,?,?,?) ''',
+                (self.credsType, self.credsContent, self.obj.getIdentifier(),self.scope))
             c.close()
             c = dbConn.get().cursor()
             c.execute('SELECT id FROM creds WHERE type=? and identifier=?',(self.credsType,self.obj.getIdentifier()))
@@ -59,10 +71,14 @@ class Creds():
         return self.obj.getKwargs()
 
     @classmethod
-    def findAll(cls):
+    def findAll(cls, scope=None):
         ret = []
         c = dbConn.get().cursor()
-        for row in c.execute('SELECT type,content FROM creds'):
+        if scope is None:
+            req = c.execute('SELECT type,content FROM creds')
+        else:
+            req = c.execute('SELECT type,content FROM creds WHERE scope=?',(scope,))
+        for row in req:
             ret.append(Creds(row[0],row[1]))
         return ret
 

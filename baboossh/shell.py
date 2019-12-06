@@ -242,6 +242,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             return
         data = []
         for endpoint in endpoints:
+            scope = "o" if endpoint.inScope() else ""
             c = endpoint.getConnection()
             if c is None:
                 c = ""
@@ -257,8 +258,8 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
                 a = "?"
             else:
                 a = str(endpoint.getAuth())
-            data.append([endpoint,h,s,r,a,c])
-        print(tabulate(data,headers=["Endpoint","Host","Scanned","Reachable","Authentication","Working connection"]))
+            data.append([scope,endpoint,h,s,r,a,c])
+        print(tabulate(data,headers=["","Endpoint","Host","Scanned","Reachable","Authentication","Working connection"]))
     
     def endpoint_add(self,stmt):
         ip = vars(stmt)['ip']
@@ -309,8 +310,9 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             return
         data = []
         for user in users:
-            data.append([user])
-        print(tabulate(data,headers=["Username"]))
+            scope = "o" if user.inScope() else ""
+            data.append([scope,user])
+        print(tabulate(data,headers=["","Username"]))
     
     def user_add(self,stmt):
         name = vars(stmt)['name']
@@ -365,8 +367,9 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             return
         data = []
         for cred in creds:
-            data.append(["#"+str(cred.getId()),cred.obj.getKey(),cred.obj.toList()])
-        print(tabulate(data,headers=["ID","Type","Value"]))
+            scope = "o" if cred.inScope() else ""
+            data.append([scope,"#"+str(cred.getId()),cred.obj.getKey(),cred.obj.toList()])
+        print(tabulate(data,headers=["","ID","Type","Value"]))
 
     def creds_show(self,stmt):
         credsId = vars(stmt)['id']
@@ -850,6 +853,32 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             print("Error: "+str(e))
             return
         importer.run(stmt,self.workspace)
+
+#################################################################
+###################           SCOPE           ###################
+#################################################################
+
+    def getScopeObject(self):
+        return self.workspace.getBaseObjects(scope=False)
+
+    def getUnscopeObject(self):
+        return self.workspace.getBaseObjects(scope=True)
+
+    parser_scope = argparse.ArgumentParser(prog="scope")
+    parser_scope.add_argument('target',help='Object to scope',choices_method=getScopeObject)
+    @cmd2.with_argparser(parser_scope)
+    def do_scope(self,stmt):
+        '''Add object to scope'''
+        key = getattr(stmt,'target',None)
+        self.workspace.scope(key)
+
+    parser_unscope = argparse.ArgumentParser(prog="unscope")
+    parser_unscope.add_argument('target',help='Object to unscope',choices_method=getUnscopeObject)
+    @cmd2.with_argparser(parser_unscope)
+    def do_unscope(self,stmt):
+        '''Remove object from scope'''
+        key = getattr(stmt,'target',None)
+        self.workspace.unscope(key)
 
 #################################################################
 ###################            CMD            ###################

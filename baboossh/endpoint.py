@@ -9,11 +9,12 @@ class Endpoint():
         self.port = port
         self.host = None
         self.id = None
+        self.scope = True
         self.scanned = False
         self.reachable = None
         self.auth = []
         c = dbConn.get().cursor()
-        c.execute('SELECT id,host,scanned,reachable,auth FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
+        c.execute('SELECT id,host,scanned,reachable,auth,scope FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
         savedEndpoint = c.fetchone()
         c.close()
         if savedEndpoint is not None:
@@ -26,9 +27,19 @@ class Endpoint():
                 self.reachable = savedEndpoint[3] != 0
             if savedEndpoint[4] is not None :
                 self.auth = json.loads(savedEndpoint[4])
+            self.scope = savedEndpoint[5] != 0
 
     def getId(self):
         return self.id
+
+    def inScope(self):
+        return self.scope
+
+    def rescope(self):
+        self.scope = True
+
+    def unscope(self):
+        self.scope = False
 
     def getIp(self):
         return self.ip
@@ -93,14 +104,15 @@ class Endpoint():
                     host = ?,
                     scanned = ?,
                     reachable = ?,
-                    auth = ?
+                    auth = ?,
+                    scope = ?
                 WHERE id = ?''',
-                (self.ip, self.port, self.host.getId() if self.host is not None else None, self.scanned, self.reachable, jauth, self.id))
+                (self.ip, self.port, self.host.getId() if self.host is not None else None, self.scanned, self.reachable, jauth, self.scope, self.id))
         else:
             #The endpoint doesn't exists in database : INSERT
-            c.execute('''INSERT INTO endpoints(ip,port,host,scanned,reachable,auth)
-                VALUES (?,?,?,?,?,?) ''',
-                (self.ip,self.port,self.host.getId() if self.host is not None else None, self.scanned, self.reachable, jauth))
+            c.execute('''INSERT INTO endpoints(ip,port,host,scanned,reachable,auth,scope)
+                VALUES (?,?,?,?,?,?,?) ''',
+                (self.ip,self.port,self.host.getId() if self.host is not None else None, self.scanned, self.reachable, jauth, self.scope))
             c.close()
             c = dbConn.get().cursor()
             c.execute('SELECT id FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
@@ -128,10 +140,14 @@ class Endpoint():
         return
 
     @classmethod
-    def findAll(cls):
+    def findAll(cls,scope=None):
         ret = []
         c = dbConn.get().cursor()
-        for row in c.execute('SELECT ip,port FROM endpoints'):
+        if scope is None:
+            req = c.execute('SELECT ip,port FROM endpoints')
+        else:
+            req = c.execute('SELECT ip,port FROM endpoints WHERE scope=?',(scope,))
+        for row in req:
             ret.append(Endpoint(row[0],row[1]))
         return ret
 

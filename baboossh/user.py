@@ -6,12 +6,14 @@ class User():
     def __init__(self,name):
         self.name = name
         self.id = None
+        self.scope = True
         c = dbConn.get().cursor()
-        c.execute('SELECT id FROM users WHERE username=?',(self.name,))
+        c.execute('SELECT id,scope FROM users WHERE username=?',(self.name,))
         savedUser = c.fetchone()
         c.close()
         if savedUser is not None:
             self.id = savedUser[0]
+            self.scope = savedUser[1] != 0
 
     def getId(self):
         return self.id
@@ -19,20 +21,30 @@ class User():
     def getName(self):
         return self.name
 
+    def inScope(self):
+        return self.scope
+
+    def rescope(self):
+        self.scope = True
+
+    def unscope(self):
+        self.scope = False
+
     def save(self):
         c = dbConn.get().cursor()
         if self.id is not None:
             #If we have an ID, the user is already saved in the database : UPDATE
             c.execute('''UPDATE users 
                 SET
-                    username = ?
+                    username = ?,
+                    scope = ?
                 WHERE id = ?''',
-                (self.name, self.id))
+                (self.name, self.scope, self.id))
         else:
             #The user doesn't exists in database : INSERT
-            c.execute('''INSERT INTO users(username)
-                VALUES (?) ''',
-                (self.name,))
+            c.execute('''INSERT INTO users(username,scope)
+                VALUES (?,?) ''',
+                (self.name,self.scope))
             c.close()
             c = dbConn.get().cursor()
             c.execute('SELECT id FROM users WHERE username=?',(self.name,))
@@ -53,10 +65,14 @@ class User():
         return
 
     @classmethod
-    def findAll(cls):
+    def findAll(cls, scope=None):
         ret = []
         c = dbConn.get().cursor()
-        for row in c.execute('SELECT username FROM users'):
+        if scope is None:
+            req = c.execute('SELECT username FROM users')
+        else:
+            req = c.execute('SELECT username FROM users WHERE scope=?',(scope,))
+        for row in req:
             ret.append(User(row[0]))
         return ret
 

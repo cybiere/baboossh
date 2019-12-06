@@ -31,6 +31,7 @@ class dbConn():
             )''')
         c.execute('''CREATE TABLE endpoints (
             id INTEGER PRIMARY KEY ASC,
+            scope INTEGER NOT NULL,
             host INTEGER,
             ip TEXT NOT NULL,
             port TEXT NOT NULL,
@@ -41,10 +42,12 @@ class dbConn():
             )''')
         c.execute('''CREATE TABLE users (
             id INTEGER PRIMARY KEY ASC,
+            scope INTEGER NOT NULL,
             username TEXT NOT NULL
             )''')
         c.execute('''CREATE TABLE creds (
             id INTEGER PRIMARY KEY ASC,
+            scope INTEGER NOT NULL,
             type TEXT NOT NULL,
             content TEXT NOT NULL,
             identifier TEXT NOT NULL

@@ -451,8 +451,37 @@ class Workspace():
                 return
         return
 
+#################################################################
+###################           SCOPE           ###################
+#################################################################
 
+    def identifyObject(self,target):
+        if target[0] == "#":
+            target = target[1:]
+        creds = Creds.find(target)
+        if creds is not None:
+            return creds
+        user = User.findByUsername(target)
+        if user is not None:
+            return user
+        try:
+            dst = Endpoint.findByIpPort(target)
+            if dst is not None:
+                return dst
+        except:
+            raise
+        print("Could not identify object.")
+        raise ValueError
 
+    def scope(self,target):
+        obj = self.identifyObject(target)
+        obj.rescope()
+        obj.save()
+
+    def unscope(self,target):
+        obj = self.identifyObject(target)
+        obj.unscope()
+        obj.save()
 
 #################################################################
 ###################          TUNNELS          ###################
@@ -569,6 +598,9 @@ class Workspace():
         if self.options[key] == None:
             return None
         return self.options[key]
+    
+    def getBaseObjects(self,scope=None):
+        return Endpoint.findAll(scope=scope) + Creds.findAll(scope=scope) + User.findAll(scope=scope)
 
     def close(self):
         for tunnel in self.tunnels.values():
