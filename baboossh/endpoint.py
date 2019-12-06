@@ -1,4 +1,3 @@
-import sqlite3
 from baboossh.params import dbConn
 from baboossh.host import Host
 import asyncio, asyncssh, sys

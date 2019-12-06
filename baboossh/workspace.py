@@ -252,21 +252,20 @@ class Workspace():
     def massConnect(self,endpoints,users,creds,verbose):
         for endpoint in endpoints:
             if Path.hasDirectPath(endpoint):
-                gateway = None
+                gw = None
             else:
-                paths = Path.getPath(None,endpoint)
-                if paths is None:
-                    print("Could not find path to "+str(endpoint))
-                    return False
-                prevHop = paths[-1].getSrc().getClosestEndpoint()
-                gateway = Connection.findWorkingByEndpoint(prevHop).connect(gw=None,silent=True,verbose=verbose)
+                gateway = endpoint.findGatewayConnection()
+                if gateway is not None:
+                    gw = gateway.initConnect(verbose=verbose)
+                else:
+                    gw = None
             for user in users:
                 for cred in creds:
                     connection = Connection(endpoint,user,cred)
-                    if connection.testConnect(gw=gateway):
+                    if connection.testConnect(gateway=gw):
                         break;
-            if gateway is not None:
-                gateway.close()
+            if gw is not None:
+                gw.close()
 
     def connect(self,endpoint,user,cred,verbose):
         connection = Connection(endpoint,user,cred)
@@ -293,20 +292,25 @@ class Workspace():
         return working
 
 
-    def connectTarget(self,arg,verbose,gw):
-        if gw is not None:
-            e = Endpoint.findByIpPort(gw)
-            if e is None:
-                print("Could not find provided gateway")
-                return False
-            gwconn = Connection.findWorkingByEndpoint(e)
-            gw = gwconn.connect(silent=True)
+    def connectTarget(self,arg,verbose,gateway):
+        if gateway is not None:
+            if gateway == "local":
+                gateway = None
+            else:
+                gateway = Connection.fromTarget(gateway)
+        else:
+            gateway = "auto"
         connection = Connection.fromTarget(arg)
-        working = connection.testConnect(gw=gw,verbose=verbose)
-        if gw is not None:
-            gw.close()
-            if working:
-                p = Path(gwconn.getEndpoint(),connection.getEndpoint())
+        working = connection.testConnect(gateway=gateway,verbose=verbose)
+        if working:
+            if gateway != "auto":
+                if gateway is None:
+                    pathSrc = None
+                elif gateway.getEndpoint().getHost() is None:
+                    return working
+                else:
+                    pathSrc = gateway.getEndpoint().getHost()
+                p = Path(pathSrc,connection.getEndpoint())
                 p.save()
         return working
 
@@ -429,8 +433,6 @@ class Workspace():
             print("The destination should be reachable directly from the host.")
             return
 
-        #gwconn = Connection.findWorkingByEndpoint(e)
-        #gw = gwconn.connect(silent=True)
         workingDirect = dst.scan(gateway=None,silent=True)
         if workingDirect:
             p = Path(None,dst)

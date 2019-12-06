@@ -8,7 +8,7 @@ from baboossh.host import Host
 import asyncio, asyncssh, sys
 
 class Connection():
-    def __init__(self,endpoint,user,cred,brute=False):
+    def __init__(self,endpoint,user,cred):
         self.endpoint = endpoint
         self.user = user
         self.cred = cred
@@ -16,9 +16,6 @@ class Connection():
         self.tested = False
         self.working = False
         self.root = False
-        self.brute = brute
-        if brute:
-            return
         c = dbConn.get().cursor()
         c.execute('SELECT id,tested,working,root FROM connections WHERE endpoint=? AND user=? AND cred=?',(self.endpoint.getId(),self.user.getId(),self.cred.getId()))
         savedConnection = c.fetchone()
@@ -229,18 +226,23 @@ class Connection():
             print("> \033[1;31;40mTimeout\033[0m")
             raise
         except Exception as e:
-            if not self.brute:
-                print("Error occured: "+str(e))
+            print("Error occured while connecting to "+str(self)+": "+str(e))
             return None
         return conn
 
-    def initConnect(self,gw=None,verbose=False):
-        addLocalPath = False
-        if gw is None:
-            gateway = self.getEndpoint().findGatewayConnection()
-            if gateway is not None:
+    def initConnect(self,gateway="auto",verbose=False):
+        if gateway is not None:
+            if isinstance(gateway,asyncssh.SSHClientConnection):
+                gw=gateway
+            elif gateway == "auto":
+                gateway = self.getEndpoint().findGatewayConnection()
+                if gateway is not None:
+                    gw = gateway.initConnect(verbose=verbose)
+                else:
+                    gw = None
+            else:
                 gw = gateway.initConnect(verbose=verbose)
-        elif gw == "local":
+        else:
             gw = None
         if verbose:
             print("> "+str(self)+"...",end="")
@@ -249,34 +251,27 @@ class Connection():
             c = asyncio.get_event_loop().run_until_complete(self.async_openConnection(gw))
         except:
             raise
-        if addLocalPath:
-            newPath = Path(src=None,dst=self.getEndpoint())
-            newPath.save()
         return c
 
-    def connect(self,gw=None,silent=False,verbose=False):
-        if self.brute:
-            silent=True
+    def connect(self,gateway="auto",silent=False,verbose=False):
         if not silent:
             print("Establishing connection to \033[1;34;40m"+str(self)+"\033[0m",end="...")
             sys.stdout.flush()
         try:
-            addLocalPath = False
-            c = self.initConnect(gw,verbose)
+            c = self.initConnect(gateway,verbose)
         except asyncio.TimeoutError:
             return None
         else:
             self.setTested(True)
             self.setWorking(c is not None)
-            if not self.brute:
-                self.save()
+            self.save()
         if c is not None:
             if not silent:
                 print("> \033[1;32;40mOK\033[0m")
         return c
 
-    def testConnect(self,gw=None,verbose=False,silent=False):
-        c = self.connect(gw=gw,verbose=verbose,silent=silent)
+    def testConnect(self,gateway="auto",verbose=False,silent=False):
+        c = self.connect(gateway=gateway,verbose=verbose,silent=silent)
         if c is None:
             return False
         if self.getEndpoint().getHost() is None:
@@ -289,8 +284,8 @@ class Connection():
     async def async_run(self,c,payload,wspaceFolder,stmt):
         return await payload.run(c,self,wspaceFolder,stmt)
 
-    def run(self,payload,wspaceFolder,stmt,gw=None):
-        c = self.connect(gw)
+    def run(self,payload,wspaceFolder,stmt):
+        c = self.connect()
         if c is None:
             return False
         asyncio.get_event_loop().run_until_complete(self.async_run(c,payload,wspaceFolder,stmt))
