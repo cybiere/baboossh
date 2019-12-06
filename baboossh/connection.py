@@ -251,6 +251,15 @@ class Connection():
             c = asyncio.get_event_loop().run_until_complete(self.async_openConnection(gw))
         except:
             raise
+        if c is not None:
+            if not isinstance(gateway,asyncssh.SSHClientConnection):
+                if gateway is None:
+                    pathSrc = None
+                else:
+                    if gateway.getEndpoint().getHost() is not None:
+                        pathSrc = gateway.getEndpoint().getHost()
+                p = Path(pathSrc,self.getEndpoint())
+                p.save()
         return c
 
     def connect(self,gateway="auto",silent=False,verbose=False):
