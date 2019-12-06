@@ -69,9 +69,6 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     def getOptionEndpoint(self):
         return self.workspace.getEndpoints()
 
-    def getOptionWordlist(self):
-        return self.workspace.getWordlists()
-
     def getOptionPayload(self):
         return Extensions.payloadsAvail()
 

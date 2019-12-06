@@ -234,17 +234,17 @@ class Workspace():
     def parseOptionsTarget(self):
         user = self.getOption("user")
         if user is None:
-            users = self.getUsers()
+            users = self.getUsers(scope=True)
         else:
             users = [User.find(user.getId())]
         endpoint = self.getOption("endpoint")
         if endpoint is None:
-            endpoints = self.getEndpoints()
+            endpoints = self.getEndpoints(scope=True)
         else:
             endpoints = [Endpoint.find(endpoint.getId())]
         cred = self.getOption("creds")
         if cred is None:
-            creds = self.getCreds()
+            creds = self.getCreds(scope=True)
         else:
             creds = [Creds.find(cred.getId())]
         return (endpoints,users,creds)
@@ -505,9 +505,6 @@ class Workspace():
     def getTunnelsPort(self):
         return list(self.tunnels.keys())
 
-    def getTunnelsList(self):
-        return [ str(t) for t in list(self.tunnels.values()) ]
-
     def openTunnel(self,target,port=None):
         if port is not None and port in self.tunnels.keys():
             print("A tunnel is already opened at port "+str(port))
@@ -537,24 +534,18 @@ class Workspace():
     def getName(self):
         return self.name
 
-    def getHosts(self):
-        return Host.findAll()
+    def getHosts(self,scope=None):
+        return Host.findAll(scope=scope)
 
     def getHostsNames(self):
         return Host.findAllNames()
 
-    def getEndpoints(self):
+    def getEndpoints(self,scope=None):
         endpoints = []
-        for endpoint in Endpoint.findAll():
+        for endpoint in Endpoint.findAll(scope=scope):
             endpoints.append(endpoint)
         return endpoints
 
-    def getEndpointsList(self):
-        endpoints = []
-        for endpoint in Endpoint.findAll():
-            endpoints.append(endpoint.ip+":"+endpoint.port)
-        return endpoints
-    
     def getTargetsValidList(self):
         connections = []
         for connection in Connection.findWorking():
@@ -567,23 +558,14 @@ class Workspace():
             connections.append(str(connection))
         return connections
 
-    def getUsersList(self):
-        users = []
-        for user in User.findAll():
-            users.append(str(user))
-        return users
-
     def getPaths(self):
         return Path.findAll()
 
-    def getUsers(self):
-        return User.findAll()
+    def getUsers(self,scope=None):
+        return User.findAll(scope=scope)
 
-    def getWordlists(self):
-        return Wordlist.findAll()
-
-    def getCreds(self):
-        return Creds.findAll()
+    def getCreds(self,scope=None):
+        return Creds.findAll(scope=scope)
 
     def getConnections(self,tested=False,working=False):
         if working:
@@ -591,15 +573,6 @@ class Workspace():
         if tested:
             return Connection.findTested()
         return Connection.findAll()
-
-    def getCredsIdList(self):
-        idList = []
-        for cred in Creds.findAll():
-            idList.append(str(cred.getId()))
-        return idList
-
-    def getOptions(self):
-        return self.options.keys()
 
     def getOptionsValues(self):
         return self.options.items()

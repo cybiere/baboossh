@@ -92,16 +92,6 @@ class Creds():
             return None
         return Creds(row[0],row[1])
 
-    @classmethod
-    def findByIdentifier(cls,identifier):
-        c = dbConn.get().cursor()
-        c.execute('''SELECT type,content FROM creds WHERE identifier=?''',(identifier,))
-        row = c.fetchone()
-        c.close()
-        if row == None:
-            return None
-        return Creds(row[0],row[1])
-
     def show(self):
         self.obj.show()
 
