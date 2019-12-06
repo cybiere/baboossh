@@ -208,12 +208,14 @@ class Connection():
             macStr = result.stdout.rstrip()
             macs = macStr.split()
             newHost = Host(hostname,uname,issue,machineId,macs)
+            e = self.getEndpoint()
             if newHost.getId() is None:
                 print("> New host: "+hostname)
             else:
                 print("> Existing host: "+hostname)
+                if not newHost.inScope():
+                    e.unscope()
             newHost.save()
-            e = self.getEndpoint()
             e.setHost(newHost)
             e.save()
         except Exception as e:

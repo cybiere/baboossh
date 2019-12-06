@@ -102,6 +102,8 @@ class BaboosshExt(object,metaclass=ExtStr):
                 if ipobj.is_loopback:
                     continue
                 endpoint = Endpoint(ip,port if port is not None else 22)
+                if not self.connection.inScope():
+                    endpoint.unscope()
                 try:
                     path = Path(self.connection.getEndpoint().getHost(),endpoint)
                 except ValueError:
@@ -114,6 +116,8 @@ class BaboosshExt(object,metaclass=ExtStr):
             if ipobj.is_loopback:
                 return []
             endpoint = Endpoint(hostname,port if port is not None else 22)
+            if not self.connection.inScope():
+                endpoint.unscope()
             if endpoint.getId() is None:
                 endpoint.save()
                 self.newEndpoints.append(endpoint)
@@ -156,6 +160,8 @@ class BaboosshExt(object,metaclass=ExtStr):
                     identity = None
                     if "user" in curHost.keys():
                         user = User(curHost["user"])
+                        if not self.connection.inScope():
+                            user.unscope()
                         if user.getId() is None:
                             user.save()
                             self.newUsers.append(user)
@@ -195,6 +201,8 @@ class BaboosshExt(object,metaclass=ExtStr):
             identity = None
             if "user" in curHost.keys():
                 user = User(curHost["user"])
+                if not self.connection.inScope():
+                    user.unscope()
                 if user.getId() is None:
                     self.newUsers.append(user)
                     user.save()
@@ -262,6 +270,8 @@ class BaboosshExt(object,metaclass=ExtStr):
             self.keysHash[output] = filepath
             c= { "passphrase":"","keypath":filepath,"haspass":haspass}
             cred = Creds("privkey",json.dumps(c))
+            if not self.connection.inScope():
+                cred.unscope()
             if cred.getId() is None:
                 cred.save()
                 self.newCreds.append(cred)
@@ -317,6 +327,8 @@ class BaboosshExt(object,metaclass=ExtStr):
                 endpoints = await self.hostnameToIP(hostname,port)
                 if user is not None:
                     user = User(user)
+                    if not self.connection.inScope():
+                        user.unscope()
                     if user.getId() is None:
                         user.save()
                         self.newUsers.append(user)
