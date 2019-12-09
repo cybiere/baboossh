@@ -223,16 +223,20 @@ class Connection():
             return False
         return True
 
-    async def async_openConnection(self,gw=None):
+    async def async_openConnection(self,gw=None,verbose=True):
         authArgs = self.getCred().getKwargs()
         try:
             conn = await asyncio.wait_for(asyncssh.connect(self.getEndpoint().getIp(), port=self.getEndpoint().getPort(), tunnel=gw, known_hosts=None, username=self.getUser().getName(),**authArgs), timeout=5)
         except asyncio.TimeoutError:
-            print("> \033[1;31;40mTimeout\033[0m")
+            if verbose:
+                print("Connecting to \033[1;34;40m"+str(self)+"\033[0m > \033[1;33;40mTimeout\033[0m. Please check connectivity to endpoint.")
             raise
         except Exception as e:
-            print("Error occured while connecting to "+str(self)+": "+str(e))
+            if verbose:
+                print("Connecting to \033[1;34;40m"+str(self)+"\033[0m > \033[1;31;40mKO\033[0m. Error was: "+str(e))
             return None
+        if verbose:
+            print("Connecting to \033[1;34;40m"+str(self)+"\033[0m > \033[1;32;40mOK\033[0m")
         return conn
 
     def initConnect(self,gateway="auto",verbose=False):
@@ -249,11 +253,8 @@ class Connection():
                 gw = gateway.initConnect(verbose=verbose)
         else:
             gw = None
-        if verbose:
-            print("> "+str(self)+"...",end="")
-            sys.stdout.flush()
         try:
-            c = asyncio.get_event_loop().run_until_complete(self.async_openConnection(gw))
+            c = asyncio.get_event_loop().run_until_complete(self.async_openConnection(gw,verbose=verbose))
         except:
             raise
         if c is not None:
@@ -268,9 +269,9 @@ class Connection():
         return c
 
     def connect(self,gateway="auto",silent=False,verbose=False):
-        if not silent:
-            print("Establishing connection to \033[1;34;40m"+str(self)+"\033[0m",end="...")
-            sys.stdout.flush()
+#        if not silent:
+#            print("Establishing connection to \033[1;34;40m"+str(self)+"\033[0m",end="...")
+#            sys.stdout.flush()
         try:
             c = self.initConnect(gateway,verbose)
         except asyncio.TimeoutError:
@@ -279,10 +280,30 @@ class Connection():
             self.setTested(True)
             self.setWorking(c is not None)
             self.save()
-        if c is not None:
-            if not silent:
-                print("> \033[1;32;40mOK\033[0m")
+#        if c is not None:
+#            if not silent:
+#                print("> \033[1;32;40mOK\033[0m")
         return c
+
+    def threadedConnect(self,verbose):
+        try:
+            loop = asyncio.get_event_loop()
+        except:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        c = dbConn.get()
+        if Path.hasDirectPath(self.getEndpoint()):
+            gw = None
+        else:
+            gateway = self.getEndpoint().findGatewayConnection()
+            if gateway is not None:
+                gw = gateway.initConnect(verbose=False)
+            else:
+                gw = None
+        self.testConnect(gw,verbose=verbose)
+        c.close()
+        if gw is not None:
+            gw.close()
 
     def testConnect(self,gateway="auto",verbose=False,silent=False):
         c = self.connect(gateway=gateway,verbose=verbose,silent=silent)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from baboossh.params import Extensions, workspacesDir
+from baboossh.params import Extensions, workspacesDir, yesNo
 from baboossh.workspace import Workspace
 from tabulate import tabulate
 import cmd2, sys, os
@@ -9,21 +9,6 @@ import argparse
 from cmd2 import with_argparser
 
 Extensions.load()
-
-def yesNo(prompt,default=None):
-    if default is None:
-        choices = "[y,n]"
-    elif default:
-        choices = "[Y,n]"
-    else:
-        choices = "[y,N]"
-    a = ""
-    while a not in ["y","n"]:
-        a = input(prompt+" "+choices+" ").lower()
-        if a == "" and default is not None:
-            a = "y" if default else "n"
-    return a == "y"
-
 
 class BaboosshShell(cmd2.Cmd):
     intro = '''                                                                            &%%%%#%%%%%                                                    
@@ -705,18 +690,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             except Exception as e:
                 print("Targeted connect failed : "+str(e))
             return
-        try:
-            endpoints,users,creds = self.workspace.parseOptionsTarget()
-        except:
-            return
-        nbIter = len(endpoints)*len(users)*len(creds)
-        if nbIter > 1:
-            if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?",False):
-                return
-        if len(endpoints)*len(users)*len(creds) > 1:
-            self.workspace.massConnect(endpoints,users,creds,verbose)
-        else:
-            self.workspace.connect(endpoints[0],users[0],creds[0],verbose)
+        self.workspace.massConnect(verbose)
 
 
     parser_run = argparse.ArgumentParser(prog="run")

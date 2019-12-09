@@ -2,7 +2,8 @@ import os
 import re
 import ipaddress
 import sys
-from baboossh.params import dbConn,Extensions,workspacesDir
+import threading
+from baboossh.params import dbConn,Extensions,workspacesDir,yesNo
 from baboossh.host import Host
 from baboossh.endpoint import Endpoint
 from baboossh.user import User
@@ -10,7 +11,6 @@ from baboossh.creds import Creds
 from baboossh.connection import Connection
 from baboossh.path import Path
 from baboossh.tunnel import Tunnel
-
 
 class Workspace():
 
@@ -249,23 +249,33 @@ class Workspace():
             creds = [Creds.find(cred.getId())]
         return (endpoints,users,creds)
 
-    def massConnect(self,endpoints,users,creds,verbose):
+
+    def massConnect(self,verbose):
+        try:
+            endpoints,users,creds = self.parseOptionsTarget()
+        except:
+            return
+        nbIter = len(endpoints)*len(users)*len(creds)
+        if nbIter == 1:
+            self.connect(endpoints[0],users[0],creds[0],verbose)
+            return
+
+        if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?",False):
+            return
+        
         for endpoint in endpoints:
-            if Path.hasDirectPath(endpoint):
-                gw = None
-            else:
-                gateway = endpoint.findGatewayConnection()
-                if gateway is not None:
-                    gw = gateway.initConnect(verbose=verbose)
-                else:
-                    gw = None
             for user in users:
                 for cred in creds:
                     connection = Connection(endpoint,user,cred)
-                    if connection.testConnect(gateway=gw):
-                        break;
-            if gw is not None:
-                gw.close()
+                    t = threading.Thread(target=connection.threadedConnect, args=(verbose,))
+                    t.start()
+#                    if connection.testConnect(gateway=gw):
+#                       break;
+        main_thread = threading.main_thread()
+        for t in threading.enumerate():
+            if t is main_thread:
+                continue
+            t.join()
 
     def connect(self,endpoint,user,cred,verbose):
         connection = Connection(endpoint,user,cred)

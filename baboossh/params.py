@@ -1,18 +1,42 @@
 import sqlite3
 import importlib
 import inspect
+import threading
 from os.path import join,exists,isfile,expanduser,dirname
 from os import listdir
 
 home = expanduser("~")
 workspacesDir = join(home,".baboossh")
 
+def yesNo(prompt,default=None):
+    if default is None:
+        choices = "[y,n]"
+    elif default:
+        choices = "[Y,n]"
+    else:
+        choices = "[y,N]"
+    a = ""
+    while a not in ["y","n"]:
+        a = input(prompt+" "+choices+" ").lower()
+        if a == "" and default is not None:
+            a = "y" if default else "n"
+    return a == "y"
 
 class dbConn():
     __conn=None
+    __threadsConn={}
+    __workspace=None
 
     @classmethod
     def get(cls):
+        mainThreadName = threading.main_thread().getName()
+        currentName = threading.currentThread().getName()
+        if currentName != mainThreadName:
+            if currentName in cls.__threadsConn.keys():
+                return cls.__threadsConn[currentName]
+            else:
+                cls.connect(cls.__workspace)
+                return cls.__threadsConn[currentName]
         if cls.__conn is None:
             raise ValueError("Trying to use unconnected database")
         return cls.__conn
@@ -82,9 +106,18 @@ class dbConn():
 
     @classmethod
     def connect(cls,workspace):
+        dbPath = join(workspacesDir,workspace,"workspace.db")
+        mainThreadName = threading.main_thread().getName()
+        currentName = threading.currentThread().getName()
+        if currentName != mainThreadName:
+            if currentName in cls.__threadsConn.keys():
+                return
+            else:
+                cls.__threadsConn[currentName] = sqlite3.connect(dbPath)
+                return
         if cls.__conn is not None:
             cls.__conn.close()
-        dbPath = join(workspacesDir,workspace,"workspace.db")
+        cls.__workspace = workspace
         if not exists(dbPath):
             raise ValueError("Workspace database not found, the workspace must be corrupted !")
         cls.__conn = sqlite3.connect(dbPath)
@@ -93,6 +126,12 @@ class dbConn():
     def close(cls):
         cls.__conn.close()
         cls.__conn = None
+
+    @classmethod
+    def cleanThreadsConn(cls):
+        for c in cls.__threadsConn.values():
+            c.close()
+        cls.__threadsConn = {}
 
 class Extensions():
     auths = {}
