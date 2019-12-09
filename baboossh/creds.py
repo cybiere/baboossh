@@ -9,13 +9,17 @@ class Creds():
         self.obj = Extensions.getAuthMethod(credsType)(credsContent)
         self.id = None
         self.scope = True
+        self.found = None
         c = dbConn.get().cursor()
-        c.execute('SELECT id,scope FROM creds WHERE type=? AND identifier=?',(self.credsType, self.obj.getIdentifier()))
+        c.execute('SELECT id,scope,found FROM creds WHERE type=? AND identifier=?',(self.credsType, self.obj.getIdentifier()))
         savedCreds = c.fetchone()
         c.close()
         if savedCreds is not None:
             self.id = savedCreds[0]
             self.scope = savedCreds[1] != 0
+            if savedCreds[2] is not None :
+                from baboossh.endpoint import Endpoint
+                self.found = Endpoint.find(savedCreds[2])
 
     def getId(self):
         return self.id
@@ -29,6 +33,12 @@ class Creds():
     def unscope(self):
         self.scope = False
 
+    def getFound(self):
+        return self.found
+
+    def setFound(self,found):
+        self.found = found
+
     def save(self):
         c = dbConn.get().cursor()
         if self.id is not None:
@@ -38,14 +48,15 @@ class Creds():
                     type = ?,
                     content = ?,
                     identifier = ?,
-                    scope = ?
+                    scope = ?,
+                    found = ?
                 WHERE id = ?''',
-                (self.credsType, self.credsContent, self.obj.getIdentifier(), self.scope, self.id))
+                (self.credsType, self.credsContent, self.obj.getIdentifier(), self.scope, self.found.getId() if self.found is not None else None, self.id))
         else:
             #The creds doesn't exists in database : INSERT
-            c.execute('''INSERT INTO creds(type,content,identifier,scope)
-                VALUES (?,?,?,?) ''',
-                (self.credsType, self.credsContent, self.obj.getIdentifier(),self.scope))
+            c.execute('''INSERT INTO creds(type,content,identifier,scope,found)
+                VALUES (?,?,?,?,?) ''',
+                (self.credsType, self.credsContent, self.obj.getIdentifier(),self.scope, self.found.getId() if self.found is not None else None))
             c.close()
             c = dbConn.get().cursor()
             c.execute('SELECT id FROM creds WHERE type=? and identifier=?',(self.credsType,self.obj.getIdentifier()))
@@ -91,6 +102,18 @@ class Creds():
         if row == None:
             return None
         return Creds(row[0],row[1])
+
+    @classmethod
+    def findByFound(cls, endpoint, scope=None):
+        ret = []
+        c = dbConn.get().cursor()
+        if scope is None:
+            req = c.execute('SELECT type,content FROM creds WHERE found=?',(endpoint.getId() if endpoint is not None else None,))
+        else:
+            req = c.execute('SELECT type,content FROM creds WHERE found=? AND scope=?',(endpoint.getId() if endpoint is not None else None,scope))
+        for row in req:
+            ret.append(Creds(row[0],row[1]))
+        return ret
 
     def show(self):
         self.obj.show()

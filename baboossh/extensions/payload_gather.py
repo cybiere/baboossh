@@ -102,6 +102,8 @@ class BaboosshExt(object,metaclass=ExtStr):
                 if ipobj.is_loopback:
                     continue
                 endpoint = Endpoint(ip,port if port is not None else 22)
+                if endpoint.getId() is None:
+                    endpoint.setFound(self.connection.getEndpoint())
                 if not self.connection.inScope():
                     endpoint.unscope()
                 try:
@@ -116,6 +118,8 @@ class BaboosshExt(object,metaclass=ExtStr):
             if ipobj.is_loopback:
                 return []
             endpoint = Endpoint(hostname,port if port is not None else 22)
+            if endpoint.getId() is None:
+                endpoint.setFound(self.connection.getEndpoint())
             if not self.connection.inScope():
                 endpoint.unscope()
             if endpoint.getId() is None:
@@ -163,6 +167,7 @@ class BaboosshExt(object,metaclass=ExtStr):
                         if not self.connection.inScope():
                             user.unscope()
                         if user.getId() is None:
+                            user.setFound(self.connection.getEndpoint())
                             user.save()
                             self.newUsers.append(user)
                     if "identity" in curHost.keys():
@@ -204,6 +209,7 @@ class BaboosshExt(object,metaclass=ExtStr):
                 if not self.connection.inScope():
                     user.unscope()
                 if user.getId() is None:
+                    user.setFound(self.connection.getEndpoint())
                     self.newUsers.append(user)
                     user.save()
             if "identity" in curHost.keys():
@@ -273,6 +279,7 @@ class BaboosshExt(object,metaclass=ExtStr):
             if not self.connection.inScope():
                 cred.unscope()
             if cred.getId() is None:
+                cred.setFound(self.connection.getEndpoint())
                 cred.save()
                 self.newCreds.append(cred)
             return cred
@@ -330,6 +337,7 @@ class BaboosshExt(object,metaclass=ExtStr):
                     if not self.connection.inScope():
                         user.unscope()
                     if user.getId() is None:
+                        user.setFound(self.connection.getEndpoint())
                         user.save()
                         self.newUsers.append(user)
                 if identity is not None:

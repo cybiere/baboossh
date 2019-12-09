@@ -38,19 +38,25 @@ class dbConn():
             scanned INTEGER NOT NULL,
             reachable INTEGER,
             auth TEXT,
+            found INTEGER,
+            FOREIGN KEY(found) REFERENCES endpoints(id),
             FOREIGN KEY(host) REFERENCES hosts(id)
             )''')
         c.execute('''CREATE TABLE users (
             id INTEGER PRIMARY KEY ASC,
             scope INTEGER NOT NULL,
-            username TEXT NOT NULL
+            username TEXT NOT NULL,
+            found INTEGER,
+            FOREIGN KEY(found) REFERENCES endpoints(id)
             )''')
         c.execute('''CREATE TABLE creds (
             id INTEGER PRIMARY KEY ASC,
             scope INTEGER NOT NULL,
             type TEXT NOT NULL,
             content TEXT NOT NULL,
-            identifier TEXT NOT NULL
+            identifier TEXT NOT NULL,
+            found INTEGER,
+            FOREIGN KEY(found) REFERENCES endpoints(id)
             )''')
         c.execute('''CREATE TABLE connections (
             id INTEGER PRIMARY KEY ASC,

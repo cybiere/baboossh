@@ -7,13 +7,17 @@ class User():
         self.name = name
         self.id = None
         self.scope = True
+        self.found = None
         c = dbConn.get().cursor()
-        c.execute('SELECT id,scope FROM users WHERE username=?',(self.name,))
+        c.execute('SELECT id,scope,found FROM users WHERE username=?',(self.name,))
         savedUser = c.fetchone()
         c.close()
         if savedUser is not None:
             self.id = savedUser[0]
             self.scope = savedUser[1] != 0
+            if savedUser[2] is not None :
+                from baboossh.endpoint import Endpoint
+                self.found = Endpoint.find(savedUser[2])
 
     def getId(self):
         return self.id
@@ -30,6 +34,12 @@ class User():
     def unscope(self):
         self.scope = False
 
+    def getFound(self):
+        return self.found
+
+    def setFound(self,found):
+        self.found = found
+
     def save(self):
         c = dbConn.get().cursor()
         if self.id is not None:
@@ -37,14 +47,15 @@ class User():
             c.execute('''UPDATE users 
                 SET
                     username = ?,
-                    scope = ?
+                    scope = ?,
+                    found = ?
                 WHERE id = ?''',
-                (self.name, self.scope, self.id))
+                (self.name, self.scope, self.found.getId() if self.found is not None else None, self.id))
         else:
             #The user doesn't exists in database : INSERT
-            c.execute('''INSERT INTO users(username,scope)
-                VALUES (?,?) ''',
-                (self.name,self.scope))
+            c.execute('''INSERT INTO users(username,scope,found)
+                VALUES (?,?,?) ''',
+                (self.name,self.scope, self.found.getId() if self.found is not None else None))
             c.close()
             c = dbConn.get().cursor()
             c.execute('SELECT id FROM users WHERE username=?',(self.name,))
@@ -95,6 +106,19 @@ class User():
         if row == None:
             return None
         return User(row[0])
+
+    @classmethod
+    def findByFound(cls, endpoint, scope=True):
+        ret = []
+        c = dbConn.get().cursor()
+        if scope is None:
+            req = c.execute('SELECT username FROM users WHERE found=?',(endpoint.getId() if endpoint is not None else None,))
+        else:
+            req = c.execute('SELECT username FROM users WHERE found=? AND scope=?',(endpoint.getId() if endpoint is not None else None,scope))
+        for row in req:
+            ret.append(User(row[0]))
+        return ret
+
 
 
     def __str__(self):

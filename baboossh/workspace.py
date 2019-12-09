@@ -274,7 +274,7 @@ class Workspace():
     def run(self,endpoint,user,cred,payload,stmt):
         connection = Connection(endpoint,user,cred)
         if not connection.working:
-            print("Please check connection "+str(connection)+" with connect first")
+            #print("Please check connection "+str(connection)+" with connect first")
             return False
         return connection.run(payload,self.workspaceFolder,stmt)
 
@@ -555,7 +555,7 @@ class Workspace():
                 connections.append(str(connection))
         return connections
 
-    def getTargetsList(self):
+    def getTargetsList(self,scope=None):
         connections = []
         for connection in Connection.findAll():
             if scope is None:
@@ -592,6 +592,15 @@ class Workspace():
     
     def getBaseObjects(self,scope=None):
         return Endpoint.findAll(scope=scope) + Creds.findAll(scope=scope) + User.findAll(scope=scope) + Host.findAll(scope=scope)
+
+    def getFoundEndpoints(self,endpoint):
+        return Endpoint.findByFound(endpoint)
+
+    def getFoundUsers(self,endpoint):
+        return User.findByFound(endpoint)
+
+    def getFoundCreds(self,endpoint):
+        return Creds.findByFound(endpoint)
 
     def close(self):
         for tunnel in self.tunnels.values():
