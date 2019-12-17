@@ -1,4 +1,5 @@
 import sqlite3
+import threading
 from baboossh.params import dbConn,Extensions
 from baboossh.endpoint import Endpoint
 from baboossh.user import User
@@ -140,11 +141,21 @@ class Connection():
         return Connection(endpoint,User.find(row[0]),Creds.find(row[1]))
 
     @classmethod
+    def findAllWorkingByEndpoint(cls,endpoint):
+        ret = []
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT user,cred FROM connections WHERE working=1 AND endpoint=? ORDER BY root ASC',(endpoint.getId(),)):
+            ret.append(Connection(endpoint,User.find(row[0]),Creds.find(row[1])))
+        c.close()
+        return ret
+
+    @classmethod
     def findAll(cls):
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT id FROM connections'):
             ret.append(cls.find(row[0]))
+        c.close()
         return ret
 
     @classmethod
@@ -153,6 +164,7 @@ class Connection():
         c = dbConn.get().cursor()
         for row in c.execute('SELECT id FROM connections where tested=?',(True,)):
             ret.append(cls.find(row[0]))
+        c.close()
         return ret
 
     @classmethod
@@ -161,6 +173,7 @@ class Connection():
         c = dbConn.get().cursor()
         for row in c.execute('SELECT id FROM connections where working=?',(True,)):
             ret.append(cls.find(row[0]))
+        c.close()
         return ret
 
     @classmethod
@@ -227,12 +240,11 @@ class Connection():
         authArgs = self.getCred().getKwargs()
         try:
             conn = await asyncio.wait_for(asyncssh.connect(self.getEndpoint().getIp(), port=self.getEndpoint().getPort(), tunnel=gw, known_hosts=None, username=self.getUser().getName(),**authArgs), timeout=5)
-        except asyncio.TimeoutError:
-            if verbose:
-                print("Connecting to \033[1;34;40m"+str(self)+"\033[0m > \033[1;33;40mTimeout\033[0m. Please check connectivity to endpoint.")
-            raise
         except Exception as e:
             if verbose:
+                if e.__class__.__name__ == 'TimeoutError':
+                    print("Connecting to \033[1;34;40m"+str(self)+"\033[0m > \033[1;31;40mKO\033[0m. Timeout: could not reach destination")
+                    raise e
                 print("Connecting to \033[1;34;40m"+str(self)+"\033[0m > \033[1;31;40mKO\033[0m. Error was: "+str(e))
             return None
         if verbose:
@@ -268,45 +280,19 @@ class Connection():
                 p.save()
         return c
 
-    def connect(self,gateway="auto",silent=False,verbose=False):
-#        if not silent:
-#            print("Establishing connection to \033[1;34;40m"+str(self)+"\033[0m",end="...")
-#            sys.stdout.flush()
+    def connect(self,gateway="auto",verbose=False):
         try:
             c = self.initConnect(gateway,verbose)
         except asyncio.TimeoutError:
-            return None
+            raise
         else:
             self.setTested(True)
             self.setWorking(c is not None)
             self.save()
-#        if c is not None:
-#            if not silent:
-#                print("> \033[1;32;40mOK\033[0m")
         return c
 
-    def threadedConnect(self,verbose):
-        try:
-            loop = asyncio.get_event_loop()
-        except:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        c = dbConn.get()
-        if Path.hasDirectPath(self.getEndpoint()):
-            gw = None
-        else:
-            gateway = self.getEndpoint().findGatewayConnection()
-            if gateway is not None:
-                gw = gateway.initConnect(verbose=False)
-            else:
-                gw = None
-        self.testConnect(gw,verbose=verbose)
-        c.close()
-        if gw is not None:
-            gw.close()
-
-    def testConnect(self,gateway="auto",verbose=False,silent=False):
-        c = self.connect(gateway=gateway,verbose=verbose,silent=silent)
+    def testConnect(self,gateway="auto",verbose=False):
+        c = self.connect(gateway=gateway,verbose=verbose)
         if c is None:
             return False
         if self.getEndpoint().getHost() is None:

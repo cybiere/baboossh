@@ -3,6 +3,7 @@ import re
 import ipaddress
 import sys
 import threading
+import asyncio
 from baboossh.params import dbConn,Extensions,workspacesDir,yesNo
 from baboossh.host import Host
 from baboossh.endpoint import Endpoint
@@ -249,6 +250,45 @@ class Workspace():
             creds = [Creds.find(cred.getId())]
         return (endpoints,users,creds)
 
+    def threadConnect(self,verbose,endpoint,users,creds):
+        try:
+            loop = asyncio.get_event_loop()
+        except:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        c = dbConn.get()
+        if Path.hasDirectPath(endpoint):
+            gw = None
+        else:
+            gateway = endpoint.findGatewayConnection()
+            if gateway is not None:
+                if verbose:
+                    print("Connecting to gateway "+str(gateway)+" to reach "+str(endpoint)+"...")
+                gw = gateway.initConnect(verbose=verbose)
+            else:
+                gw = None
+        workingQueue = []
+        dunnoQueue = []
+        for user in users:
+            for cred in creds:
+                connection = Connection(endpoint,user,cred)
+                if connection.isWorking():
+                    workingQueue.append(connection)
+                else:
+                    dunnoQueue.append(connection)
+        queue = workingQueue + dunnoQueue
+        for connection in queue:
+            try:
+                working = connection.testConnect(gw,verbose=True)
+            except:
+                print("Due to timeout, subsequent connections to endpoint will be ignored.")
+                break
+            if working:
+                break
+        if gw is not None:
+            gw.close()
+        dbConn.close()
+
 
     def massConnect(self,verbose):
         try:
@@ -264,13 +304,8 @@ class Workspace():
             return
         
         for endpoint in endpoints:
-            for user in users:
-                for cred in creds:
-                    connection = Connection(endpoint,user,cred)
-                    t = threading.Thread(target=connection.threadedConnect, args=(verbose,))
-                    t.start()
-#                    if connection.testConnect(gateway=gw):
-#                       break;
+            t = threading.Thread(target=self.threadConnect, args=(verbose,endpoint,users,creds))
+            t.start()
         main_thread = threading.main_thread()
         for t in threading.enumerate():
             if t is main_thread:

@@ -124,6 +124,13 @@ class dbConn():
 
     @classmethod
     def close(cls):
+        mainThreadName = threading.main_thread().getName()
+        currentName = threading.currentThread().getName()
+        if currentName != mainThreadName:
+            if currentName in cls.__threadsConn.keys():
+                cls.__threadsConn[currentName].close()
+                del cls.__threadsConn[currentName]
+            return
         cls.__conn.close()
         cls.__conn = None
 
