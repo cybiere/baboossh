@@ -1,5 +1,4 @@
 import sqlite3
-import threading
 from baboossh.params import dbConn,Extensions
 from baboossh.endpoint import Endpoint
 from baboossh.user import User
@@ -223,9 +222,9 @@ class Connection():
             newHost = Host(hostname,uname,issue,machineId,macs)
             e = self.getEndpoint()
             if newHost.getId() is None:
-                print("> New host: "+hostname)
+                print("\t"+str(self)+" is a new host: "+hostname)
             else:
-                print("> Existing host: "+hostname)
+                print("\t"+str(self)+" is an existing host: "+hostname)
                 if not newHost.inScope():
                     e.unscope()
             newHost.save()
@@ -236,22 +235,27 @@ class Connection():
             return False
         return True
 
-    async def async_openConnection(self,gw=None,verbose=True):
+    async def async_openConnection(self,gw=None,verbose=True,target=False):
+        if target:
+            verbose=True
         authArgs = self.getCred().getKwargs()
+        hostname = ""
+        if self.getEndpoint().getHost() is not None:
+            hostname = " ("+str(self.getEndpoint().getHost())+")"
         try:
             conn = await asyncio.wait_for(asyncssh.connect(self.getEndpoint().getIp(), port=self.getEndpoint().getPort(), tunnel=gw, known_hosts=None, username=self.getUser().getName(),**authArgs), timeout=5)
         except Exception as e:
             if verbose:
                 if e.__class__.__name__ == 'TimeoutError':
-                    print("Connecting to \033[1;34;40m"+str(self)+"\033[0m > \033[1;31;40mKO\033[0m. Timeout: could not reach destination")
+                    print("Connecting to \033[1;34;40m"+str(self)+"\033[0m"+hostname+" > \033[1;31;40mKO\033[0m. Timeout: could not reach destination")
                     raise e
-                print("Connecting to \033[1;34;40m"+str(self)+"\033[0m > \033[1;31;40mKO\033[0m. Error was: "+str(e))
+                print("Connecting to \033[1;34;40m"+str(self)+"\033[0m"+hostname+" > \033[1;31;40mKO\033[0m. Error was: "+str(e))
             return None
         if verbose:
-            print("Connecting to \033[1;34;40m"+str(self)+"\033[0m > \033[1;32;40mOK\033[0m")
+            print("Connecting to \033[1;34;40m"+str(self)+"\033[0m"+hostname+" > \033[1;32;40mOK\033[0m")
         return conn
 
-    def initConnect(self,gateway="auto",verbose=False):
+    def initConnect(self,gateway="auto",verbose=False,target=False):
         if gateway is not None:
             if isinstance(gateway,asyncssh.SSHClientConnection):
                 gw=gateway
@@ -266,7 +270,7 @@ class Connection():
         else:
             gw = None
         try:
-            c = asyncio.get_event_loop().run_until_complete(self.async_openConnection(gw,verbose=verbose))
+            c = asyncio.get_event_loop().run_until_complete(self.async_openConnection(gw,verbose=verbose,target=target))
         except:
             raise
         if c is not None:
@@ -280,9 +284,9 @@ class Connection():
                 p.save()
         return c
 
-    def connect(self,gateway="auto",verbose=False):
+    def connect(self,gateway="auto",verbose=False,target=False):
         try:
-            c = self.initConnect(gateway,verbose)
+            c = self.initConnect(gateway,verbose,target=target)
         except asyncio.TimeoutError:
             raise
         else:
@@ -292,12 +296,10 @@ class Connection():
         return c
 
     def testConnect(self,gateway="auto",verbose=False):
-        c = self.connect(gateway=gateway,verbose=verbose)
+        c = self.connect(gateway=gateway,verbose=verbose,target=True)
         if c is None:
             return False
         if self.getEndpoint().getHost() is None:
-            print("\tUnknown host, identifying...",end="")
-            sys.stdout.flush()
             asyncio.get_event_loop().run_until_complete(self.identify(c))
         c.close()
         return True
@@ -306,7 +308,7 @@ class Connection():
         return await payload.run(c,self,wspaceFolder,stmt)
 
     def run(self,payload,wspaceFolder,stmt):
-        c = self.connect()
+        c = self.connect(target=True)
         if c is None:
             return False
         asyncio.get_event_loop().run_until_complete(self.async_run(c,payload,wspaceFolder,stmt))
