@@ -66,14 +66,19 @@ class BaboosshExt(object,metaclass=ExtStr):
         return True
     
     async def gather(self):
-        print("Starting gathering... ",end="")
+        print("Starting gathering...")
         sys.stdout.flush()
 
+        print("From SSH user config")
         await self.gatherFromConfig()
+        print("From history files")
         historyFiles = await self.listHistoryFiles()
         for historyFile in historyFiles:
+            print("\t -"+historyFile)
             await self.gatherFromHistory(historyFile)
+        print("From user keys")
         await self.gatherKeys()
+        print("From known_hosts")
         await self.gatherFromKnown()
         print("Done !")
         print("Users :")
@@ -150,7 +155,7 @@ class BaboosshExt(object,metaclass=ExtStr):
             if line == '':
                 continue
             if line[:5].lower() == "Host ".lower():
-                if curHost != None:
+                if curHost != None and curHost["name"] != "*":
                     if "host" in curHost.keys():
                         host = curHost["host"]
                     else:
@@ -192,7 +197,8 @@ class BaboosshExt(object,metaclass=ExtStr):
                     if val[:2] == '~/':
                         val = val[2:]
                     curHost['identity'] = val
-        if curHost != None:
+        if curHost != None and curHost["name"] != "*":
+            print("Not None")
             if "host" in curHost.keys():
                 host = curHost["host"]
             else:
@@ -219,6 +225,7 @@ class BaboosshExt(object,metaclass=ExtStr):
                     conn = Connection(endpoint,user,identity)
                     conn.save()
                     self.newConnections.append(conn)
+        print("End")
 
     async def gatherFromKnown(self):
         lootFolder = os.path.join(self.wspaceFolder,"loot")
@@ -296,8 +303,17 @@ class BaboosshExt(object,metaclass=ExtStr):
         return ret
 
     async def gatherFromHistory(self,historyFile):
-        result = await self.socket.run("cat "+historyFile)
-        lines = result.stdout.splitlines()
+        lootFolder = os.path.join(self.wspaceFolder,"loot")
+        filename = str(self.connection.getEndpoint()).replace(":","-")+"_"+str(self.connection.getUser())+"_"+historyFile.replace("/","_")
+        filepath = os.path.join(lootFolder,filename)
+        try:
+            await asyncssh.scp((self.socket,historyFile),filepath)
+        except Exception as e:
+            print(e)
+            return None
+        with open(filepath,"r",errors="ignore") as dledFile:
+            data = dledFile.read()
+        lines = data.splitlines()
         for line in lines:
             if re.search(r'^ *ssh ',line):
                 option = ""
