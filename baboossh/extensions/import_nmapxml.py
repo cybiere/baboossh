@@ -58,7 +58,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         countNew = 0
         for host in report.hosts:
             for s in host.services:
-                if s.service == "ssh":
+                if s.service == "ssh" and s.open():
                     count = count + 1
                     newEndpoint = Endpoint(host.address,s.port)
                     if newEndpoint.getId() is None:
