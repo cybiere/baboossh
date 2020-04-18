@@ -594,6 +594,9 @@ class Workspace():
     def searchEndpoints(self,field,val,showAll=False):
         return Endpoint.search(field,val,showAll)
 
+    def searchHosts(self,field,val,showAll=False):
+        return Host.search(field,val,showAll)
+
     def getTargetsValidList(self,scope=None):
         connections = []
         for connection in Connection.findWorking():
@@ -653,6 +656,8 @@ class Workspace():
     def getSearchFields(self,obj):
         if obj == "Endpoint":
             return Endpoint.getSearchFields()
+        if obj == "Host":
+            return Host.getSearchFields()
         return []
 
     def close(self):

@@ -155,6 +155,27 @@ class Host():
             ret.append(host.getName())
         return ret
 
+    @classmethod
+    def getSearchFields(cls):
+        return ['name','uname']
+
+    @classmethod
+    def search(cls,field,val,showAll=False):
+        if field not in cls.getSearchFields():
+            raise ValueError
+        ret = []
+        print(field);
+        c = dbConn.get().cursor()
+        val = "%"+val+"%"
+        #Ok this sounds fugly, but there seems to be no way to set a column name in a parameter. The SQL injection risk is mitigated as field must be in allowed fields, but if you find something better I take it
+        c.execute('SELECT name,uname,issue,machineId,macs FROM hosts WHERE {} LIKE ?'.format(field),(val,))
+        for row in c:
+            ret.append(Host(row[0],row[1],row[2],row[3],json.loads(row[4])))
+        return ret
+
+
+
+
     def __str__(self):
         return self.name
 

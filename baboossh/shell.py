@@ -67,6 +67,9 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     def getSearchFieldsEndpoint(self):
         return self.workspace.getSearchFields("Endpoint")
 
+    def getSearchFieldsHost(self):
+        return self.workspace.getSearchFields("Host")
+
     def getOpenTunnels(self):
         return self.workspace.getTunnelsPort()
 
@@ -176,13 +179,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 ###################           HOSTS           ###################
 #################################################################
 
-    def host_list(self,stmt):
-        print("Current hosts in workspace:")
-        outScope = getattr(stmt,'all',False)
-        hosts = self.workspace.getHosts()
-        if not hosts:
-            print("No hosts in current workspace")
-            return
+    def host_print(self,hosts):
         data = []
         for host in hosts:
             if not host.inScope() and not outScope:
@@ -197,6 +194,35 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             data.append([scope,host.getId(),host.getName(),endpoints])
         print(tabulate(data,headers=["","ID","Hostname","Endpoints"]))
 
+    def host_list(self,stmt):
+        print("Current hosts in workspace:")
+        outScope = getattr(stmt,'all',False)
+        hosts = self.workspace.getHosts()
+        if not hosts:
+            print("No hosts in current workspace")
+            return
+        data = []
+        for host in hosts:
+            if not host.inScope() and not outScope:
+                continue
+            data.append(host)
+        self.host_print(data)
+
+    def host_search(self,stmt):
+        showAll = getattr(stmt,'all',False)
+        field = vars(stmt)['field']
+        allowedFields = self.getSearchFieldsHost()
+        if field not in allowedFields:
+            print("Invalid field specified, use one of "+str(allowedFields)+".")
+            return
+        val = vars(stmt)['val']
+        hosts = self.workspace.searchHosts(field,val,showAll)
+        print("Search result for hosts:")
+        if not hosts:
+            print("No results")
+            return
+        self.host_print(hosts)
+
     def host_del(self,stmt):
         host = getattr(stmt,'host',None)
         return self.workspace.delHost(host)
@@ -205,10 +231,15 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     subparser_host = parser_host.add_subparsers(title='Actions',help='Available actions')
     parser_host_list = subparser_host.add_parser("list",help='List hosts')
     parser_host_list.add_argument("-a", "--all", help="Show out of scope objects",action="store_true")
+    parser_host_search = subparser_host.add_parser("search",help='Search a host')
+    parser_host_search.add_argument('field',help='Field to search in',choices_method=getSearchFieldsHost)
+    parser_host_search.add_argument('val',help='Value to search')
+ 
     parser_host_del = subparser_host.add_parser("delete",help='Delete host')
     parser_host_del.add_argument('host',help='Host name',choices_method=getHosts)
 
     parser_host_list.set_defaults(func=host_list)
+    parser_host_search.set_defaults(func=host_search)
     parser_host_del.set_defaults(func=host_del)
 
     @cmd2.with_argparser(parser_host)
