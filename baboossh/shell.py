@@ -223,15 +223,31 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
    
     def endpoint_list(self,stmt):
         print("Current endpoints in workspace:")
-        outScope = getattr(stmt,'all',False)
+        showAll = getattr(stmt,'all',False)
+        reachable = getattr(stmt,'reachable',None)
+        scanned = getattr(stmt,'scanned',None)
+        conn = getattr(stmt,'conn',None)
         endpoints = self.workspace.getEndpoints()
         if not endpoints:
             print("No endpoints in current workspace")
             return
         data = []
         for endpoint in endpoints:
-            if not endpoint.inScope() and not outScope:
-                continue
+            if not showAll:
+                if not endpoint.inScope():
+                    continue
+                if scanned is not None:
+                    flagScanned = scanned == "true"
+                    if endpoint.isScanned() != flagScanned:
+                        continue
+                if reachable is not None:
+                    flagReachable = reachable == "true"
+                    if endpoint.isReachable() != flagReachable:
+                        continue
+                if conn is not None:
+                    flagConn = conn == "true"
+                    if (endpoint.getConnection() is None) == flagConn:
+                        continue
             scope = "o" if endpoint.inScope() else ""
             c = endpoint.getConnection()
             if c is None:
@@ -269,6 +285,9 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     subparser_endpoint = parser_endpoint.add_subparsers(title='Actions',help='Available actions')
     parser_endpoint_list = subparser_endpoint.add_parser("list",help='List endpoints')
     parser_endpoint_list.add_argument("-a", "--all", help="Show out of scope objects",action="store_true")
+    parser_endpoint_list.add_argument("-s", "--scanned", help="Show only scanned endpoints", nargs='?', choices=["true","false"] , const="true")
+    parser_endpoint_list.add_argument("-r", "--reachable", help="Show only reachable endpoints", nargs='?', choices=["true","false"] , const="true")
+    parser_endpoint_list.add_argument("-c", "--conn", help="Show only endpoints with connection", nargs='?', choices=["true","false"], const="true")
     parser_endpoint_add = subparser_endpoint.add_parser("add",help='Add a new endpoint')
     parser_endpoint_add.add_argument('ip',help='New endpoint ip')
     parser_endpoint_add.add_argument('port',help='New endpoint port', type=int, default=22, nargs='?')
