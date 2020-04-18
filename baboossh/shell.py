@@ -63,6 +63,10 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     def getOptionConnection(self):
         return self.workspace.getTargetsList(scope=True)
 
+
+    def getSearchFieldsEndpoint(self):
+        return self.workspace.getSearchFields("Endpoint")
+
     def getOpenTunnels(self):
         return self.workspace.getTunnelsPort()
 
@@ -221,33 +225,9 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 ###################         ENDPOINTS         ###################
 #################################################################
    
-    def endpoint_list(self,stmt):
-        print("Current endpoints in workspace:")
-        showAll = getattr(stmt,'all',False)
-        reachable = getattr(stmt,'reachable',None)
-        scanned = getattr(stmt,'scanned',None)
-        conn = getattr(stmt,'conn',None)
-        endpoints = self.workspace.getEndpoints()
-        if not endpoints:
-            print("No endpoints in current workspace")
-            return
+    def endpoint_print(self,endpoints):
         data = []
         for endpoint in endpoints:
-            if not showAll:
-                if not endpoint.inScope():
-                    continue
-                if scanned is not None:
-                    flagScanned = scanned == "true"
-                    if endpoint.isScanned() != flagScanned:
-                        continue
-                if reachable is not None:
-                    flagReachable = reachable == "true"
-                    if endpoint.isReachable() != flagReachable:
-                        continue
-                if conn is not None:
-                    flagConn = conn == "true"
-                    if (endpoint.getConnection() is None) == flagConn:
-                        continue
             scope = "o" if endpoint.inScope() else ""
             c = endpoint.getConnection()
             if c is None:
@@ -267,6 +247,37 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             data.append([scope,endpoint,h,s,r,a,c])
         print(tabulate(data,headers=["","Endpoint","Host","Scanned","Reachable","Authentication","Working connection"]))
     
+    def endpoint_list(self,stmt):
+        print("Current endpoints in workspace:")
+        showAll = getattr(stmt,'all',False)
+        reachable = getattr(stmt,'reachable',None)
+        scanned = getattr(stmt,'scanned',None)
+        conn = getattr(stmt,'conn',None)
+        endpoints = self.workspace.getEndpoints()
+        if not endpoints:
+            print("No endpoints in current workspace")
+            return
+
+        endpointList = []
+        for endpoint in endpoints:
+            if not showAll:
+                if not endpoint.inScope():
+                    continue
+                if scanned is not None:
+                    flagScanned = scanned == "true"
+                    if endpoint.isScanned() != flagScanned:
+                        continue
+                if reachable is not None:
+                    flagReachable = reachable == "true"
+                    if endpoint.isReachable() != flagReachable:
+                        continue
+                if conn is not None:
+                    flagConn = conn == "true"
+                    if (endpoint.getConnection() is None) == flagConn:
+                        continue
+            endpointList.append(endpoint)
+        self.endpoint_print(endpointList)
+    
     def endpoint_add(self,stmt):
         ip = vars(stmt)['ip']
         port = str(vars(stmt)['port'])
@@ -281,6 +292,22 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         endpoint = vars(stmt)['endpoint']
         return self.workspace.delEndpoint(endpoint)
 
+    def endpoint_search(self,stmt):
+        showAll = getattr(stmt,'all',False)
+        field = vars(stmt)['field']
+        allowedFields = self.getSearchFieldsEndpoint()
+        if field not in allowedFields:
+            print("Invalid field specified, use one of "+str(allowedFields)+".")
+            return
+        val = vars(stmt)['val']
+        endpoints = self.workspace.searchEndpoints(field,val,showAll)
+        print("Search result for endpoints:")
+        if not endpoints:
+            print("No results")
+            return
+        self.endpoint_print(endpoints)
+
+
     parser_endpoint = argparse.ArgumentParser(prog="endpoint")
     subparser_endpoint = parser_endpoint.add_subparsers(title='Actions',help='Available actions')
     parser_endpoint_list = subparser_endpoint.add_parser("list",help='List endpoints')
@@ -291,11 +318,16 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     parser_endpoint_add = subparser_endpoint.add_parser("add",help='Add a new endpoint')
     parser_endpoint_add.add_argument('ip',help='New endpoint ip')
     parser_endpoint_add.add_argument('port',help='New endpoint port', type=int, default=22, nargs='?')
+    parser_endpoint_search = subparser_endpoint.add_parser("search",help='Search an endpoint')
+    parser_endpoint_search.add_argument("-a", "--all", help="Include out of scope elements in search",action="store_true")
+    parser_endpoint_search.add_argument('field',help='Field to search in',choices_method=getSearchFieldsEndpoint)
+    parser_endpoint_search.add_argument('val',help='Value to search')
     parser_endpoint_del = subparser_endpoint.add_parser("delete",help='Set target endpoint')
     parser_endpoint_del.add_argument('endpoint',help='Endpoint',choices_method=getOptionEndpoint)
 
     parser_endpoint_list.set_defaults(func=endpoint_list)
     parser_endpoint_add.set_defaults(func=endpoint_add)
+    parser_endpoint_search.set_defaults(func=endpoint_search)
     parser_endpoint_del.set_defaults(func=endpoint_del)
 
     @cmd2.with_argparser(parser_endpoint)

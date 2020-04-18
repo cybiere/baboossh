@@ -591,6 +591,9 @@ class Workspace():
             endpoints.append(endpoint)
         return endpoints
 
+    def searchEndpoints(self,field,val,showAll=False):
+        return Endpoint.search(field,val,showAll)
+
     def getTargetsValidList(self,scope=None):
         connections = []
         for connection in Connection.findWorking():
@@ -646,6 +649,11 @@ class Workspace():
 
     def getFoundCreds(self,endpoint):
         return Creds.findByFound(endpoint)
+
+    def getSearchFields(self,obj):
+        if obj == "Endpoint":
+            return Endpoint.getSearchFields()
+        return []
 
     def close(self):
         for tunnel in self.tunnels.values():
