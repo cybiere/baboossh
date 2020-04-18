@@ -481,21 +481,26 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 
     def connection_list(self,stmt):
         print("Available connections:")
-        outScope = getattr(stmt,'all',False)
-        tested = False
-        working = False
-        if stmt is not None:
-            opt = getattr(stmt,"opt",[])
-            tested = "tested" in opt
-            working = "working" in opt
-        connections = self.workspace.getConnections(tested=tested,working=working)
+        showAll = getattr(stmt,'all',False)
+        working = getattr(stmt,'working',None)
+        tested = getattr(stmt,'tested',None)
+        connections = self.workspace.getConnections()
         if not connections:
             print("No connections in current workspace")
             return
         data = []
         for connection in connections:
-            if not connection.inScope() and not outScope:
-                continue
+            if not showAll:
+                if not connection.inScope():
+                    continue
+                if working is not None:
+                    flagWorking = working == "true"
+                    if connection.isWorking() != flagWorking:
+                        continue
+                if tested is not None:
+                    flagTested = tested == "true"
+                    if connection.isTested() != flagTested:
+                        continue
             data.append([connection.getEndpoint(),connection.getUser(),connection.getCred(),connection.isTested(),connection.isWorking()])
         print(tabulate(data,headers=["Endpoint","User","Creds","Tested","Working"]))
 
@@ -507,7 +512,8 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     subparser_connection = parser_connection.add_subparsers(title='Actions',help='Available actions')
     parser_connection_list = subparser_connection.add_parser("list",help='List connections')
     parser_connection_list.add_argument("-a", "--all", help="Show out of scope objects",action="store_true")
-    parser_connection_list.add_argument('opt',help='Filter options',nargs=argparse.REMAINDER,choices=["working","tested"])
+    parser_connection_list.add_argument("-w", "--working", help="Show only working connections", nargs='?', choices=["true","false"] , const="true")
+    parser_connection_list.add_argument("-t", "--tested", help="Show only tested connections", nargs='?', choices=["true","false"] , const="true")
     parser_connection_del = subparser_connection.add_parser("delete",help='Delete connection')
     parser_connection_del.add_argument('connection',help='Connection string',choices_method=getOptionConnection)
 
