@@ -887,7 +887,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         return True
     
     def initPrompt(self):
-        newPrompt = "\033[1;33;40m"
+        newPrompt = "\033[1;33m"
         newPrompt = newPrompt+"["+self.workspace.getName()+"]\033[1;34m"
         if self.workspace.getOption("endpoint"):
             if self.workspace.getOption("user"):
@@ -902,8 +902,8 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
                 newPrompt = newPrompt+":"+str(self.workspace.getOption("creds"))
             newPrompt = newPrompt+"@..."
         if self.workspace.getOption("payload"):
-            newPrompt = newPrompt+"\033[1;31;40m("+str(self.workspace.getOption("payload"))+")\033[0m"
-        self.prompt = newPrompt+"\033[1;33;40m>\033[0m "
+            newPrompt = newPrompt+"\033[1;31m("+str(self.workspace.getOption("payload"))+")\033[0m"
+        self.prompt = newPrompt+"\033[1;33m>\033[0m "
 
     def emptyline(self):
         pass
