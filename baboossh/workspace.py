@@ -1,10 +1,9 @@
 import os
 import re
 import ipaddress
-import sys
 import threading
 import asyncio
-from baboossh.params import dbConn,Extensions,workspacesDir,yesNo
+from baboossh.params import dbConn, Extensions, workspacesDir, yesNo
 from baboossh.host import Host
 from baboossh.endpoint import Endpoint
 from baboossh.user import User
@@ -17,7 +16,7 @@ class Workspace():
     """A container for all related objects and connections
 
     The workspace allows to separate environments with dedicated folders and
-    database. Any object (`Endpoint`, `User`, `Creds`, `Connection`, etc. exists 
+    database. Any object (`Endpoint`, `User`, `Creds`, `Connection`, etc. exists
     only in its workspace to avoid cluttering the user.
 
     """
@@ -28,7 +27,7 @@ class Workspace():
 #################################################################
 
     @classmethod
-    def create(cls,name: str):
+    def create(cls, name: str):
         """Create a new workspace
 
         Create a new workspace with its dedicated folder (in `$HOME/.baboossh` by
@@ -39,17 +38,17 @@ class Workspace():
         if name == "":
             print("Cannot use workspace with empty name")
             raise ValueError
-        if re.match('^[\w_\.-]+$', name) is None:
+        if re.match(r'^[\w_\.-]+$', name) is None:
             print('Invalid characters in workspace name. Allowed characters are letters, numbers and ._-')
             raise ValueError
-        workspaceFolder = os.path.join(workspacesDir,name)
-        if not os.path.exists(workspaceFolder):
+        workspace_folder = os.path.join(workspacesDir, name)
+        if not os.path.exists(workspace_folder):
             try:
-                os.mkdir(workspaceFolder)
-                os.mkdir(os.path.join(workspaceFolder,"loot"))
-                os.mkdir(os.path.join(workspaceFolder,"keys"))
+                os.mkdir(workspace_folder)
+                os.mkdir(os.path.join(workspace_folder, "loot"))
+                os.mkdir(os.path.join(workspace_folder, "keys"))
             except OSError:
-                print ("Creation of the directory %s failed" % workspaceFolder)
+                print("Creation of the directory %s failed" % workspace_folder)
                 raise OSError
             print("Workspace "+name+" created")
         else:
@@ -59,14 +58,14 @@ class Workspace():
         dbConn.build(name)
         return Workspace(name)
 
-    def __init__(self,name):
+    def __init__(self, name):
         if name == "":
             raise ValueError("Cannot use workspace with empty name")
-        if re.match('^[\w_\.-]+$', name) is None:
+        if re.match(r'^[\w_\.-]+$', name) is None:
             print('Invalid characters in workspace name. Allowed characters are letters, numbers and ._-')
             raise ValueError
-        self.workspaceFolder = os.path.join(workspacesDir,name)
-        if not os.path.exists(self.workspaceFolder):
+        self.workspace_folder = os.path.join(workspacesDir, name)
+        if not os.path.exists(self.workspace_folder):
             raise ValueError("Workspace "+name+" does not exist")
         dbConn.connect(name)
         self.name = name
@@ -84,26 +83,26 @@ class Workspace():
 #################################################################
 
     #Checks if param is a valid IP (v4 or v6)
-    def checkIsIP(self,ip):
+    def __check_is_ip(self, ipaddr):
         try:
-            ipaddress.ip_address(ip)
+            ipaddress.ip_address(ipaddr)
         except ValueError:
             return False
         return True
 
     #Manually add a endpoint
-    def addEndpoint(self,ip,port):
-        if not self.checkIsIP(ip):
+    def addEndpoint(self, ipaddr, port):
+        if not self.__check_is_ip(ipaddr):
             print("The address given isn't a valid IP")
             raise ValueError
         if not port.isdigit():
             print("The port given isn't a positive integer")
             raise ValueError
 
-        newEndpoint = Endpoint(ip,port)
+        newEndpoint = Endpoint(ipaddr, port)
         newEndpoint.save()
 
-    def delEndpoint(self,endpoint):
+    def delEndpoint(self, endpoint):
         try:
             endpoint = Endpoint.findByIpPort(endpoint)
         except ValueError:
@@ -118,11 +117,11 @@ class Workspace():
 ###################           USERS           ###################
 #################################################################
 
-    def addUser(self,name):
+    def addUser(self, name):
         newUser = User(name)
         newUser.save()
 
-    def delUser(self,name):
+    def delUser(self, name):
         user = User.findByUsername(name)
         if user is None:
             print("Could not find user.")
@@ -133,11 +132,10 @@ class Workspace():
 ###################           HOSTS           ###################
 #################################################################
 
-    def delHost(self,host):
+    def delHost(self, host):
         if host not in self.getHostsNames():
             print("Not a known Host name.")
             return False
-        
         hosts = Host.findByName(host)
         if len(hosts) > 1:
             print("Several hosts corresponding. Please delete endpoints.")
@@ -149,13 +147,13 @@ class Workspace():
 ###################           CREDS           ###################
 #################################################################
 
-    def addCreds(self,credsType,stmt):
+    def addCreds(self, credsType, stmt):
         credsContent = Extensions.getAuthMethod(credsType).fromStatement(stmt)
-        newCreds = Creds(credsType,credsContent)
+        newCreds = Creds(credsType, credsContent)
         newCreds.save()
         return newCreds.getId()
 
-    def showCreds(self,credsId):
+    def showCreds(self, credsId):
         if credsId[0] == '#':
             credsId = credsId[1:]
         creds = Creds.find(credsId)
@@ -164,7 +162,7 @@ class Workspace():
             return
         creds.show()
 
-    def editCreds(self,credsId):
+    def editCreds(self, credsId):
         if credsId[0] == '#':
             credsId = credsId[1:]
         creds = Creds.find(credsId)
@@ -173,7 +171,7 @@ class Workspace():
             return
         creds.edit()
 
-    def delCreds(self,credsId):
+    def delCreds(self, credsId):
         if credsId[0] == '#':
             credsId = credsId[1:]
         creds = Creds.find(credsId)
@@ -186,15 +184,15 @@ class Workspace():
 ###################          OPTIONS          ###################
 #################################################################
 
-    def setOption(self,option,value):
+    def setOption(self, option, value):
         if option == 'connection':
             if value is None:
                 self.options['endpoint'] = None
                 self.options['user'] = None
                 self.options['creds'] = None
-                for option in ['endpoint','user','creds']:
+                for option in ['endpoint', 'user', 'creds']:
                     print(option+" => "+str(self.getOption(option)))
-                return 
+                return
             if '@' not in value or ':' not in value:
                 return
             connection = Connection.fromTarget(value)
@@ -203,9 +201,9 @@ class Workspace():
             self.options['endpoint'] = connection.getEndpoint()
             self.options['user'] = connection.getUser()
             self.options['creds'] = connection.getCred()
-            for option in ['endpoint','user','creds']:
+            for option in ['endpoint', 'user', 'creds']:
                 print(option+" => "+str(self.getOption(option)))
-            return 
+            return
         if not option in list(self.options.keys()):
             raise ValueError(option+" isn't a valid option.")
         if value != None:
@@ -239,8 +237,8 @@ class Workspace():
 #################################################################
 ###################        CONNECTIONS        ###################
 #################################################################
-    
-    def delConnection(self,target):
+
+    def delConnection(self, target):
         connection = Connection.fromTarget(target)
         if connection is None:
             print("Connection not found.")
@@ -263,9 +261,9 @@ class Workspace():
             creds = self.getCreds(scope=True)
         else:
             creds = [Creds.find(cred.getId())]
-        return (endpoints,users,creds)
+        return (endpoints, users, creds)
 
-    def threadConnect(self,verbose,endpoint,users,creds):
+    def threadConnect(self, verbose, endpoint, users, creds):
         try:
             loop = asyncio.get_event_loop()
         except:
@@ -286,7 +284,7 @@ class Workspace():
         dunnoQueue = []
         for user in users:
             for cred in creds:
-                connection = Connection(endpoint,user,cred)
+                connection = Connection(endpoint, user, cred)
                 if connection.isWorking():
                     workingQueue.append(connection)
                 else:
@@ -294,7 +292,7 @@ class Workspace():
         queue = workingQueue + dunnoQueue
         for connection in queue:
             try:
-                working = connection.testConnect(gw,verbose=True)
+                working = connection.testConnect(gw, verbose=True)
             except:
                 print("Due to timeout, subsequent connections to endpoint will be ignored.")
                 break
@@ -305,21 +303,21 @@ class Workspace():
         dbConn.close()
 
 
-    def massConnect(self,verbose):
+    def massConnect(self, verbose):
         try:
-            endpoints,users,creds = self.parseOptionsTarget()
+            endpoints, users, creds = self.parseOptionsTarget()
         except:
             return
         nbIter = len(endpoints)*len(users)*len(creds)
         if nbIter == 1:
-            self.connect(endpoints[0],users[0],creds[0],verbose)
+            self.connect(endpoints[0], users[0], creds[0], verbose)
             return
 
-        if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?",False):
+        if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?", False):
             return
-        
+
         for endpoint in endpoints:
-            t = threading.Thread(target=self.threadConnect, args=(verbose,endpoint,users,creds))
+            t = threading.Thread(target=self.threadConnect, args=(verbose, endpoint, users, creds))
             t.start()
         main_thread = threading.main_thread()
         for t in threading.enumerate():
@@ -327,19 +325,19 @@ class Workspace():
                 continue
             t.join()
 
-    def connect(self,endpoint,user,cred,verbose):
-        connection = Connection(endpoint,user,cred)
+    def connect(self, endpoint, user, cred, verbose):
+        connection = Connection(endpoint, user, cred)
         return connection.testConnect(verbose=verbose)
 
-    def run(self,endpoint,user,cred,payload,stmt):
-        connection = Connection(endpoint,user,cred)
+    def run(self, endpoint, user, cred, payload, stmt):
+        connection = Connection(endpoint, user, cred)
         if not connection.working:
             #print("Please check connection "+str(connection)+" with connect first")
             return False
-        return connection.run(payload,self.workspaceFolder,stmt)
+        return connection.run(payload, self.workspace_folder, stmt)
 
-    def scanTarget(self,target,gateway=None):
-        if not isinstance(target,Endpoint):
+    def scanTarget(self, target, gateway=None):
+        if not isinstance(target, Endpoint):
             target = Endpoint.findByIpPort(target)
         if gateway is not None:
             if gateway == "local":
@@ -352,7 +350,7 @@ class Workspace():
         return working
 
 
-    def connectTarget(self,arg,verbose,gateway):
+    def connectTarget(self, arg, verbose, gateway):
         if gateway is not None:
             if gateway == "local":
                 gateway = None
@@ -361,7 +359,7 @@ class Workspace():
         else:
             gateway = "auto"
         connection = Connection.fromTarget(arg)
-        working = connection.testConnect(gateway=gateway,verbose=verbose)
+        working = connection.testConnect(gateway=gateway, verbose=verbose)
         if working:
             if gateway != "auto":
                 if gateway is None:
@@ -370,11 +368,11 @@ class Workspace():
                     return working
                 else:
                     pathSrc = gateway.getEndpoint().getHost()
-                p = Path(pathSrc,connection.getEndpoint())
+                p = Path(pathSrc, connection.getEndpoint())
                 p.save()
         return working
 
-    def runTarget(self,arg,payloadName,stmt):
+    def runTarget(self, arg, payloadName, stmt):
         if arg in self.getHostsNames():
             hosts = Host.findByName(arg)
             if len(hosts) > 1:
@@ -386,13 +384,13 @@ class Workspace():
             print("Please check connection "+str(connection)+" with connect first")
             return False
         payload = Extensions.getPayload(payloadName)
-        return connection.run(payload,self.workspaceFolder,stmt)
+        return connection.run(payload, self.workspace_folder, stmt)
 
 #################################################################
 ###################           PATHS           ###################
 #################################################################
 
-    def getPathToDst(self,dst):
+    def getPathToDst(self, dst):
         if dst in self.getHostsNames():
             hosts = Host.findByName(dst)
             if len(hosts) > 1:
@@ -410,19 +408,18 @@ class Workspace():
         if Path.hasDirectPath(dst):
             print("The destination should be reachable from the host")
             return
-        chain = Path.getPath(None,dst)
+        chain = Path.getPath(None, dst)
         if chain is None:
             print("No path could be found to the destination")
             return
         for path in chain:
             print(path)
 
-    def delPath(self,src,dst):
+    def delPath(self, src, dst):
         if src.lower() != "local":
             if src not in self.getHostsNames():
                 print("Not a known Host name.")
                 return False
-            
             hosts = Host.findByName(src)
             if len(hosts) > 1:
                 print("Several hosts corresponding. Add failed")
@@ -440,18 +437,17 @@ class Workspace():
         if dst is None:
             print("The destination endpoint provided doesn't exist in this workspace")
             return False
-        p = Path(src,dst)
+        p = Path(src, dst)
         if p.getId() is None:
             print("The specified Path doesn't exist in this workspace.")
             return False
         return p.delete()
 
-    def addPath(self,src,dst):
+    def addPath(self, src, dst):
         if src.lower() != "local":
             if src not in self.getHostsNames():
                 print("Not a known Host name.")
                 return
-            
             hosts = Host.findByName(src)
             if len(hosts) > 1:
                 print("Several hosts corresponding. Add failed")
@@ -469,11 +465,11 @@ class Workspace():
         if dst is None:
             print("The destination endpoint provided doesn't exist in this workspace")
             return
-        p = Path(src,dst)
+        p = Path(src, dst)
         p.save()
         print("Path saved")
 
-    def findPath(self,dst):
+    def findPath(self, dst):
         #DST is HOST
         #if dst in self.getHostsNames():
         #    hosts = Host.findByName(dst)
@@ -493,9 +489,9 @@ class Workspace():
             print("The destination should be reachable directly from the host.")
             return
 
-        workingDirect = dst.scan(gateway=None,silent=True)
+        workingDirect = dst.scan(gateway=None, silent=True)
         if workingDirect:
-            p = Path(None,dst)
+            p = Path(None, dst)
             p.save()
             print("Could reach target directly, path added.")
             return
@@ -503,9 +499,9 @@ class Workspace():
         for h in Path.getHostsOrderedClosest():
             e = h.getClosestEndpoint()
             gateway = Connection.findWorkingByEndpoint(e)
-            working = dst.scan(gateway=gateway,silent=True)
+            working = dst.scan(gateway=gateway, silent=True)
             if working:
-                p = Path(h,dst)
+                p = Path(h, dst)
                 p.save()
                 print("Working with gw "+str(e)+" (host "+str(h)+")")
                 return
@@ -515,7 +511,7 @@ class Workspace():
 ###################           SCOPE           ###################
 #################################################################
 
-    def identifyObject(self,target):
+    def identifyObject(self, target):
         if target[0] == "#":
             credsId = target[1:]
         else:
@@ -541,14 +537,14 @@ class Workspace():
         print("Could not identify object.")
         return None
 
-    def scope(self,target):
+    def scope(self, target):
         obj = self.identifyObject(target)
         if obj is None:
             return False
         obj.rescope()
         obj.save()
 
-    def unscope(self,target):
+    def unscope(self, target):
         obj = self.identifyObject(target)
         if obj is None:
             return False
@@ -565,20 +561,20 @@ class Workspace():
     def getTunnelsPort(self):
         return list(self.tunnels.keys())
 
-    def openTunnel(self,target,port=None):
+    def openTunnel(self, target, port=None):
         if port is not None and port in self.tunnels.keys():
             print("A tunnel is already opened at port "+str(port))
             return False
         connection = Connection.fromTarget(target)
         try:
-            t = Tunnel(connection,port)
+            t = Tunnel(connection, port)
         except Exception as e:
             print("Error opening tunnel: "+str(e))
             return False
         self.tunnels[t.getPort()] = t
         return True
 
-    def closeTunnel(self,port):
+    def closeTunnel(self, port):
         if port not in self.tunnels.keys():
             print("No tunnel on port "+str(port))
         t = self.tunnels.pop(port)
@@ -594,25 +590,25 @@ class Workspace():
     def getName(self):
         return self.name
 
-    def getHosts(self,scope=None):
+    def getHosts(self, scope=None):
         return Host.findAll(scope=scope)
 
-    def getHostsNames(self,scope=None):
+    def getHostsNames(self, scope=None):
         return Host.findAllNames(scope=scope)
 
-    def getEndpoints(self,scope=None):
+    def getEndpoints(self, scope=None):
         endpoints = []
         for endpoint in Endpoint.findAll(scope=scope):
             endpoints.append(endpoint)
         return endpoints
 
-    def searchEndpoints(self,field,val,showAll=False):
-        return Endpoint.search(field,val,showAll)
+    def searchEndpoints(self, field, val, showAll=False):
+        return Endpoint.search(field, val, showAll)
 
-    def searchHosts(self,field,val,showAll=False):
-        return Host.search(field,val,showAll)
+    def searchHosts(self, field, val, showAll=False):
+        return Host.search(field, val, showAll)
 
-    def getTargetsValidList(self,scope=None):
+    def getTargetsValidList(self, scope=None):
         connections = []
         for connection in Connection.findWorking():
             if scope is None:
@@ -621,7 +617,7 @@ class Workspace():
                 connections.append(str(connection))
         return connections
 
-    def getTargetsList(self,scope=None):
+    def getTargetsList(self, scope=None):
         connections = []
         for connection in Connection.findAll():
             if scope is None:
@@ -633,13 +629,13 @@ class Workspace():
     def getPaths(self):
         return Path.findAll()
 
-    def getUsers(self,scope=None):
+    def getUsers(self, scope=None):
         return User.findAll(scope=scope)
 
-    def getCreds(self,scope=None):
+    def getCreds(self, scope=None):
         return Creds.findAll(scope=scope)
 
-    def getConnections(self,tested=False,working=False):
+    def getConnections(self, tested=False, working=False):
         if working:
             return Connection.findWorking()
         if tested:
@@ -649,26 +645,26 @@ class Workspace():
     def getOptionsValues(self):
         return self.options.items()
 
-    def getOption(self,key):
+    def getOption(self, key):
         if key not in self.options.keys():
             raise ValueError()
         if self.options[key] == None:
             return None
         return self.options[key]
-    
-    def getBaseObjects(self,scope=None):
+
+    def getBaseObjects(self, scope=None):
         return Endpoint.findAll(scope=scope) + Creds.findAll(scope=scope) + User.findAll(scope=scope) + Host.findAll(scope=scope)
 
-    def getFoundEndpoints(self,endpoint):
+    def getFoundEndpoints(self, endpoint):
         return Endpoint.findByFound(endpoint)
 
-    def getFoundUsers(self,endpoint):
+    def getFoundUsers(self, endpoint):
         return User.findByFound(endpoint)
 
-    def getFoundCreds(self,endpoint):
+    def getFoundCreds(self, endpoint):
         return Creds.findByFound(endpoint)
 
-    def getSearchFields(self,obj):
+    def getSearchFields(self, obj):
         if obj == "Endpoint":
             return Endpoint.getSearchFields()
         if obj == "Host":
@@ -680,5 +676,3 @@ class Workspace():
             tunnel.close()
         dbConn.close()
         print("Closing workspace "+self.name)
-
-
