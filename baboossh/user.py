@@ -77,7 +77,7 @@ class User():
         dbConn.get().commit()
 
     def delete(self):
-        """Delete a user from the :class:`.Workspace`"""
+        """Delete a User from the :class:`.Workspace`"""
 
         from baboossh.connection import Connection
         if self.id is None:
@@ -92,10 +92,10 @@ class User():
 
     @classmethod
     def findAll(cls, scope=None):
-        """Find all users
+        """Find all Users
 
         Args:
-            scope (bool): List users in scope (`True`), out of scope (`False`), or both (`None`)
+            scope (bool): List Users in scope (`True`), out of scope (`False`), or both (`None`)
     
         Returns:
             A list of all `User`\ s in the :class:`.Workspace`

@@ -4,6 +4,24 @@ import asyncio, asyncssh, sys
 import json
 
 class Endpoint():
+    """A SSH endpoint
+
+    An Endpoint is a couple of an IP address and a port on which a SSH server is
+    (supposed) being run.
+
+    Attributes:
+        ip (str): The IP address of the Endpoint
+        port (str): The port number of the Endpoint
+        id (int): The endpoint id
+        host (:class:`.Host`): The Endpoint's :class:`.Host`
+        scope (bool): Whether the Endpoint is in scope or not
+        scanned (bool): Whether :func:`~endpoint.Endpoint.scan` has been run on the Endpoint
+        reachable (bool): Whether the Endpoint was reached using :func:`~endpoint.Endpoint.scan` or :func:`~connection.Connection.connect`
+        found (:class:`.Endpoint`): The Endpoint on which the current Endpoint was discovered
+        auth ([str...]): A list of allowed authentication methods, populated by a :func:`~endpoint.Endpoint.scan`
+
+    """
+
     def __init__(self,ip,port):
         self.ip = ip
         self.port = port
@@ -85,6 +103,24 @@ class Endpoint():
         self.found = found
 
     def getConnection(self,working=True,scope=True):
+        """Get a :class:`.Connection` to the Endpoint
+
+        Find a :class:`.Connection` (working and in scope depending on the 
+        arguments) to the Endpoint. 
+
+        Connections are sorted to prioritize non-root. The first Connection 
+        matching the arguments is returned.
+
+        Args:
+            working (bool):
+                Filter :class:`.Connection` on their `working` flag value. (default: `True`)
+            scope (bool):
+                Find :class:`.Connection` in scope (`True`), out of scope (`False`) or both (`None`)
+
+        Returns:
+            A :class:`.Connection` matching the criteria or `None`
+        """
+
         from baboossh.connection import Connection
         c = dbConn.get().cursor()
         if working:
@@ -104,6 +140,13 @@ class Endpoint():
 
 
     def save(self):
+        """Save the Connection in database
+
+        If the Connection object has an id it means it is already stored in database,
+        so it is updated. Else it is inserted and the id is set in the object.
+
+        """
+
         c = dbConn.get().cursor()
         if not self.auth:
             jauth = None
@@ -136,6 +179,8 @@ class Endpoint():
         dbConn.get().commit()
 
     def delete(self):
+        """Delete a Connection from the :class:`.Workspace`"""
+
         from baboossh.path import Path
         from baboossh.connection import Connection
         if self.id is None:
@@ -156,6 +201,15 @@ class Endpoint():
 
     @classmethod
     def findAll(cls,scope=None):
+        """Find all Connections
+
+        Args:
+            scope (bool): List Connections in scope (`True`), out of scope (`False`), or both (`None`)
+    
+        Returns:
+            A list of all `Connection`\ s in the :class:`.Workspace`
+        """
+
         ret = []
         c = dbConn.get().cursor()
         if scope is None:
@@ -303,6 +357,7 @@ class Endpoint():
         return True
 
     def scan(self,gateway="auto",silent=False):
+        """Scan the endpoint to gather information"""
         if gateway == "auto":
             gateway = self.findGatewayConnection()
         if gateway is not None:
