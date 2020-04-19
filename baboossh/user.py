@@ -1,37 +1,45 @@
 from baboossh.params import dbConn
 
-
 class User():
+    """A username to authenticate with on servers.
+
+    Attributes:
+        name (str): the username
+        id (int): the User's id
+        scope (bool): whether the User is in the scope or not
+        found (:class:`.Endpoint`): the endpoint the user was discovered on
+    """
+
     def __init__(self, name):
-        self.__name = name
-        self.__id = None
-        self.__scope = True
+        self.name = name
+        self.id = None
+        self.scope = True
         self.found = None
         cursor = dbConn.get().cursor()
-        cursor.execute('SELECT id, scope, found FROM users WHERE username=?', (self.__name, ))
+        cursor.execute('SELECT id, scope, found FROM users WHERE username=?', (self.name, ))
         saved_user = cursor.fetchone()
         cursor.close()
         if saved_user is not None:
-            self.__id = saved_user[0]
-            self.__scope = saved_user[1] != 0
+            self.id = saved_user[0]
+            self.scope = saved_user[1] != 0
             if saved_user[2] is not None:
                 from baboossh.endpoint import Endpoint
                 self.found = Endpoint.find(saved_user[2])
 
     def getId(self):
-        return self.__id
+        return self.id
 
     def getName(self):
-        return self.__name
+        return self.name
 
     def inScope(self):
-        return self.__scope
+        return self.scope
 
     def rescope(self):
-        self.__scope = True
+        self.scope = True
 
     def unscope(self):
-        self.__scope = False
+        self.scope = False
 
     def getFound(self):
         return self.found
@@ -40,8 +48,14 @@ class User():
         self.found = found
 
     def save(self):
+        """Save the user in database
+
+        If the User object has an id it means it is already stored in database,
+        so it is updated. Else it is inserted and the id is set in the object.
+
+        """
         c = dbConn.get().cursor()
-        if self.__id is not None:
+        if self.id is not None:
             #If we have an ID, the user is already saved in the database : UPDATE
             c.execute('''UPDATE users 
                 SET
@@ -49,33 +63,44 @@ class User():
                     scope = ?,
                     found = ?
                 WHERE id = ?''',
-                (self.__name, self.__scope, self.found.getId() if self.found is not None else None, self.__id))
+                (self.name, self.scope, self.found.getId() if self.found is not None else None, self.id))
         else:
             #The user doesn't exists in database : INSERT
             c.execute('''INSERT INTO users(username, scope, found)
                 VALUES (?, ?, ?) ''',
-                (self.__name, self.__scope, self.found.getId() if self.found is not None else None))
+                (self.name, self.scope, self.found.getId() if self.found is not None else None))
             c.close()
             c = dbConn.get().cursor()
-            c.execute('SELECT id FROM users WHERE username=?', (self.__name, ))
-            self.__id = c.fetchone()[0]
+            c.execute('SELECT id FROM users WHERE username=?', (self.name, ))
+            self.id = c.fetchone()[0]
         c.close()
         dbConn.get().commit()
 
     def delete(self):
+        """Delete a user from the :class:`.Workspace`"""
+
         from baboossh.connection import Connection
-        if self.__id is None:
+        if self.id is None:
             return
         for connection in Connection.findByUser(self):
             connection.delete()
         c = dbConn.get().cursor()
-        c.execute('DELETE FROM users WHERE id = ?', (self.__id, ))
+        c.execute('DELETE FROM users WHERE id = ?', (self.id, ))
         c.close()
         dbConn.get().commit()
         return
 
     @classmethod
     def findAll(cls, scope=None):
+        """Find all users
+
+        Args:
+            scope (bool): List users in scope (`True`), out of scope (`False`), or both (`None`)
+    
+        Returns:
+            A list of all `User`\ s in the :class:`.Workspace`
+        """
+
         ret = []
         c = dbConn.get().cursor()
         if scope is None:
@@ -88,6 +113,15 @@ class User():
 
     @classmethod
     def find(cls, userId):
+        """Find a user by its id
+
+        Args:
+            userId (int): the user id to search
+
+        Returns:
+            A single `User` or `None`.
+        """
+
         c = dbConn.get().cursor()
         c.execute('''SELECT username FROM users WHERE id=?''', (userId, ))
         row = c.fetchone()
@@ -97,7 +131,16 @@ class User():
         return User(row[0])
 
     @classmethod
-    def findByUsername(cls, name):
+    def findByUsername(cls, name: str):
+        """Find a user by its username
+
+        Args:
+            name (str): the username to search
+        
+        Returns:
+            A single `User` or `None`.
+        """ 
+        
         c = dbConn.get().cursor()
         c.execute('''SELECT username FROM users WHERE username=?''', (name, ))
         row = c.fetchone()
@@ -108,6 +151,21 @@ class User():
 
     @classmethod
     def findByFound(cls, endpoint, scope=True):
+        """Find users found on an `Endpoint`
+
+        When a user is found by `gather` payload, the endpoint he was found on is
+        saved. This functions finds and returns users discovered on a given host.
+
+        Args:
+            endpoint (:class:`.Endpoint`):
+                the `Endpoint` the users were discovered on
+            scope (bool):
+                look only for user in scope (`True`), out of scope (`False`) or vboth (`None`)
+
+        Returns:
+            A list of `User`\ s found on given endpoint.
+        """
+
         ret = []
         c = dbConn.get().cursor()
         if scope is None:
@@ -118,8 +176,6 @@ class User():
             ret.append(User(row[0]))
         return ret
 
-
-
     def __str__(self):
-        return self.__name
+        return self.name
 
