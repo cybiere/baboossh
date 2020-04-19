@@ -14,13 +14,28 @@ from baboossh.path import Path
 from baboossh.tunnel import Tunnel
 
 class Workspace():
+    """A container for all related objects and connections
+
+    The workspace allows to separate environments with dedicated folders and
+    database. Any object (`Endpoint`, `User`, `Creds`, `Connection`, etc. exists 
+    only in its workspace to avoid cluttering the user.
+
+    """
+
 
 #################################################################
 ###################           INIT            ###################
 #################################################################
 
     @classmethod
-    def create(cls,name):
+    def create(cls,name: str):
+        """Create a new workspace
+
+        Create a new workspace with its dedicated folder (in `$HOME/.baboossh` by
+        default) and its database.
+
+        """
+
         if name == "":
             print("Cannot use workspace with empty name")
             raise ValueError
