@@ -1,17 +1,39 @@
 #!/usr/bin/env python3
 
-from baboossh.params import Extensions, workspacesDir, yesNo
-from baboossh.workspace import Workspace
-from tabulate import tabulate
-import cmd2, sys, os
+"""BabooSSH interactive interface
+
+This module contains the whole user interface for BabooSSH, extending
+cmd2 and providing completion & command syntax help. It also loads the
+extensions on startup.
+
+  Typical usage example:
+
+  from baboossh.shell import BaboosshShell
+  BaboosshShell().cmdloop()
+"""
+
+import os
+import cmd2
 import re
 import argparse
-from cmd2 import with_argparser
+from tabulate import tabulate
+from baboossh.params import Extensions, workspacesDir, yesNo
+from baboossh.workspace import Workspace
 
 Extensions.load()
 
 class BaboosshShell(cmd2.Cmd):
-    intro = '''                                                                            &%%%%#%%%%%                                                    
+    """BabooSSH Shell interface
+
+    This class extends cmd2.Cmd to build the user interface.
+
+    Attributes:
+        intro (str): The banner printed on program start
+        prompt (str): The default prompt
+        workspace (baboossh.Workspace): The current open baboossh.Workspace
+        debug (bool): Boolean for debug output
+    """
+    intro = '''                                                                            &%%%%#%%%%%
   %%%%%%%%%%%@         %%%%%&        %%%%%%%%%%%         @%%%%%%%%@       %%/          %%@    @%%%%%%%%%@    %%%%%%%%%&   %%%%       %%%%  
   %%%%%%%%%%%%%       %%%%%%%        %%%%%%%%%%%%%     %%/        *%%@  &%,              %%  %%%%%%%%%%%   &%%%%%%%%%%    %%%%       %%%%  
   %%%%     %%%%      @%%% %%%%       %%%%     %%%%   %%.      .##.   %%@%.      % *@@(    %& %%%%          %%%%           %%%%       %%%%  
@@ -36,7 +58,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 
     def getHosts(self):
         return self.workspace.getHostsNames(scope=True)
- 
+
     def getArgWorkspaces(self):
         return [name for name in os.listdir(workspacesDir) if os.path.isdir(os.path.join(workspacesDir, name))]
 
@@ -95,8 +117,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 
     def workspace_list(self, params):
         print("Existing workspaces :")
-        workspaces = [name for name in os.listdir(workspacesDir)
-            if os.path.isdir(os.path.join(workspacesDir, name))]
+        workspaces = [name for name in os.listdir(workspacesDir) if os.path.isdir(os.path.join(workspacesDir, name))]
         for workspace in workspaces:
             if workspace == self.workspace.getName():
                 print(" -["+workspace+"]")
@@ -106,11 +127,11 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     def workspace_add(self, stmt):
         name = vars(stmt)['name']
         #Check if name was given
-        if re.match('^[\w_\.-]+$', name) is None:
+        if re.match(r'^[\w_\.-]+$', name) is None:
             print('Invalid characters in workspace name. Allowed characters are letters, numbers and ._-')
             return
         #Check if workspace already exists
-        if os.path.exists(os.path.join(workspacesDir,name)):
+        if os.path.exists(os.path.join(workspacesDir, name)):
             print("Workspace already exists")
             return
         try:
@@ -120,10 +141,10 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         else:
             self.workspace = newWorkspace
 
-    def workspace_use(self,stmt):
+    def workspace_use(self, stmt):
         name = vars(stmt)['name']
         #Check if workspace already exists
-        if not os.path.exists(os.path.join(workspacesDir,name)):
+        if not os.path.exists(os.path.join(workspacesDir, name)):
             print("Workspace does not exist")
             return
         try:
@@ -133,31 +154,29 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         else:
             self.workspace = newWorkspace
 
-    def workspace_del(self,stmt):
+    def workspace_del(self, stmt):
         name = vars(stmt)['name']
         #Check if workspace already exists
-        if not os.path.exists(os.path.join(workspacesDir,name)):
+        if not os.path.exists(os.path.join(workspacesDir, name)):
             print("Workspace does not exist")
             return
         if self.workspace.name == name:
             print("Cannot delete current workspace, please change workspace first.")
             return
-        if not yesNo("Are you sure you want to delete workspace "+name+"?",default=False):
+        if not yesNo("Are you sure you want to delete workspace "+name+"?", default=False):
             return
         from shutil import rmtree
-        rmtree(os.path.join(workspacesDir,name))
+        rmtree(os.path.join(workspacesDir, name))
         print("Workspace deleted !")
-        
-        
 
     parser_wspace = argparse.ArgumentParser(prog="workspace")
-    subparser_wspace = parser_wspace.add_subparsers(title='Actions',help='Available actions')
-    parser_wspace_list = subparser_wspace.add_parser("list",help='List workspaces')
-    parser_wspace_add = subparser_wspace.add_parser("add",help='Add a new workspace')
-    parser_wspace_add.add_argument('name',help='New workspace name')
-    parser_wspace_use = subparser_wspace.add_parser("use",help='Change current workspace')
+    subparser_wspace = parser_wspace.add_subparsers(title='Actions', help='Available actions')
+    parser_wspace_list = subparser_wspace.add_parser("list", help='List workspaces')
+    parser_wspace_add = subparser_wspace.add_parser("add", help='Add a new workspace')
+    parser_wspace_add.add_argument('name', help='New workspace name')
+    parser_wspace_use = subparser_wspace.add_parser("use", help='Change current workspace')
     use_arg = parser_wspace_use.add_argument('name', help='Name of workspace to use', choices_method=getArgWorkspaces)
-    parser_wspace_del = subparser_wspace.add_parser("delete",help='Delete workspace')
+    parser_wspace_del = subparser_wspace.add_parser("delete", help='Delete workspace')
     del_arg = parser_wspace_del.add_argument('name', help='Name of workspace to delete', choices_method=getArgWorkspaces)
 
     parser_wspace_list.set_defaults(func=workspace_list)
@@ -179,7 +198,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 ###################           HOSTS           ###################
 #################################################################
 
-    def host_print(self,hosts):
+    def host_print(self, hosts):
         data = []
         for host in hosts:
             if not host.inScope() and not outScope:
@@ -191,12 +210,12 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
                 else:
                     endpoints = endpoints + ", "+str(e)
             scope = "o" if host.inScope() else ""
-            data.append([scope,host.getId(),host.getName(),endpoints])
-        print(tabulate(data,headers=["","ID","Hostname","Endpoints"]))
+            data.append([scope, host.getId(), host.getName(), endpoints])
+        print(tabulate(data, headers=["", "ID", "Hostname", "Endpoints"]))
 
-    def host_list(self,stmt):
+    def host_list(self, stmt):
         print("Current hosts in workspace:")
-        outScope = getattr(stmt,'all',False)
+        outScope = getattr(stmt, 'all', False)
         hosts = self.workspace.getHosts()
         if not hosts:
             print("No hosts in current workspace")
@@ -208,35 +227,35 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             data.append(host)
         self.host_print(data)
 
-    def host_search(self,stmt):
-        showAll = getattr(stmt,'all',False)
+    def host_search(self, stmt):
+        showAll = getattr(stmt, 'all', False)
         field = vars(stmt)['field']
         allowedFields = self.getSearchFieldsHost()
         if field not in allowedFields:
             print("Invalid field specified, use one of "+str(allowedFields)+".")
             return
         val = vars(stmt)['val']
-        hosts = self.workspace.searchHosts(field,val,showAll)
+        hosts = self.workspace.searchHosts(field, val, showAll)
         print("Search result for hosts:")
         if not hosts:
             print("No results")
             return
         self.host_print(hosts)
 
-    def host_del(self,stmt):
-        host = getattr(stmt,'host',None)
+    def host_del(self, stmt):
+        host = getattr(stmt, 'host', None)
         return self.workspace.delHost(host)
-        
+
     parser_host = argparse.ArgumentParser(prog="host")
-    subparser_host = parser_host.add_subparsers(title='Actions',help='Available actions')
-    parser_host_list = subparser_host.add_parser("list",help='List hosts')
-    parser_host_list.add_argument("-a", "--all", help="Show out of scope objects",action="store_true")
-    parser_host_search = subparser_host.add_parser("search",help='Search a host')
-    parser_host_search.add_argument('field',help='Field to search in',choices_method=getSearchFieldsHost)
-    parser_host_search.add_argument('val',help='Value to search')
- 
-    parser_host_del = subparser_host.add_parser("delete",help='Delete host')
-    parser_host_del.add_argument('host',help='Host name',choices_method=getHosts)
+    subparser_host = parser_host.add_subparsers(title='Actions', help='Available actions')
+    parser_host_list = subparser_host.add_parser("list", help='List hosts')
+    parser_host_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
+    parser_host_search = subparser_host.add_parser("search", help='Search a host')
+    parser_host_search.add_argument('field', help='Field to search in', choices_method=getSearchFieldsHost)
+    parser_host_search.add_argument('val', help='Value to search')
+
+    parser_host_del = subparser_host.add_parser("delete", help='Delete host')
+    parser_host_del.add_argument('host', help='Host name', choices_method=getHosts)
 
     parser_host_list.set_defaults(func=host_list)
     parser_host_search.set_defaults(func=host_search)
@@ -255,8 +274,8 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 #################################################################
 ###################         ENDPOINTS         ###################
 #################################################################
-   
-    def endpoint_print(self,endpoints):
+
+    def endpoint_print(self, endpoints):
         data = []
         for endpoint in endpoints:
             scope = "o" if endpoint.inScope() else ""
@@ -275,15 +294,15 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
                 a = "?"
             else:
                 a = str(endpoint.getAuth())
-            data.append([scope,endpoint,h,s,r,a,c])
-        print(tabulate(data,headers=["","Endpoint","Host","Scanned","Reachable","Authentication","Working connection"]))
-    
-    def endpoint_list(self,stmt):
+            data.append([scope, endpoint, h, s, r, a, c])
+        print(tabulate(data, headers=["", "Endpoint", "Host", "Scanned", "Reachable", "Authentication", "Working connection"]))
+
+    def endpoint_list(self, stmt):
         print("Current endpoints in workspace:")
-        showAll = getattr(stmt,'all',False)
-        reachable = getattr(stmt,'reachable',None)
-        scanned = getattr(stmt,'scanned',None)
-        conn = getattr(stmt,'conn',None)
+        showAll = getattr(stmt, 'all', False)
+        reachable = getattr(stmt, 'reachable', None)
+        scanned = getattr(stmt, 'scanned', None)
+        conn = getattr(stmt, 'conn', None)
         endpoints = self.workspace.getEndpoints()
         if not endpoints:
             print("No endpoints in current workspace")
@@ -308,30 +327,30 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
                         continue
             endpointList.append(endpoint)
         self.endpoint_print(endpointList)
-    
-    def endpoint_add(self,stmt):
+
+    def endpoint_add(self, stmt):
         ip = vars(stmt)['ip']
         port = str(vars(stmt)['port'])
         try:
-            self.workspace.addEndpoint(ip,port)
+            self.workspace.addEndpoint(ip, port)
         except Exception as e:
             print("Endpoint addition failed: "+str(e))
         else:
             print("Endpoint "+ip+":"+port+" added.")
 
-    def endpoint_del(self,stmt):
+    def endpoint_del(self, stmt):
         endpoint = vars(stmt)['endpoint']
         return self.workspace.delEndpoint(endpoint)
 
-    def endpoint_search(self,stmt):
-        showAll = getattr(stmt,'all',False)
+    def endpoint_search(self, stmt):
+        showAll = getattr(stmt, 'all', False)
         field = vars(stmt)['field']
         allowedFields = self.getSearchFieldsEndpoint()
         if field not in allowedFields:
             print("Invalid field specified, use one of "+str(allowedFields)+".")
             return
         val = vars(stmt)['val']
-        endpoints = self.workspace.searchEndpoints(field,val,showAll)
+        endpoints = self.workspace.searchEndpoints(field, val, showAll)
         print("Search result for endpoints:")
         if not endpoints:
             print("No results")
@@ -340,21 +359,21 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 
 
     parser_endpoint = argparse.ArgumentParser(prog="endpoint")
-    subparser_endpoint = parser_endpoint.add_subparsers(title='Actions',help='Available actions')
-    parser_endpoint_list = subparser_endpoint.add_parser("list",help='List endpoints')
-    parser_endpoint_list.add_argument("-a", "--all", help="Show out of scope objects",action="store_true")
-    parser_endpoint_list.add_argument("-s", "--scanned", help="Show only scanned endpoints", nargs='?', choices=["true","false"] , const="true")
-    parser_endpoint_list.add_argument("-r", "--reachable", help="Show only reachable endpoints", nargs='?', choices=["true","false"] , const="true")
-    parser_endpoint_list.add_argument("-c", "--conn", help="Show only endpoints with connection", nargs='?', choices=["true","false"], const="true")
-    parser_endpoint_add = subparser_endpoint.add_parser("add",help='Add a new endpoint')
-    parser_endpoint_add.add_argument('ip',help='New endpoint ip')
-    parser_endpoint_add.add_argument('port',help='New endpoint port', type=int, default=22, nargs='?')
-    parser_endpoint_search = subparser_endpoint.add_parser("search",help='Search an endpoint')
-    parser_endpoint_search.add_argument("-a", "--all", help="Include out of scope elements in search",action="store_true")
-    parser_endpoint_search.add_argument('field',help='Field to search in',choices_method=getSearchFieldsEndpoint)
-    parser_endpoint_search.add_argument('val',help='Value to search')
-    parser_endpoint_del = subparser_endpoint.add_parser("delete",help='Set target endpoint')
-    parser_endpoint_del.add_argument('endpoint',help='Endpoint',choices_method=getOptionEndpoint)
+    subparser_endpoint = parser_endpoint.add_subparsers(title='Actions', help='Available actions')
+    parser_endpoint_list = subparser_endpoint.add_parser("list", help='List endpoints')
+    parser_endpoint_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
+    parser_endpoint_list.add_argument("-s", "--scanned", help="Show only scanned endpoints", nargs='?', choices=["true", "false"], const="true")
+    parser_endpoint_list.add_argument("-r", "--reachable", help="Show only reachable endpoints", nargs='?', choices=["true", "false"], const="true")
+    parser_endpoint_list.add_argument("-c", "--conn", help="Show only endpoints with connection", nargs='?', choices=["true", "false"], const="true")
+    parser_endpoint_add = subparser_endpoint.add_parser("add", help='Add a new endpoint')
+    parser_endpoint_add.add_argument('ip', help='New endpoint ip')
+    parser_endpoint_add.add_argument('port', help='New endpoint port', type=int, default=22, nargs='?')
+    parser_endpoint_search = subparser_endpoint.add_parser("search", help='Search an endpoint')
+    parser_endpoint_search.add_argument("-a", "--all", help="Include out of scope elements in search", action="store_true")
+    parser_endpoint_search.add_argument('field', help='Field to search in', choices_method=getSearchFieldsEndpoint)
+    parser_endpoint_search.add_argument('val', help='Value to search')
+    parser_endpoint_del = subparser_endpoint.add_parser("delete", help='Set target endpoint')
+    parser_endpoint_del.add_argument('endpoint', help='Endpoint', choices_method=getOptionEndpoint)
 
     parser_endpoint_list.set_defaults(func=endpoint_list)
     parser_endpoint_add.set_defaults(func=endpoint_add)
@@ -375,9 +394,9 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 ###################           USERS           ###################
 #################################################################
 
-    def user_list(self,stmt):
+    def user_list(self, stmt):
         print("Current users in workspace:")
-        outScope = getattr(stmt,'all',False)
+        outScope = getattr(stmt, 'all', False)
         users = self.workspace.getUsers()
         if not users:
             print("No users in current workspace")
@@ -387,10 +406,10 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             if not user.inScope() and not outScope:
                 continue
             scope = "o" if user.inScope() else ""
-            data.append([scope,user])
-        print(tabulate(data,headers=["","Username"]))
-    
-    def user_add(self,stmt):
+            data.append([scope, user])
+        print(tabulate(data, headers=["", "Username"]))
+
+    def user_add(self, stmt):
         name = vars(stmt)['name']
         try:
             self.workspace.addUser(name)
@@ -399,18 +418,18 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         else:
             print("User "+name+" added.")
 
-    def user_del(self,stmt):
+    def user_del(self, stmt):
         name = vars(stmt)['name']
         return self.workspace.delUser(name)
 
     parser_user = argparse.ArgumentParser(prog="user")
-    subparser_user = parser_user.add_subparsers(title='Actions',help='Available actions')
-    parser_user_list = subparser_user.add_parser("list",help='List users')
-    parser_user_list.add_argument("-a", "--all", help="Show out of scope objects",action="store_true")
-    parser_user_add = subparser_user.add_parser("add",help='Add a new user')
-    parser_user_add.add_argument('name',help='New user name')
-    parser_user_del = subparser_user.add_parser("delete",help='Delete a user')
-    parser_user_del.add_argument('name',help='User name',choices_method=getOptionUser)
+    subparser_user = parser_user.add_subparsers(title='Actions', help='Available actions')
+    parser_user_list = subparser_user.add_parser("list", help='List users')
+    parser_user_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
+    parser_user_add = subparser_user.add_parser("add", help='Add a new user')
+    parser_user_add.add_argument('name', help='New user name')
+    parser_user_del = subparser_user.add_parser("delete", help='Delete a user')
+    parser_user_del.add_argument('name', help='User name', choices_method=getOptionUser)
 
     parser_user_list.set_defaults(func=user_list)
     parser_user_add.set_defaults(func=user_add)
@@ -430,15 +449,15 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 ###################           CREDS           ###################
 #################################################################
 
-    def creds_types(self,stmt):
+    def creds_types(self, stmt):
         print("Supported credential types:")
         data = []
         for key in Extensions.authMethodsAvail():
-            data.append([key,Extensions.getAuthMethod(key).descr()])
-        print(tabulate(data,headers=["Key","Description"]))
-    
-    def creds_list(self,stmt):
-        outScope = getattr(stmt,'all',False)
+            data.append([key, Extensions.getAuthMethod(key).descr()])
+        print(tabulate(data, headers=["Key", "Description"]))
+
+    def creds_list(self, stmt):
+        outScope = getattr(stmt, 'all', False)
         creds = self.workspace.getCreds()
         if not creds:
             print("No creds in current workspace")
@@ -448,51 +467,51 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             if not cred.inScope() and not outScope:
                 continue
             scope = "o" if cred.inScope() else ""
-            data.append([scope,"#"+str(cred.getId()),cred.obj.getKey(),cred.obj.toList()])
-        print(tabulate(data,headers=["","ID","Type","Value"]))
+            data.append([scope, "#"+str(cred.getId()), cred.obj.getKey(), cred.obj.toList()])
+        print(tabulate(data, headers=["", "ID", "Type", "Value"]))
 
-    def creds_show(self,stmt):
+    def creds_show(self, stmt):
         credsId = vars(stmt)['id']
         self.workspace.showCreds(credsId)
         pass
 
-    def creds_edit(self,stmt):
+    def creds_edit(self, stmt):
         credsId = vars(stmt)['id']
         self.workspace.editCreds(credsId)
         pass
 
-    def creds_del(self,stmt):
+    def creds_del(self, stmt):
         credsId = vars(stmt)['id']
         self.workspace.delCreds(credsId)
         pass
 
-    def creds_add(self,stmt):
+    def creds_add(self, stmt):
         credsType = vars(stmt)['type']
         try:
-            credsId = self.workspace.addCreds(credsType,stmt)
+            credsId = self.workspace.addCreds(credsType, stmt)
         except Exception as e:
             print("Credentials addition failed: "+str(e))
         else:
             print("Credentials #"+str(credsId)+" added.")
 
     parser_creds = argparse.ArgumentParser(prog="creds")
-    subparser_creds = parser_creds.add_subparsers(title='Actions',help='Available actions')
-    parser_creds_list = subparser_creds.add_parser("list",help='List saved credentials')
-    parser_creds_list.add_argument("-a", "--all", help="Show out of scope objects",action="store_true")
-    parser_creds_types = subparser_creds.add_parser("types",help='List available credentials types')
-    parser_creds_show = subparser_creds.add_parser("show",help='Show credentials details')
-    parser_creds_show.add_argument('id',help='Creds identifier',choices_method=getOptionCreds)
-    parser_creds_edit = subparser_creds.add_parser("edit",help='Edit credentials details')
-    parser_creds_edit.add_argument('id',help='Creds identifier',choices_method=getOptionCreds)
-    parser_creds_add = subparser_creds.add_parser("add",help='Add a new credentials')
-    subparser_creds_add = parser_creds_add.add_subparsers(title='Add creds',help='Available creds types')
+    subparser_creds = parser_creds.add_subparsers(title='Actions', help='Available actions')
+    parser_creds_list = subparser_creds.add_parser("list", help='List saved credentials')
+    parser_creds_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
+    parser_creds_types = subparser_creds.add_parser("types", help='List available credentials types')
+    parser_creds_show = subparser_creds.add_parser("show", help='Show credentials details')
+    parser_creds_show.add_argument('id', help='Creds identifier', choices_method=getOptionCreds)
+    parser_creds_edit = subparser_creds.add_parser("edit", help='Edit credentials details')
+    parser_creds_edit.add_argument('id', help='Creds identifier', choices_method=getOptionCreds)
+    parser_creds_add = subparser_creds.add_parser("add", help='Add a new credentials')
+    subparser_creds_add = parser_creds_add.add_subparsers(title='Add creds', help='Available creds types')
     for methodName in Extensions.authMethodsAvail():
         method = Extensions.getAuthMethod(methodName)
-        parser_method = subparser_creds_add.add_parser(methodName,help=method.descr())
+        parser_method = subparser_creds_add.add_parser(methodName, help=method.descr())
         parser_method.set_defaults(type=methodName)
         method.buildParser(parser_method)
-    parser_creds_del = subparser_creds.add_parser("delete",help='Delete credentials from workspace')
-    parser_creds_del.add_argument('id',help='Creds identifier',choices_method=getOptionCreds)
+    parser_creds_del = subparser_creds.add_parser("delete", help='Delete credentials from workspace')
+    parser_creds_del.add_argument('id', help='Creds identifier', choices_method=getOptionCreds)
 
     parser_creds_list.set_defaults(func=creds_list)
     parser_creds_types.set_defaults(func=creds_types)
@@ -515,16 +534,16 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 ###################          PAYLOADS         ###################
 #################################################################
 
-    def payload_list(self,stmt):
+    def payload_list(self, stmt):
         print("Available payloads:")
         data = []
         for key in Extensions.payloadsAvail():
-            data.append([key,Extensions.getPayload(key).descr()])
-        print(tabulate(data,headers=["Key","Description"]))
-    
+            data.append([key, Extensions.getPayload(key).descr()])
+        print(tabulate(data, headers=["Key", "Description"]))
+
     parser_payload = argparse.ArgumentParser(prog="payload")
-    subparser_payload = parser_payload.add_subparsers(title='Actions',help='Available actions')
-    parser_payload_list = subparser_payload.add_parser("list",help='List payloads')
+    subparser_payload = parser_payload.add_subparsers(title='Actions', help='Available actions')
+    parser_payload_list = subparser_payload.add_parser("list", help='List payloads')
 
     parser_payload_list.set_defaults(func=payload_list)
 
@@ -542,11 +561,11 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 ###################        CONNECTIONS        ###################
 #################################################################
 
-    def connection_list(self,stmt):
+    def connection_list(self, stmt):
         print("Available connections:")
-        showAll = getattr(stmt,'all',False)
-        working = getattr(stmt,'working',None)
-        tested = getattr(stmt,'tested',None)
+        showAll = getattr(stmt, 'all', False)
+        working = getattr(stmt, 'working', None)
+        tested = getattr(stmt, 'tested', None)
         connections = self.workspace.getConnections()
         if not connections:
             print("No connections in current workspace")
@@ -564,21 +583,21 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
                     flagTested = tested == "true"
                     if connection.isTested() != flagTested:
                         continue
-            data.append([connection.getEndpoint(),connection.getUser(),connection.getCred(),connection.isTested(),connection.isWorking()])
-        print(tabulate(data,headers=["Endpoint","User","Creds","Tested","Working"]))
+            data.append([connection.getEndpoint(), connection.getUser(), connection.getCred(), connection.isTested(), connection.isWorking()])
+        print(tabulate(data, headers=["Endpoint", "User", "Creds", "Tested", "Working"]))
 
-    def connection_del(self,stmt):
-        connection = getattr(stmt,"connection",None)
+    def connection_del(self, stmt):
+        connection = getattr(stmt, "connection", None)
         return self.workspace.delConnection(connection)
-    
+
     parser_connection = argparse.ArgumentParser(prog="connection")
-    subparser_connection = parser_connection.add_subparsers(title='Actions',help='Available actions')
-    parser_connection_list = subparser_connection.add_parser("list",help='List connections')
-    parser_connection_list.add_argument("-a", "--all", help="Show out of scope objects",action="store_true")
-    parser_connection_list.add_argument("-w", "--working", help="Show only working connections", nargs='?', choices=["true","false"] , const="true")
-    parser_connection_list.add_argument("-t", "--tested", help="Show only tested connections", nargs='?', choices=["true","false"] , const="true")
-    parser_connection_del = subparser_connection.add_parser("delete",help='Delete connection')
-    parser_connection_del.add_argument('connection',help='Connection string',choices_method=getOptionConnection)
+    subparser_connection = parser_connection.add_subparsers(title='Actions', help='Available actions')
+    parser_connection_list = subparser_connection.add_parser("list", help='List connections')
+    parser_connection_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
+    parser_connection_list.add_argument("-w", "--working", help="Show only working connections", nargs='?', choices=["true", "false"], const="true")
+    parser_connection_list.add_argument("-t", "--tested", help="Show only tested connections", nargs='?', choices=["true", "false"], const="true")
+    parser_connection_del = subparser_connection.add_parser("delete", help='Delete connection')
+    parser_connection_del.add_argument('connection', help='Connection string', choices_method=getOptionConnection)
 
     parser_connection_list.set_defaults(func=connection_list)
     parser_connection_del.set_defaults(func=connection_del)
@@ -600,24 +619,24 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 
     def options_list(self):
         print("Current options:")
-        for key,val in self.workspace.getOptionsValues():
+        for key, val in self.workspace.getOptionsValues():
             print("    - "+key+": "+str(val))
-    
+
     parser_option = argparse.ArgumentParser(prog="option")
-    subparser_option = parser_option.add_subparsers(title='Actions',help='Available actions')
-    parser_option_list = subparser_option.add_parser("list",help='List options')
-    parser_option_user = subparser_option.add_parser("user",help='Set target user')
-    parser_option_user.add_argument('username',help='User name',nargs="?",choices_method=getOptionUser)
-    parser_option_creds = subparser_option.add_parser("creds",help='Set target creds')
-    parser_option_creds.add_argument('id',help='Creds ID',nargs="?",choices_method=getOptionCreds)
-    parser_option_endpoint = subparser_option.add_parser("endpoint",help='Set target endpoint')
-    parser_option_endpoint.add_argument('endpoint',nargs="?",help='Endpoint',choices_method=getOptionEndpoint)
-    parser_option_payload = subparser_option.add_parser("payload",help='Set target payload')
-    parser_option_payload.add_argument('payload',nargs="?",help='Payload name',choices_method=getOptionPayload)
-    parser_option_connection = subparser_option.add_parser("connection",help='Set target connection')
-    parser_option_connection.add_argument('connection',nargs="?",help='Connection string',choices_method=getOptionConnection)
-    parser_option_params = subparser_option.add_parser("params",help='Set payload params')
-    parser_option_params.add_argument('params',nargs="*",help='Payload params')
+    subparser_option = parser_option.add_subparsers(title='Actions', help='Available actions')
+    parser_option_list = subparser_option.add_parser("list", help='List options')
+    parser_option_user = subparser_option.add_parser("user", help='Set target user')
+    parser_option_user.add_argument('username', help='User name', nargs="?", choices_method=getOptionUser)
+    parser_option_creds = subparser_option.add_parser("creds", help='Set target creds')
+    parser_option_creds.add_argument('id', help='Creds ID', nargs="?", choices_method=getOptionCreds)
+    parser_option_endpoint = subparser_option.add_parser("endpoint", help='Set target endpoint')
+    parser_option_endpoint.add_argument('endpoint', nargs="?", help='Endpoint', choices_method=getOptionEndpoint)
+    parser_option_payload = subparser_option.add_parser("payload", help='Set target payload')
+    parser_option_payload.add_argument('payload', nargs="?", help='Payload name', choices_method=getOptionPayload)
+    parser_option_connection = subparser_option.add_parser("connection", help='Set target connection')
+    parser_option_connection.add_argument('connection', nargs="?", help='Connection string', choices_method=getOptionConnection)
+    parser_option_params = subparser_option.add_parser("params", help='Set payload params')
+    parser_option_params.add_argument('params', nargs="*", help='Payload params')
 
     parser_option_list.set_defaults(option="list")
     parser_option_user.set_defaults(option="user")
@@ -628,7 +647,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
     parser_option_params.set_defaults(option="params")
 
     @cmd2.with_argparser(parser_option)
-    def do_set(self,stmt):
+    def do_set(self, stmt):
         '''Manage options'''
         if 'option' not in vars(stmt):
             self.options_list()
@@ -651,7 +670,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             elif option == "params":
                 value = " ".join(vars(stmt)['params'])
             try:
-                self.workspace.setOption(option,value)
+                self.workspace.setOption(option, value)
             except ValueError:
                 print("Invalid value for "+option)
         else:
@@ -661,9 +680,9 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 ###################           PATHS           ###################
 #################################################################
 
-    def path_list(self,stmt):
+    def path_list(self, stmt):
         print("Current paths in workspace:")
-        outScope = getattr(stmt,'all',False)
+        outScope = getattr(stmt, 'all', False)
         paths = self.workspace.getPaths()
         if not paths:
             print("No paths in current workspace")
@@ -675,41 +694,41 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             src = path.src
             if src == None:
                 src = "Local"
-            data.append([src,path.dst])
-        print(tabulate(data,headers=["Source","Destination"]))
-    
-    def path_get(self,stmt):
+            data.append([src, path.dst])
+        print(tabulate(data, headers=["Source", "Destination"]))
+
+    def path_get(self, stmt):
         endpoint = vars(stmt)['endpoint']
         self.workspace.getPathToDst(endpoint)
 
-    def path_add(self,stmt):
+    def path_add(self, stmt):
         src = vars(stmt)['src']
         dst = vars(stmt)['dst']
-        self.workspace.addPath(src,dst)
+        self.workspace.addPath(src, dst)
 
-    def path_del(self,stmt):
+    def path_del(self, stmt):
         src = vars(stmt)['src']
         dst = vars(stmt)['dst']
-        self.workspace.delPath(src,dst)
+        self.workspace.delPath(src, dst)
 
-    def path_find(self,stmt):
+    def path_find(self, stmt):
         dst = vars(stmt)['dst']
         self.workspace.findPath(dst)
 
     parser_path = argparse.ArgumentParser(prog="path")
-    subparser_path = parser_path.add_subparsers(title='Actions',help='Available actions')
-    parser_path_list = subparser_path.add_parser("list",help='List paths')
-    parser_path_list.add_argument("-a", "--all", help="Show out of scope objects",action="store_true")
-    parser_path_get = subparser_path.add_parser("get",help='Get path to endpoint')
-    parser_path_get.add_argument('endpoint',help='Endpoint',choices_method=getEndpointOrHost)
-    parser_path_add = subparser_path.add_parser("add",help='Add path to endpoint')
-    parser_path_add.add_argument('src',help='Source host',choices_method=getHostOrLocal)
-    parser_path_add.add_argument('dst',help='Destination endpoint',choices_method=getOptionEndpoint)
-    parser_path_del = subparser_path.add_parser("delete",help='Delete path to endpoint')
-    parser_path_del.add_argument('src',help='Source host',choices_method=getHostOrLocal)
-    parser_path_del.add_argument('dst',help='Destination endpoint',choices_method=getOptionEndpoint)
-    parser_path_find = subparser_path.add_parser("find",help='Find shortest path to endpoint or host')
-    parser_path_find.add_argument('dst',help='Destination',choices_method=getEndpointOrHost)
+    subparser_path = parser_path.add_subparsers(title='Actions', help='Available actions')
+    parser_path_list = subparser_path.add_parser("list", help='List paths')
+    parser_path_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
+    parser_path_get = subparser_path.add_parser("get", help='Get path to endpoint')
+    parser_path_get.add_argument('endpoint', help='Endpoint', choices_method=getEndpointOrHost)
+    parser_path_add = subparser_path.add_parser("add", help='Add path to endpoint')
+    parser_path_add.add_argument('src', help='Source host', choices_method=getHostOrLocal)
+    parser_path_add.add_argument('dst', help='Destination endpoint', choices_method=getOptionEndpoint)
+    parser_path_del = subparser_path.add_parser("delete", help='Delete path to endpoint')
+    parser_path_del.add_argument('src', help='Source host', choices_method=getHostOrLocal)
+    parser_path_del.add_argument('dst', help='Destination endpoint', choices_method=getOptionEndpoint)
+    parser_path_find = subparser_path.add_parser("find", help='Find shortest path to endpoint or host')
+    parser_path_find.add_argument('dst', help='Destination', choices_method=getEndpointOrHost)
 
     parser_path_list.set_defaults(func=path_list)
     parser_path_get.set_defaults(func=path_get)
@@ -732,49 +751,49 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 #################################################################
 
     parser_scan = argparse.ArgumentParser(prog="scan")
-    parser_scan.add_argument("-g", "--gateway", help="force specific gateway",choices_method=getOptionGateway)
-    parser_scan.add_argument('endpoint',help='Endpoint',nargs="?",choices_method=getOptionEndpoint)
+    parser_scan.add_argument("-g", "--gateway", help="force specific gateway", choices_method=getOptionGateway)
+    parser_scan.add_argument('endpoint', help='Endpoint', nargs="?", choices_method=getOptionEndpoint)
 
     @cmd2.with_argparser(parser_scan)
-    def do_scan(self,stmt):
+    def do_scan(self, stmt):
         '''Scan endpoint to check connectivity and supported authentication methods'''
         target = vars(stmt)['endpoint']
         gateway = vars(stmt)['gateway']
         if target is not None:
             try:
-                self.workspace.scanTarget(target,gateway=gateway)
+                self.workspace.scanTarget(target, gateway=gateway)
             except Exception as e:
                 print("Targeted scan failed : "+str(e))
             return
         try:
-            endpoints,users,creds = self.workspace.parseOptionsTarget()
+            endpoints, users, creds = self.workspace.parseOptionsTarget()
         except:
             return
         nbIter = len(endpoints)
         if nbIter > 1:
-            if not yesNo("This will attempt up to "+str(nbIter)+" scans. Proceed ?",False):
+            if not yesNo("This will attempt up to "+str(nbIter)+" scans. Proceed ?", False):
                 return
         for endpoint in endpoints:
-            self.workspace.scanTarget(endpoint,gateway=gateway)
+            self.workspace.scanTarget(endpoint, gateway=gateway)
 
 #################################################################
 ###################          CONNECT          ###################
 #################################################################
 
     parser_connect = argparse.ArgumentParser(prog="connect")
-    parser_connect.add_argument("-v", "--verbose", help="increase output verbosity",action="store_true")
-    parser_connect.add_argument("-g", "--gateway", help="force specific gateway",choices_method=getOptionGateway)
-    parser_connect.add_argument('connection',help='Connection string',nargs="?",choices_method=getOptionConnection)
+    parser_connect.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
+    parser_connect.add_argument("-g", "--gateway", help="force specific gateway", choices_method=getOptionGateway)
+    parser_connect.add_argument('connection', help='Connection string', nargs="?", choices_method=getOptionConnection)
 
     @cmd2.with_argparser(parser_connect)
-    def do_connect(self,stmt):
+    def do_connect(self, stmt):
         '''Try connection to endpoint and identify host'''
         connect = vars(stmt)['connection']
         verbose = vars(stmt)['verbose']
-        gw = getattr(stmt,'gateway',None)
+        gw = getattr(stmt, 'gateway', None)
         if connect != None:
             try:
-                self.workspace.connectTarget(connect,verbose,gw)
+                self.workspace.connectTarget(connect, verbose, gw)
             except Exception as e:
                 print("Targeted connect failed : "+str(e))
             return
@@ -782,23 +801,23 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 
 
     parser_run = argparse.ArgumentParser(prog="run")
-    parser_run.add_argument('connection',help='Connection string',nargs="?",choices_method=getRunTargets)
-    subparser_run = parser_run.add_subparsers(title='Actions',help='Available actions')
+    parser_run.add_argument('connection', help='Connection string', nargs="?", choices_method=getRunTargets)
+    subparser_run = parser_run.add_subparsers(title='Actions', help='Available actions')
     for payloadName in Extensions.payloadsAvail():
         payload = Extensions.getPayload(payloadName)
-        parser_payload = subparser_run.add_parser(payloadName,help=payload.descr())
+        parser_payload = subparser_run.add_parser(payloadName, help=payload.descr())
         parser_payload.set_defaults(type=payloadName)
         payload.buildParser(parser_payload)
 
     @cmd2.with_argparser(parser_run)
-    def do_run(self,stmt):
+    def do_run(self, stmt):
         '''Run a payload on a connection'''
-        connect = getattr(stmt,'connection',None)
-        payload = getattr(stmt,'type',None)
+        connect = getattr(stmt, 'connection', None)
+        payload = getattr(stmt, 'type', None)
         self._reset_completion_defaults()
         if connect != None and payload != None:
             try:
-                self.workspace.runTarget(connect,payload,stmt)
+                self.workspace.runTarget(connect, payload, stmt)
             except Exception as e:
                 print("Run failed : "+str(e))
             return
@@ -812,27 +831,27 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         payload.buildParser(parser)
         if params is None:
             params = ""
-        stmt,unk= parser.parse_known_args(params.split())
+        stmt, unk = parser.parse_known_args(params.split())
 
         try:
-            endpoints,users,creds = self.workspace.parseOptionsTarget()
+            endpoints, users, creds = self.workspace.parseOptionsTarget()
         except:
             return
         nbIter = len(endpoints)*len(users)*len(creds)
         if nbIter > 1:
-            if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?",False):
+            if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?", False):
                 return
         for endpoint in endpoints:
             for user in users:
                 for cred in creds:
-                    if self.workspace.run(endpoint,user,cred,payload,stmt):
-                        break;
+                    if self.workspace.run(endpoint, user, cred, payload, stmt):
+                        break
 
 #################################################################
 ###################          TUNNELS          ###################
 #################################################################
 
-    def tunnel_list(self,stmt):
+    def tunnel_list(self, stmt):
         print("Current tunnels in workspace:")
         tunnels = self.workspace.getTunnels()
         if not tunnels:
@@ -840,26 +859,26 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             return
         data = []
         for tunnel in tunnels:
-            data.append([tunnel.port,tunnel.connection])
-        print(tabulate(data,headers=["Local port","Destination"]))
+            data.append([tunnel.port, tunnel.connection])
+        print(tabulate(data, headers=["Local port", "Destination"]))
 
-    def tunnel_open(self,stmt):
+    def tunnel_open(self, stmt):
         connectionStr = getattr(stmt, 'connection', None)
         port = getattr(stmt, 'port', None)
-        self.workspace.openTunnel(connectionStr,port)
+        self.workspace.openTunnel(connectionStr, port)
 
-    def tunnel_close(self,stmt):
+    def tunnel_close(self, stmt):
         port = getattr(stmt, 'port', None)
         self.workspace.closeTunnel(port)
 
     parser_tunnel = argparse.ArgumentParser(prog="tunnel")
-    subparser_tunnel = parser_tunnel.add_subparsers(title='Actions',help='Available actions')
-    parser_tunnel_list = subparser_tunnel.add_parser("list",help='List tunnels')
-    parser_tunnel_open = subparser_tunnel.add_parser("open",help='Open tunnel')
-    parser_tunnel_open.add_argument('connection',help='Connection string',choices_method=getOptionValidConnection)
-    parser_tunnel_open.add_argument('port',help='Tunnel entry port', type=int, nargs='?')
-    parser_tunnel_close = subparser_tunnel.add_parser("close",help='Close tunnel')
-    parser_tunnel_close.add_argument('port',help='Tunnel entry port', type=int,choices_method=getOpenTunnels)
+    subparser_tunnel = parser_tunnel.add_subparsers(title='Actions', help='Available actions')
+    parser_tunnel_list = subparser_tunnel.add_parser("list", help='List tunnels')
+    parser_tunnel_open = subparser_tunnel.add_parser("open", help='Open tunnel')
+    parser_tunnel_open.add_argument('connection', help='Connection string', choices_method=getOptionValidConnection)
+    parser_tunnel_open.add_argument('port', help='Tunnel entry port', type=int, nargs='?')
+    parser_tunnel_close = subparser_tunnel.add_parser("close", help='Close tunnel')
+    parser_tunnel_close.add_argument('port', help='Tunnel entry port', type=int, choices_method=getOpenTunnels)
 
     parser_tunnel_list.set_defaults(func=tunnel_list)
     parser_tunnel_open.set_defaults(func=tunnel_open)
@@ -881,62 +900,62 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 
 
     parser_export = argparse.ArgumentParser(prog="export")
-    subparser_export = parser_export.add_subparsers(title='Actions',help='Available exporters')
-    parser_method = subparser_export.add_parser('list',help='List available exporters')
+    subparser_export = parser_export.add_subparsers(title='Actions', help='Available exporters')
+    parser_method = subparser_export.add_parser('list', help='List available exporters')
     for key in Extensions.exportsAvail():
         export = Extensions.getExport(key)
-        parser_method = subparser_export.add_parser(key,help=export.descr())
+        parser_method = subparser_export.add_parser(key, help=export.descr())
         parser_method.set_defaults(exporter=key)
         export.buildParser(parser_method)
 
     @cmd2.with_argparser(parser_export)
-    def do_export(self,stmt):
+    def do_export(self, stmt):
         '''Export workspace info'''
-        key = getattr(stmt,'exporter','list')
+        key = getattr(stmt, 'exporter', 'list')
         if key == 'list':
             print("Available exporters:")
             data = []
             for key in Extensions.exportsAvail():
-                data.append([key,Extensions.getExport(key).descr()])
-            print(tabulate(data,headers=["Key","Description"]))
+                data.append([key, Extensions.getExport(key).descr()])
+            print(tabulate(data, headers=["Key", "Description"]))
             return
         try:
             exporter = Extensions.getExport(key)
         except Exception as e:
             print("Error: "+str(e))
             return
-        exporter.run(stmt,self.workspace)
+        exporter.run(stmt, self.workspace)
 
 #################################################################
 ###################          IMPORTS          ###################
 #################################################################
-    
+
     parser_import = argparse.ArgumentParser(prog="import")
-    subparser_import = parser_import.add_subparsers(title='Actions',help='Available importers')
-    parser_method = subparser_import.add_parser('list',help='List available importers')
+    subparser_import = parser_import.add_subparsers(title='Actions', help='Available importers')
+    parser_method = subparser_import.add_parser('list', help='List available importers')
     for key in Extensions.importsAvail():
         importer = Extensions.getImport(key)
-        parser_method = subparser_import.add_parser(key,help=importer.descr())
+        parser_method = subparser_import.add_parser(key, help=importer.descr())
         parser_method.set_defaults(importer=key)
         importer.buildParser(parser_method)
 
     @cmd2.with_argparser(parser_import)
-    def do_import(self,stmt):
+    def do_import(self, stmt):
         '''Import workspace info'''
-        key = getattr(stmt,'importer','list')
+        key = getattr(stmt, 'importer', 'list')
         if key == 'list':
             print("Available importers:")
             data = []
             for key in Extensions.importsAvail():
-                data.append([key,Extensions.getImport(key).descr()])
-            print(tabulate(data,headers=["Key","Description"]))
+                data.append([key, Extensions.getImport(key).descr()])
+            print(tabulate(data, headers=["Key", "Description"]))
             return
         try:
             importer = Extensions.getImport(key)
         except Exception as e:
             print("Error: "+str(e))
             return
-        importer.run(stmt,self.workspace)
+        importer.run(stmt, self.workspace)
 
 #################################################################
 ###################           SCOPE           ###################
@@ -949,19 +968,19 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         return self.workspace.getBaseObjects(scope=True)
 
     parser_scope = argparse.ArgumentParser(prog="scope")
-    parser_scope.add_argument('target',help='Object to scope',choices_method=getScopeObject)
+    parser_scope.add_argument('target', help='Object to scope', choices_method=getScopeObject)
     @cmd2.with_argparser(parser_scope)
-    def do_scope(self,stmt):
+    def do_scope(self, stmt):
         '''Add object to scope'''
-        key = getattr(stmt,'target',None)
+        key = getattr(stmt, 'target', None)
         self.workspace.scope(key)
 
     parser_unscope = argparse.ArgumentParser(prog="unscope")
-    parser_unscope.add_argument('target',help='Object to unscope',choices_method=getUnscopeObject)
+    parser_unscope.add_argument('target', help='Object to unscope', choices_method=getUnscopeObject)
     @cmd2.with_argparser(parser_unscope)
-    def do_unscope(self,stmt):
+    def do_unscope(self, stmt):
         '''Remove object from scope'''
-        key = getattr(stmt,'target',None)
+        key = getattr(stmt, 'target', None)
         self.workspace.unscope(key)
 
 #################################################################
@@ -969,39 +988,46 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 #################################################################
 
     def do_exit(self, arg):
-        'Quit Baboossh'
+        'Close active workspace & quit Baboossh'
+
         self.workspace.close()
         print("Bye !")
         return True
-    
+
     def initPrompt(self):
-        newPrompt = "\033[1;33m"
-        newPrompt = newPrompt+"["+self.workspace.getName()+"]\033[1;34m"
+        'Build prompt to output currect workspace & active options'
+
+        new_prompt = "\033[1;33m"
+        new_prompt = new_prompt+"["+self.workspace.getName()+"]\033[1;34m"
         if self.workspace.getOption("endpoint"):
             if self.workspace.getOption("user"):
-                newPrompt = newPrompt+str(self.workspace.getOption("user"))
+                new_prompt = new_prompt+str(self.workspace.getOption("user"))
                 if self.workspace.getOption("creds"):
-                    newPrompt = newPrompt+":"+str(self.workspace.getOption("creds"))
-                newPrompt = newPrompt+"@"
-            newPrompt = newPrompt+str(self.workspace.getOption("endpoint"))
+                    new_prompt = new_prompt+":"+str(self.workspace.getOption("creds"))
+                new_prompt = new_prompt+"@"
+            new_prompt = new_prompt+str(self.workspace.getOption("endpoint"))
         elif self.workspace.getOption("user"):
-            newPrompt = newPrompt+str(self.workspace.getOption("user"))
+            new_prompt = new_prompt+str(self.workspace.getOption("user"))
             if self.workspace.getOption("creds"):
-                newPrompt = newPrompt+":"+str(self.workspace.getOption("creds"))
-            newPrompt = newPrompt+"@..."
+                new_prompt = new_prompt+":"+str(self.workspace.getOption("creds"))
+            new_prompt = new_prompt+"@..."
         if self.workspace.getOption("payload"):
-            newPrompt = newPrompt+"\033[1;31m("+str(self.workspace.getOption("payload"))+")\033[0m"
-        self.prompt = newPrompt+"\033[1;33m>\033[0m "
+            new_prompt = new_prompt+"\033[1;31m("+str(self.workspace.getOption("payload"))+")\033[0m"
+        self.prompt = new_prompt+"\033[1;33m>\033[0m "
 
     def emptyline(self):
-        pass
+        'Don\'t output empty line after command'
 
-    def postcmd(self,stop,line):
+
+    def postcmd(self, stop, line):
+        'Refresh promt after each command to reflect parameters changes'
+
         self.initPrompt()
         return stop
-        
+
 
     def __init__(self):
+        'Init BabooSSH shell & cmd2.Cmd, create (if needed) & open default workspace.'
 
         super().__init__()
 
@@ -1009,21 +1035,19 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             print("> First run ? Creating workspaces directory")
             os.makedirs(workspacesDir)
         #Create default workspace if not exists
-        if not os.path.exists(os.path.join(workspacesDir,'default')):
+        if not os.path.exists(os.path.join(workspacesDir, 'default')):
             Workspace.create('default')
 
         self.workspace = Workspace("default")
         self.initPrompt()
         #Removes cmd2 default commands
-        self.disable_command("run_pyscript","disabled")
-        self.disable_command("run_script","disabled")
-        self.disable_command("alias","disabled")
-        self.disable_command("edit","disabled")
-        self.disable_command("quit","disabled")
-        self.disable_command("macro","disabled")
-        self.disable_command("shortcuts","disabled")
+        self.disable_command("run_pyscript", "disabled")
+        self.disable_command("run_script", "disabled")
+        self.disable_command("alias", "disabled")
+        self.disable_command("edit", "disabled")
+        self.disable_command("quit", "disabled")
+        self.disable_command("macro", "disabled")
+        self.disable_command("shortcuts", "disabled")
         self.quit_on_sigint = False
         #TODO remove debug
-        self.debug=True
-
-
+        self.debug = True
