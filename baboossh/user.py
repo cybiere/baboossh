@@ -154,7 +154,7 @@ class User():
         """Find users found on an `Endpoint`
 
         When a user is found by `gather` payload, the endpoint he was found on is
-        saved. This functions finds and returns users discovered on a given host.
+        saved. This functions finds and returns users discovered on a given endpoint.
 
         Args:
             endpoint (:class:`.Endpoint`):

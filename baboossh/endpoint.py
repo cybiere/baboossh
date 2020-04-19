@@ -140,9 +140,9 @@ class Endpoint():
 
 
     def save(self):
-        """Save the Connection in database
+        """Save the Endpoint in database
 
-        If the Connection object has an id it means it is already stored in database,
+        If the Endpoint object has an id it means it is already stored in database,
         so it is updated. Else it is inserted and the id is set in the object.
 
         """
@@ -179,7 +179,7 @@ class Endpoint():
         dbConn.get().commit()
 
     def delete(self):
-        """Delete a Connection from the :class:`.Workspace`"""
+        """Delete an Endpoint from the :class:`.Workspace`"""
 
         from baboossh.path import Path
         from baboossh.connection import Connection
@@ -200,14 +200,14 @@ class Endpoint():
         return
 
     @classmethod
-    def findAll(cls,scope=None):
-        """Find all Connections
+    def findAll(cls,scope=True,working=None):
+        """Find all Endpoints
 
         Args:
-            scope (bool): List Connections in scope (`True`), out of scope (`False`), or both (`None`)
+            scope (bool): List Endpoints in scope (`True`), out of scope (`False`), or both (`None`)
     
         Returns:
-            A list of all `Connection`\ s in the :class:`.Workspace`
+            A list of all `Endpoint`\ s in the :class:`.Workspace`
         """
 
         ret = []
@@ -221,19 +221,30 @@ class Endpoint():
         return ret
 
     @classmethod
-    def findAllWorking(cls):
-        endpointsId = []
-        c = dbConn.get().cursor()
-        for row in c.execute('SELECT endpoint FROM connections WHERE working=?',(True,)):
-            endpointsId.append(row[0])
-        endpointsId = set(endpointsId)
+    def findAllWithWorkingConn(cls):
+        """Find all endpoints with a working :class:`.Connection`
+
+        Returns:
+            A list of all `Endpoint`\ s in a working `Connection`
+        """
+
         ret = []
-        for endpointId in endpointsId:
-            ret.append(cls.find(endpointId))
+        c = dbConn.get().cursor()
+        for row in c.execute('SELECT DISTINCT e.ip, e.port FROM connections c LEFT JOIN endpoints e ON c.endpoint = e.id WHERE working=?',(True,)):
+            ret.append(Endpoint(row[0],row[1]))
         return ret
 
     @classmethod
     def findByIpPort(cls,endpoint):
+        """Find an Endpoint by it's IP address and port
+
+        Args:
+            endpoint (str): The IP and port as "<ip>:<port>"
+
+        Returns:
+            A single `Endpoint` or `None`
+        """
+
         ip,sep,port = endpoint.partition(":")
         if port == "":
             raise ValueError
@@ -247,6 +258,15 @@ class Endpoint():
 
     @classmethod
     def find(cls,endpointId):
+        """Find an endpoint by its id
+
+        Args:
+            endpointId (int): the endpoint id to search
+
+        Returns:
+            A single `Endpoint` or `None`.
+        """
+
         if endpointId == 0:
             return None
         c = dbConn.get().cursor()
@@ -259,6 +279,21 @@ class Endpoint():
 
     @classmethod
     def findByFound(cls,endpoint,scope=None):
+        """Find Endpoints found on an `Endpoint`
+
+        When an endpoint is found by `gather` payload, the endpoint he was found on is
+        saved. This functions finds and returns endpoints discovered on a given endpoint.
+
+        Args:
+            endpoint (:class:`.Endpoint`):
+                the `Endpoint` the endpoints were discovered on
+            scope (bool):
+                look only for endpoints in scope (`True`), out of scope (`False`) or vboth (`None`)
+
+        Returns:
+            A list of `Endpoints`\ s found on given endpoint.
+        """
+
         ret = []
         c = dbConn.get().cursor()
         if scope is None:
@@ -273,6 +308,16 @@ class Endpoint():
         return self.ip+":"+str(self.port)
 
     def findGatewayConnection(self):
+        """Find a working connection to a gateway for the Endpoint
+
+        Return a connection to an endpoint from which the current Endpoint can be
+        reached. If you're familiar with the "NextHop" in a network, think of it
+        as a "PreviousHop"
+
+        Returns:
+            A working :class:`.Connection` to the gateway or `None`
+        """
+
         from baboossh.path import Path
         from baboossh.connection import Connection
         if not Path.hasDirectPath(self):
@@ -286,10 +331,26 @@ class Endpoint():
 
     @classmethod
     def getSearchFields(cls):
+        """List available fields to perform a search on
+        
+        Returns:
+            A list of `str` corresponding to the searchable attributes' names
+        """
         return ['ip','port','auth']
 
     @classmethod
     def search(cls,field,val,showAll=False):
+        """Search in the workspace for an endpoint
+
+        Args:
+            field (str): the Endpoint attribute to search in
+            val (str): the value to search for
+            showAll (bool): whether to include out-of scope Endpoints in search results
+
+        Returns:
+            A list of `Endpoints` corresponding to the search.
+        """
+
         if field not in cls.getSearchFields():
             raise ValueError
         ret = []
