@@ -3,19 +3,20 @@ from baboossh.params import dbConn
 import asyncio, asyncssh, sys
 import multiprocessing as mp
 
-async def listenAndLock(c,port,q):
-    try:
-        listener = await c.forward_socks('localhost',port)
-    except Exception as e:
-        q.put((False,str(e)))
-        return
-    q.put((True,"ok"))
-    await listener.wait_closed()
-
-def proxLock(c,port,q):
-    asyncio.get_event_loop().run_until_complete(listenAndLock(c,port,q))
-
 class Tunnel():
+
+    async def listenAndLock(c,port,q):
+        try:
+            listener = await c.forward_socks('localhost',port)
+        except Exception as e:
+            q.put((False,str(e)))
+            return
+        q.put((True,"ok"))
+        await listener.wait_closed()
+
+    def proxLock(c,port,q):
+        asyncio.get_event_loop().run_until_complete(Tunnel.listenAndLock(c,port,q))
+
     def __init__(self,connection,port=None):
         self.connection = connection
         if port is None:
@@ -27,7 +28,7 @@ class Tunnel():
         self.port = port
         self.socket = self.connection.connect()
         q = mp.Queue()
-        self.subprocess = mp.Process(target=proxLock,args=(self.socket,self.port,q))
+        self.subprocess = mp.Process(target=Tunnel.proxLock,args=(self.socket,self.port,q))
         self.subprocess.start()
         worked,msg = q.get()
         if not worked:
