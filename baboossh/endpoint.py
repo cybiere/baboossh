@@ -428,13 +428,13 @@ class Endpoint():
         Args:
             gateway (`None` or `"auto"` or a :class:`.Connection`): Defines the
                 gateway to use to reach the Endpoint: 
-                * `None` disable the use of any gateway to try to reach directly
-                    the endpoint, 
-                * `"auto"` finds an existing gateway using 
-                    :func:`~endpoint.Endpoint.findGatewayConnection`
+
+                * `None` disable the use of any gateway to try to reach directly the endpoint, 
+                * `"auto"` finds an existing gateway using :func:`~endpoint.Endpoint.findGatewayConnection`
                 * :class:`.Connection` uses the provided connection as a gateway
+
                 Defaults to `"auto"`
-            silent (bool): Whether the connection output is printed.
+            silent (bool): Whether the connection output is printed. Defaults to `False`
             
         Returns:
             `True` if the endpoint was reached and the scan successful, `False` otherwise.
