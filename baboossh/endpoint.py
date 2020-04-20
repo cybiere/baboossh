@@ -366,8 +366,7 @@ class Endpoint():
             ret.append(Endpoint(row[0],row[1]))
         return ret
 
-    async def asyncScan(self,gw,silent):
-
+    async def __asyncScan(self,gw,silent):
         #This inner class access the endpoint through the "endpoint" var as "self" keywork is changed
         endpoint = self
         class ScanSSHClient(asyncssh.SSHClient):
@@ -418,14 +417,36 @@ class Endpoint():
         return True
 
     def scan(self,gateway="auto",silent=False):
-        """Scan the endpoint to gather information"""
+        """Scan the endpoint to gather information
+
+        Scanning the endpoint allows to check if it can be reached with existing
+        pathes or with a manually specified gateway. Once an Endpoint is reached,
+        supported authentication are listed and stored. This function populates
+        `scanned`, `reachable` and `auth`, as well as creates relevant
+        :class:`.Path` object if needed.
+
+        Args:
+            gateway (`None` or `"auto"` or a :class:`.Connection`): Defines the
+                gateway to use to reach the Endpoint: 
+                * `None` disable the use of any gateway to try to reach directly
+                    the endpoint, 
+                * `"auto"` finds an existing gateway using 
+                    :func:`~endpoint.Endpoint.findGatewayConnection`
+                * :class:`.Connection` uses the provided connection as a gateway
+                Defaults to `"auto"`
+            silent (bool): Whether the connection output is printed.
+            
+        Returns:
+            `True` if the endpoint was reached and the scan successful, `False` otherwise.
+        """
+
         if gateway == "auto":
             gateway = self.findGatewayConnection()
         if gateway is not None:
             gw = gateway.initConnect()
         else:
             gw = None
-        done = asyncio.get_event_loop().run_until_complete(self.asyncScan(gw,silent))
+        done = asyncio.get_event_loop().run_until_complete(self.__asyncScan(gw,silent))
         try:
             gw.close()
         except:
@@ -445,6 +466,3 @@ class Endpoint():
             if p.getId() is not None:
                 p.delete()
         return done 
-
-
-
