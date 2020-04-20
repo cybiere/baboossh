@@ -118,7 +118,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
 ###################         WORKSPACE         ###################
 #################################################################
 
-    def __workspace_list(self):
+    def __workspace_list(self, stmt):
         print("Existing workspaces :")
         workspaces = [name for name in os.listdir(workspacesDir) if os.path.isdir(os.path.join(workspacesDir, name))]
         for workspace in workspaces:
@@ -198,7 +198,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            self.__workspace_list()
+            self.__workspace_list(stmt)
 
 #################################################################
 ###################           HOSTS           ###################
