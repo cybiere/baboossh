@@ -5,6 +5,23 @@ from baboossh.host import Host
 from collections import deque
 
 class Path():
+    """Indicates an endpoint is reachable from a host
+
+    A path is created when an :class:`.Endpoint` can be reached from a :class:`.Host`,
+    either by being on the same network or by not having filtering between both.
+    This is used to pivot through compromised hosts to reach endpoints which could
+    not be accessed from the user's position in the network (`"Local"`)
+
+    This class provides various functions to get paths to Endpoints through
+    several pivots, or to discover new paths to the host.
+
+    Attributes:
+        src (:class:`.Host` or `None`): the starting Host of the path. if `None`,
+            the path starts at `"Local"`, the user current's position in the network.
+        dst (:class:`.Endpoint`): the destination Endpoint of the path
+        id (int): The path id
+    """
+
     def __init__(self,src,dst):
         if str(src) == str(dst):
             raise ValueError("Can't create path to self")
@@ -35,9 +52,15 @@ class Path():
         return self.dst
 
     def save(self):
+        """Save the Path in database
+
+        If the Path object has an id it means it is already stored in database,
+        so it is updated. Else it is inserted and the id is set in the object.
+
+        """
+
         c = dbConn.get().cursor()
         if self.id is not None:
-            #If we have an ID, the user is already saved in the database : UPDATE
             c.execute('''UPDATE paths 
                 SET
                     src = ?,
@@ -45,7 +68,6 @@ class Path():
                 WHERE id = ?''',
                 (self.src.getId() if self.src is not None else 0,self.dst.getId(), self.id))
         else:
-            #The user doesn't exists in database : INSERT
             c.execute('''INSERT INTO paths(src,dst)
                 VALUES (?,?) ''',
                 (self.src.getId() if self.src is not None else 0,self.dst.getId()))
@@ -57,6 +79,8 @@ class Path():
         dbConn.get().commit()
 
     def delete(self):
+        """Delete an Path from the :class:`.Workspace`"""
+
         if self.id is None:
             return
         c = dbConn.get().cursor()
@@ -67,6 +91,12 @@ class Path():
 
     @classmethod
     def findAll(cls):
+        """Find all Paths
+
+        Returns:
+            A list of all `Path`\ s in the :class:`.Workspace`
+        """
+
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT src,dst FROM paths'):
@@ -76,6 +106,15 @@ class Path():
 
     @classmethod
     def find(cls,pathId):
+        """Find an path by its id
+
+        Args:
+            pathId (int): the path id to search
+
+        Returns:
+            A single `Path` or `None`.
+        """
+
         c = dbConn.get().cursor()
         c.execute('''SELECT src,dst FROM paths WHERE id=?''',(pathId,))
         row = c.fetchone()
@@ -86,6 +125,15 @@ class Path():
     
     @classmethod
     def findByDst(cls,dst):
+        """Find all paths to an :class:`.Endpoint`
+
+        Args:
+            dst (:class:`.Endpoint`): the Endpoint to use as destination
+
+        Returns:
+            A list of `Path`\ s to provided Endpoint
+        """
+
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT src,dst FROM paths WHERE dst=?',(dst.getId(), )):
@@ -95,6 +143,15 @@ class Path():
 
     @classmethod
     def findBySrc(cls,src):
+        """Find all paths from a :class:`.Host`
+
+        Args:
+            src (:class:`.Host` or `None`): the Host to use as source, `"Local"` if `None`
+
+        Returns:
+            A list of `Path`\ s from provided Host
+        """
+
         if src==None:
             srcId = 0
         else:
@@ -108,6 +165,15 @@ class Path():
 
     @classmethod
     def hasDirectPath(cls,dst):
+        """Check if there is a Path from `"Local"` to an Endpoint
+
+        Args:
+            dst (:class:`.Endpoint`): the Endpoint to use as destination
+
+        Returns:
+            `True` if there is a `Path` from `"Local"` to dst, `False` otherwise
+        """
+
         c = dbConn.get().cursor()
         c.execute('''SELECT id FROM paths WHERE src=0 and dst=?''',(dst.getId(),))
         row = c.fetchone()
