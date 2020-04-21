@@ -1,6 +1,6 @@
 import sqlite3
+import collections
 from baboossh import dbConn, Endpoint, Host
-from collections import deque
 
 class Path():
     """Indicates an endpoint is reachable from a host
@@ -241,7 +241,7 @@ class Path():
     def getHostsOrderedClosest(cls):
         ret = []
         done = []
-        queue = deque([None])
+        queue = collections.deque([None])
         try:
             while True:
                 s = queue.popleft()

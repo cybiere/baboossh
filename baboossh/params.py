@@ -2,11 +2,10 @@ import sqlite3
 import importlib
 import inspect
 import threading
-from os.path import join,exists,isfile,expanduser,dirname
-from os import listdir
+import os
 
-home = expanduser("~")
-workspacesDir = join(home,".baboossh")
+home = os.path.expanduser("~")
+workspacesDir = os.path.join(home,".baboossh")
 
 def yesNo(prompt,default=None):
     if default is None:
@@ -43,7 +42,7 @@ class dbConn():
 
     @classmethod
     def build(cls,workspace):
-        dbPath = join(workspacesDir,workspace,"workspace.db")
+        dbPath = os.path.join(workspacesDir,workspace,"workspace.db")
         c = sqlite3.connect(dbPath)
         c.execute('''CREATE TABLE hosts (
             id INTEGER PRIMARY KEY ASC,
@@ -106,7 +105,7 @@ class dbConn():
 
     @classmethod
     def connect(cls,workspace):
-        dbPath = join(workspacesDir,workspace,"workspace.db")
+        dbPath = os.path.join(workspacesDir,workspace,"workspace.db")
         mainThreadName = threading.main_thread().getName()
         currentName = threading.currentThread().getName()
         if currentName != mainThreadName:
@@ -118,7 +117,7 @@ class dbConn():
         if cls.__conn is not None:
             cls.__conn.close()
         cls.__workspace = workspace
-        if not exists(dbPath):
+        if not os.path.exists(dbPath):
             raise ValueError("Workspace database not found, the workspace must be corrupted !")
         cls.__conn = sqlite3.connect(dbPath)
 
@@ -149,8 +148,8 @@ class Extensions():
     @classmethod
     def load(cls):
         nbExt = 0
-        extensionsFolder = join(dirname(__file__),'extensions')
-        files = [f.split('.')[0] for f in listdir(extensionsFolder) if isfile(join(extensionsFolder,f)) and f[0] != '.']
+        extensionsFolder = os.path.join(os.path.dirname(__file__),'extensions')
+        files = [f.split('.')[0] for f in os.listdir(extensionsFolder) if os.path.isfile(os.path.join(extensionsFolder,f)) and f[0] != '.']
         for mod in files:
             moduleName = "baboossh.extensions."+mod
             try:

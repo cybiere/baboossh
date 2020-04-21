@@ -15,10 +15,10 @@ class Endpoint():
         id (int): The endpoint id
         host (:class:`.Host`): The Endpoint's :class:`.Host`
         scope (bool): Whether the Endpoint is in scope or not
-        scanned (bool): Whether :func:`~endpoint.Endpoint.scan` has been run on the Endpoint
-        reachable (bool): Whether the Endpoint was reached using :func:`~endpoint.Endpoint.scan` or :func:`~connection.Connection.connect`
+        scanned (bool): Whether :func:`scan` has been run on the Endpoint
+        reachable (bool): Whether the Endpoint was reached using :func:`scan` or :func:`.Connection.connect`
         found (:class:`.Endpoint`): The Endpoint on which the current Endpoint was discovered
-        auth ([str...]): A list of allowed authentication methods, populated by a :func:`~endpoint.Endpoint.scan`
+        auth ([str...]): A list of allowed authentication methods, populated by a :func:`scan`
 
     """
 

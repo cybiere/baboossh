@@ -8,23 +8,23 @@ extensions on startup.
 
 Typical usage example:
 
-    from baboossh.shell import BaboosshShell
-    BaboosshShell().cmdloop()
+    from baboossh.shell import Shell
+    Shell().cmdloop()
 
 """
 
 import os
 import re
 import argparse
-from shutil import rmtree
+import shutil
 import cmd2
-from tabulate import tabulate
+import tabulate
 from baboossh.params import Extensions, workspacesDir, yesNo
 from baboossh.workspace import Workspace
 
 Extensions.load()
 
-class BaboosshShell(cmd2.Cmd):
+class Shell(cmd2.Cmd):
     """BabooSSH Shell interface
 
     This class extends cmd2.Cmd to build the user interface.
@@ -36,22 +36,6 @@ class BaboosshShell(cmd2.Cmd):
         debug (bool): Boolean for debug output
     """
 
-    intro = '''                                                                            &%%%%#%%%%%
-  %%%%%%%%%%%@         %%%%%&        %%%%%%%%%%%         @%%%%%%%%@       %%/          %%@    @%%%%%%%%%@    %%%%%%%%%&   %%%%       %%%%  
-  %%%%%%%%%%%%%       %%%%%%%        %%%%%%%%%%%%%     %%/        *%%@  &%,              %%  %%%%%%%%%%%   &%%%%%%%%%%    %%%%       %%%%  
-  %%%%     %%%%      @%%% %%%%       %%%%     %%%%   %%.      .##.   %%@%.      % *@@(    %& %%%%          %%%%           %%%%       %%%%  
-  %%%%   @&%%%%      %%%%  %%%&      %%%%   @%%%%%  %%       #  @@@   %%%      *@(@@@@.   /% %%%%%&        %%%%%&         %%%%       %%%%  
-  %%%%%%%%%%%@      %%%%   %%%%      %%%%%%%%%%&@  @%*      ,@@@@@@.  .%#       @@@@@*    ,%   %%%%%%%&      %%%%%%%&     %%%%%%%%%%%%%%%  
-  %%%%     %%%%    %%%%%%%%%%%%%     %%%%     %%%% %%.       .@@@@     %%                 #%      %%%%%%        %%%%%%&   %%%%       %%%%  
-  %%%%     @%%%&  @%%%%%%%%%%%%%%    %%%%     &%%%  %(                ,%%#               *%          %%%%          %%%%   %%%%       %%%%  
-  %%%%&&&%%%%%%   %%%%       %%%%&   %%%%&&&%%%%%%  %%*               %% %%,            %%   %%%&&@&%%%%   %%%&&@&%%%%%   %%%%       %%%%  
-  %%%%%%%%%%%%   %%%%%        %%%%   %%%%%%%%%%%      %%            #%%    %%%.      #%%%    %%%%%%%%%%    %%%%%%%%%%     %%%%       %%%%  
-                                                       %%%(      *%%%         %%%%%%%                                                      
-                                                           %%%%%%
-
-Welcome to BabooSSH. Type help or ? to list commands.'''
-
-    prompt = '> '
 
 #################################################################
 ###################          GETTERS          ###################
@@ -168,7 +152,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             return
         if not yesNo("Are you sure you want to delete workspace "+name+"?", default=False):
             return
-        rmtree(os.path.join(workspacesDir, name))
+        shutil.rmtree(os.path.join(workspacesDir, name))
         print("Workspace deleted !")
 
     __parser_wspace = argparse.ArgumentParser(prog="workspace")
@@ -215,7 +199,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
                     endpoints = endpoints + ", "+str(endpoint)
             scope = "o" if host.inScope() else ""
             data.append([scope, host.getId(), host.getName(), endpoints])
-        print(tabulate(data, headers=["", "ID", "Hostname", "Endpoints"]))
+        print(tabulate.tabulate(data, headers=["", "ID", "Hostname", "Endpoints"]))
 
     def __host_list(self, stmt):
         print("Current hosts in workspace:")
@@ -299,7 +283,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             else:
                 auth = str(endpoint.getAuth())
             data.append([scope, endpoint, host, scanned, reachable, auth, conn])
-        print(tabulate(data, headers=["", "Endpoint", "Host", "Scanned", "Reachable", "Authentication", "Working connection"]))
+        print(tabulate.tabulate(data, headers=["", "Endpoint", "Host", "Scanned", "Reachable", "Authentication", "Working connection"]))
 
     def __endpoint_list(self, stmt):
         print("Current endpoints in workspace:")
@@ -411,7 +395,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
                 continue
             scope = "o" if user.inScope() else ""
             data.append([scope, user])
-        print(tabulate(data, headers=["", "Username"]))
+        print(tabulate.tabulate(data, headers=["", "Username"]))
 
     def __user_add(self, stmt):
         name = vars(stmt)['name']
@@ -458,7 +442,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         data = []
         for key in Extensions.authMethodsAvail():
             data.append([key, Extensions.getAuthMethod(key).descr()])
-        print(tabulate(data, headers=["Key", "Description"]))
+        print(tabulate.tabulate(data, headers=["Key", "Description"]))
 
     def __creds_list(self, stmt):
         show_all = getattr(stmt, 'all', False)
@@ -472,7 +456,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
                 continue
             scope = "o" if cred.inScope() else ""
             data.append([scope, "#"+str(cred.getId()), cred.obj.getKey(), cred.obj.toList()])
-        print(tabulate(data, headers=["", "ID", "Type", "Value"]))
+        print(tabulate.tabulate(data, headers=["", "ID", "Type", "Value"]))
 
     def __creds_show(self, stmt):
         creds_id = vars(stmt)['id']
@@ -540,7 +524,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         data = []
         for key in Extensions.payloadsAvail():
             data.append([key, Extensions.getPayload(key).descr()])
-        print(tabulate(data, headers=["Key", "Description"]))
+        print(tabulate.tabulate(data, headers=["Key", "Description"]))
 
     __parser_payload = argparse.ArgumentParser(prog="payload")
     __subparser_payload = __parser_payload.add_subparsers(title='Actions', help='Available actions')
@@ -585,7 +569,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
                     if connection.isTested() != flag_tested:
                         continue
             data.append([connection.getEndpoint(), connection.getUser(), connection.getCred(), connection.isTested(), connection.isWorking()])
-        print(tabulate(data, headers=["Endpoint", "User", "Creds", "Tested", "Working"]))
+        print(tabulate.tabulate(data, headers=["Endpoint", "User", "Creds", "Tested", "Working"]))
 
     def __connection_del(self, stmt):
         connection = getattr(stmt, "connection", None)
@@ -696,7 +680,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             if src is None:
                 src = "Local"
             data.append([src, path.dst])
-        print(tabulate(data, headers=["Source", "Destination"]))
+        print(tabulate.tabulate(data, headers=["Source", "Destination"]))
 
     def __path_get(self, stmt):
         endpoint = vars(stmt)['endpoint']
@@ -861,7 +845,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         data = []
         for tunnel in tunnels:
             data.append([tunnel.port, tunnel.connection])
-        print(tabulate(data, headers=["Local port", "Destination"]))
+        print(tabulate.tabulate(data, headers=["Local port", "Destination"]))
 
     def __tunnel_open(self, stmt):
         connection_str = getattr(stmt, 'connection', None)
@@ -918,7 +902,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             data = []
             for key in Extensions.exportsAvail():
                 data.append([key, Extensions.getExport(key).descr()])
-            print(tabulate(data, headers=["Key", "Description"]))
+            print(tabulate.tabulate(data, headers=["Key", "Description"]))
             return
         try:
             exporter = Extensions.getExport(key)
@@ -949,7 +933,7 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
             data = []
             for key in Extensions.importsAvail():
                 data.append([key, Extensions.getImport(key).descr()])
-            print(tabulate(data, headers=["Key", "Description"]))
+            print(tabulate.tabulate(data, headers=["Key", "Description"]))
             return
         try:
             importer = Extensions.getImport(key)
@@ -1038,6 +1022,14 @@ Welcome to BabooSSH. Type help or ? to list commands.'''
         #Create default workspace if not exists
         if not os.path.exists(os.path.join(workspacesDir, 'default')):
             Workspace.create('default')
+
+        self.intro = '''  %%%%%/      %%%     %%%%%.      .%%/     %%     %/   /%%%/   ,%%%/  *%%    %% 
+  %%   %%*   %% %%    %%   %%  %*       % %    /@*  % %%      %%      *%%    %% 
+  %%%%%%    %%, %%%   %%%%%%  %    @@@@  %    /@@@  /  %%%%    %%%%   *%%%%%%%% 
+  %%   %%% %%%%%%%%,  %%   %%(%          %%         %     %%%     %%% *%%    %% 
+  %%%%%%  ,%%     %%  %%%%%%   %%      ,%   %#   %%   %%%%%.  %%%%%.  *%%    %%
+
+Welcome to BabooSSH. Type help or ? to list commands.'''
 
         self.workspace = Workspace("default")
         self.__init_prompt()

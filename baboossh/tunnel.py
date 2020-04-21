@@ -17,7 +17,8 @@ class Tunnel():
             it is opened.
     """
 
-    async def listenAndLock(c,port,q):
+    @classmethod
+    async def listenAndLock(cls,conn,port,q):
         """Open the proxy on the connection and wait.
 
         Once the connection is opened, this function opens the proxy and waits.
@@ -25,27 +26,24 @@ class Tunnel():
         with the error message in case of failure.
 
         Args:
-            c (asyncssh.SSHClientConnection): the opened connection to the exit
+            conn (asyncssh.SSHClientConnection): the opened connection to the exit
             port (int): the local entrance port
             q (multiprocessing.Queue): the queue to report status to the main process
         """
 
         try:
-            listener = await c.forward_socks('localhost',port)
+            listener = await conn.forward_socks('localhost',port)
         except Exception as e:
             q.put((False,str(e)))
             return
         q.put((True,"ok"))
         await listener.wait_closed()
 
-    def proxLock(c,port,q):
-        """Run :func:`~tunnel.Tunnel.listenAndLock`
+    @classmethod
+    def proxLock(cls,conn,port,q):
+        """Run :func:`listenAndLock` with same parameters"""
 
-        Args:
-            See :func:`~tunnel.Tunnel.listenAndLock`
-        """
-
-        asyncio.get_event_loop().run_until_complete(Tunnel.listenAndLock(c,port,q))
+        asyncio.get_event_loop().run_until_complete(Tunnel.listenAndLock(conn,port,q))
 
     def __init__(self,connection,port=None):
         self.connection = connection

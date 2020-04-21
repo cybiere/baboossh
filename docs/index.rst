@@ -5,26 +5,11 @@ Welcome to BabooSSH's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-Classes reference
+Automodapi
 =================
 
-
-.. autosummary::
-   :toctree:
-   :nosignatures:
-   
-   shell.BaboosshShell
-   connection.Connection
-   creds.Creds
-   params.dbConn
-   endpoint.Endpoint
-   params.Extensions
-   host.Host
-   path.Path
-   tunnel.Tunnel
-   user.User
-   workspace.Workspace
-
+.. automodapi:: baboossh
+   :no-inheritance-diagram:
 
 Indices and tables
 ==================
