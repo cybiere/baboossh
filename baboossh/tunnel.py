@@ -1,5 +1,5 @@
 import sqlite3
-from baboossh.params import dbConn
+from baboossh import dbConn
 import asyncio, asyncssh, sys
 import multiprocessing as mp
 

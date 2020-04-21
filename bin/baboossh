@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from baboossh.shell import BaboosshShell
+from baboossh import BaboosshShell
 
 if __name__ == '__main__':
     BaboosshShell().cmdloop()

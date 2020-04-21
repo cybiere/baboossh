@@ -1,6 +1,7 @@
-from baboossh.params import dbConn
+from baboossh import dbConn
 
 class User():
+
     """A username to authenticate with on servers.
 
     Attributes:
@@ -23,7 +24,7 @@ class User():
             self.id = saved_user[0]
             self.scope = saved_user[1] != 0
             if saved_user[2] is not None:
-                from baboossh.endpoint import Endpoint
+                from baboossh import Endpoint
                 self.found = Endpoint.find(saved_user[2])
 
     def getId(self):
@@ -79,7 +80,7 @@ class User():
     def delete(self):
         """Delete a User from the :class:`.Workspace`"""
 
-        from baboossh.connection import Connection
+        from baboossh import Connection
         if self.id is None:
             return
         for connection in Connection.findByUser(self):

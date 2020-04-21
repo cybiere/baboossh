@@ -1,10 +1,5 @@
 import sqlite3
-from baboossh.params import dbConn,Extensions
-from baboossh.endpoint import Endpoint
-from baboossh.user import User
-from baboossh.creds import Creds
-from baboossh.path import Path
-from baboossh.host import Host
+from baboossh import dbConn,Extensions, Endpoint, User, Creds, Path, Host
 import asyncio, asyncssh, sys
 
 class Connection():

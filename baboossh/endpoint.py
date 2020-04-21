@@ -1,5 +1,5 @@
-from baboossh.params import dbConn
-from baboossh.host import Host
+from baboossh import dbConn
+from baboossh import Host
 import asyncio, asyncssh, sys
 import json
 
@@ -121,7 +121,7 @@ class Endpoint():
             A :class:`.Connection` matching the criteria or `None`
         """
 
-        from baboossh.connection import Connection
+        from baboossh import Connection
         c = dbConn.get().cursor()
         if working:
             req = c.execute('''SELECT id FROM connections WHERE endpoint=? AND working=? ORDER BY root DESC''',(self.getId(),1))
@@ -181,8 +181,8 @@ class Endpoint():
     def delete(self):
         """Delete an Endpoint from the :class:`.Workspace`"""
 
-        from baboossh.path import Path
-        from baboossh.connection import Connection
+        from baboossh import Path
+        from baboossh import Connection
         if self.id is None:
             return
         if self.host is not None:
@@ -318,8 +318,8 @@ class Endpoint():
             A working :class:`.Connection` to the gateway or `None`
         """
 
-        from baboossh.path import Path
-        from baboossh.connection import Connection
+        from baboossh import Path
+        from baboossh import Connection
         if not Path.hasDirectPath(self):
             paths = Path.getPath(None,self)
             if paths is None:
@@ -458,7 +458,7 @@ class Endpoint():
             gwHost = gateway.getEndpoint().getHost()
             if gwHost is None:
                 return done
-        from baboossh.path import Path
+        from baboossh import Path
         p = Path(gwHost,self)
         if done:
             p.save()

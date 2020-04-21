@@ -1,5 +1,5 @@
 import sqlite3
-from baboossh.params import dbConn,Extensions
+from baboossh import dbConn,Extensions
 
 
 class Creds():
@@ -18,7 +18,7 @@ class Creds():
             self.id = savedCreds[0]
             self.scope = savedCreds[1] != 0
             if savedCreds[2] is not None :
-                from baboossh.endpoint import Endpoint
+                from baboossh import Endpoint
                 self.found = Endpoint.find(savedCreds[2])
 
     def getId(self):
@@ -65,7 +65,7 @@ class Creds():
         dbConn.get().commit()
 
     def delete(self):
-        from baboossh.connection import Connection
+        from baboossh import Connection
         if self.id is None:
             return
         for connection in Connection.findByCreds(self):

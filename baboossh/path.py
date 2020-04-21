@@ -1,7 +1,5 @@
 import sqlite3
-from baboossh.params import dbConn
-from baboossh.endpoint import Endpoint
-from baboossh.host import Host
+from baboossh import dbConn, Endpoint, Host
 from collections import deque
 
 class Path():

@@ -3,14 +3,7 @@ import re
 import ipaddress
 import threading
 import asyncio
-from baboossh.params import dbConn, Extensions, workspacesDir, yesNo
-from baboossh.host import Host
-from baboossh.endpoint import Endpoint
-from baboossh.user import User
-from baboossh.creds import Creds
-from baboossh.connection import Connection
-from baboossh.path import Path
-from baboossh.tunnel import Tunnel
+from baboossh import *
 
 class Workspace():
     """A container for all related objects and connections
