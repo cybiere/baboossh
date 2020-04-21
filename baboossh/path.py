@@ -180,6 +180,13 @@ class Path():
 
     @classmethod
     def getAdjacencyList(cls):
+        """Build a lightweight adjacency matrix to find the shortest path
+        
+        Returns:
+            A `Dict` of `List`, with for each endpoint with a working connection as source,
+            references a `List` of all reachable endpoints as a destination
+        """
+
         adj = {}
         adj[0] = []
         c = dbConn.get().cursor()
@@ -197,6 +204,16 @@ class Path():
 
     @classmethod
     def easyPath(cls,srcId,dstId):
+        """Simplified Dijkstra to find the shortes path from an :class:`Endpoint` to another
+
+        Args:
+            srcId (int): The id of the starting endpoint
+            dstId (int): The id of the destination endpoint
+
+        Returns:
+            A `List` of :class:`Endpoint` id forming a chain from src to dst
+        """
+
         adj = cls.getAdjacencyList()
         queue = [[srcId]]
         done = []
@@ -219,6 +236,16 @@ class Path():
 
     @classmethod
     def getPath(cls,src,dst):
+        """Get a path from an `Endpoint` to another
+
+        Args:
+            src (:class:`Endpoint` or `None`): the starting `Endpoint`, or `"Local"` if `None`
+            dst (:class:`Endpoint`): the destination `Endpoint`
+
+        Returns:
+            A `List` of :class:`Path` forming a chain from src to dst
+        """
+
         if src == None:
             srcId = 0
         else:
@@ -239,6 +266,15 @@ class Path():
     
     @classmethod
     def getHostsOrderedClosest(cls):
+        """Get a List of :class:`Host`\ s ordered by their distance to `"Local"`
+
+        Lists the Hosts ordered by the number of pivots to reach them from
+        `"Local"`
+
+        Returns:
+            An ordered `List` of :class:`Host`
+        """
+
         ret = []
         done = []
         queue = collections.deque([None])
