@@ -4,6 +4,26 @@ from baboossh import dbConn
 
 
 class Host():
+    """A machine with one or several :class:`Endpoint`
+
+    This is used to aggregate endpoints as a single machine can have several
+    interfaces with SSH listening on them. In order to prevent unecessary pivots,
+    :class:`Path`\ s are calculated using the `Host` as sources as it might be
+    longer to reach a `Host` from one endpoint rather than the other.
+
+    The aggregation is checked by :func:`Connection.identify`, which is run on
+    every endpoint newly connected. If every `Host` attribute matches with an
+    existing Host, the endpoint is considered to belong to it and is added.
+
+    Attributes:
+        name (str): the hostname of the Host as returned by the command `hostname`
+        id (int): the id of the Host
+        uname (str): the output of the command `uname -a` on the Host
+        issue (str): the content of the file `/etc/issue` on the Host
+        machineId (str): the content of the file `/etc/machine-id` on the Host
+        macs ([str,...]): a list of the MAC addresses of the Host interfaces
+    """
+
     def __init__(self,name,uname,issue,machineId,macs):
         self.name = name
         self.id = None
