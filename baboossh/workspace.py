@@ -6,7 +6,7 @@ import asyncio
 from baboossh import *
 
 class Workspace():
-    """A container for all related objects and connections
+    """A container to hold all related objects
 
     The workspace allows to separate environments with dedicated folders and
     database. Any object (`Endpoint`, `User`, `Creds`, `Connection`, etc. exists

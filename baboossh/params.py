@@ -22,12 +22,26 @@ def yesNo(prompt,default=None):
     return a == "y"
 
 class dbConn():
+    """A singleton handling the database connection
+
+    This class allows the use of a single sqlite connection for earch thread
+    """
+
     __conn=None
     __threadsConn={}
     __workspace=None
 
     @classmethod
     def get(cls):
+        """Returns the database connection for the current thread
+
+        If the current thread isn't the main and no connection is already
+        opened, opens a new one and returns it
+
+        Returns:
+            An open :class:`sqlite3.Connection`
+        """
+
         mainThreadName = threading.main_thread().getName()
         currentName = threading.currentThread().getName()
         if currentName != mainThreadName:
@@ -42,6 +56,12 @@ class dbConn():
 
     @classmethod
     def build(cls,workspace):
+        """Create the databases and the tables for a new :class:`Workspace`
+
+        Args:
+            workspace (str): the workspace's name
+        """
+
         dbPath = os.path.join(workspacesDir,workspace,"workspace.db")
         c = sqlite3.connect(dbPath)
         c.execute('''CREATE TABLE hosts (
@@ -105,6 +125,19 @@ class dbConn():
 
     @classmethod
     def connect(cls,workspace):
+        """Open the connection to the database for a :class:`Workspace`
+        
+        If this function is called from the main thread, it closes existing
+        sqlite connections and opens a new one. Else, if a connection isn't
+        already open for the current thread, it opens the connection.
+
+        Args:
+            workspace (str): the name of the Workspace to open
+
+        Raises:
+            ValueError: raised if the database file doesn't exist
+        """
+
         dbPath = os.path.join(workspacesDir,workspace,"workspace.db")
         mainThreadName = threading.main_thread().getName()
         currentName = threading.currentThread().getName()
@@ -123,6 +156,8 @@ class dbConn():
 
     @classmethod
     def close(cls):
+        """Closes the connection for the current Thread"""
+
         mainThreadName = threading.main_thread().getName()
         currentName = threading.currentThread().getName()
         if currentName != mainThreadName:
@@ -135,6 +170,8 @@ class dbConn():
 
     @classmethod
     def cleanThreadsConn(cls):
+        """Closes sqlite connection in non-main threads"""
+
         for c in cls.__threadsConn.values():
             c.close()
         cls.__threadsConn = {}

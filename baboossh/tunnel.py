@@ -4,7 +4,7 @@ import asyncio, asyncssh, sys
 import multiprocessing as mp
 
 class Tunnel():
-    """Open SOCKS tunnel to a host to proxify other tools
+    """Open SOCKS tunnel to a :class:`Host`
 
     Each tunnel is opened in another process so that BabooSSH is still usable
     while the tunnel is open.
