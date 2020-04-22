@@ -177,13 +177,24 @@ class dbConn():
         cls.__threadsConn = {}
 
 class Extensions():
-    auths = {}
-    payloads = {}
-    exports = {}
-    imports = {}
+    """Load and access available extensions"""
+
+    __auths = {}
+    __payloads = {}
+    __exports = {}
+    __imports = {}
 
     @classmethod
     def load(cls):
+        """Load extensions from the dedicated folder
+
+        Load extensions and sort them according to their type:
+        * Authentication Methods
+        * Payloads
+        * Exporter
+        * Importer
+        """
+
         nbExt = 0
         extensionsFolder = os.path.join(os.path.dirname(__file__),'extensions')
         files = [f.split('.')[0] for f in os.listdir(extensionsFolder) if os.path.isfile(os.path.join(extensionsFolder,f)) and f[0] != '.']
@@ -203,13 +214,13 @@ class Extensions():
         
                     modType = data.getModType()
                     if modType == "auth":
-                        dico = cls.auths
+                        dico = cls.__auths
                     elif modType == "payload":
-                        dico = cls.payloads
+                        dico = cls.__payloads
                     elif modType == "export":
-                        dico = cls.exports
+                        dico = cls.__exports
                     elif modType == "import":
-                        dico = cls.imports
+                        dico = cls.__imports
                     else:
                         print(mod+"> module type Invalid")
                         continue
@@ -222,41 +233,100 @@ class Extensions():
 
     @classmethod
     def getAuthMethod(cls,key):
-        if key not in cls.auths.keys():
+        """Get an authentication method by its key
+
+        Args:
+            key (str): the desired method key
+
+        Returns:
+            The AuthMethod class
+        """
+
+        if key not in cls.__auths.keys():
             raise IndexError("Extension "+key+" not found")
-        return cls.auths[key]
+        return cls.__auths[key]
 
     @classmethod
     def authMethodsAvail(cls):
-        return cls.auths.keys()
+        """Get all available authentication methods
+
+        Returns:
+            A list of the keys of available methods
+        """
+
+        return cls.__auths.keys()
 
     @classmethod
     def getPayload(cls,key):
-        if key not in cls.payloads.keys():
+        """Get a payload by its key
+
+        Args:
+            key (str): the desired payload key
+
+        Returns:
+            The Payload class
+        """
+
+        if key not in cls.__payloads.keys():
             raise IndexError("Extension "+key+" not found")
-        return cls.payloads[key]
+        return cls.__payloads[key]
 
     @classmethod
     def payloadsAvail(cls):
-        return cls.payloads.keys()
+        """Get all available payloads
+
+        Returns:
+            A list of the keys of available payloads
+        """
+
+        return cls.__payloads.keys()
 
     @classmethod
     def getExport(cls,key):
-        if key not in cls.exports.keys():
+        """Get an exporter by its key
+
+        Args:
+            key (str): the desired exporter key
+
+        Returns:
+            The Exporter class
+        """
+
+        if key not in cls.__exports.keys():
             raise IndexError("Extension "+key+" not found")
-        return cls.exports[key]
+        return cls.__exports[key]
 
     @classmethod
     def exportsAvail(cls):
-        return cls.exports.keys()
+        """Get all available exporters
+
+        Returns:
+            A list of the keys of exporters
+        """
+
+        return cls.__exports.keys()
 
     @classmethod
     def getImport(cls,key):
-        if key not in cls.imports.keys():
+        """Get an importer by its key
+
+        Args:
+            key (str): the desired importer key
+
+        Returns:
+            The Importer class
+        """
+
+        if key not in cls.__imports.keys():
             raise IndexError("Extension "+key+" not found")
-        return cls.imports[key]
+        return cls.__imports[key]
 
     @classmethod
     def importsAvail(cls):
-        return cls.imports.keys()
+        """Get all available importers
 
+        Returns:
+            A list of the keys of available importers
+        """
+
+        return cls.__imports.keys()
