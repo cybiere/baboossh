@@ -3,6 +3,20 @@ from baboossh import dbConn,Extensions, Endpoint, User, Creds, Path, Host
 import asyncio, asyncssh, sys
 
 class Connection():
+    """A :class:`User` and :class:`Creds` to authenticate on an :class:`Endpoint`
+    
+    A connection represents the association of those 3 objects and its results.
+    If it is working, it can be used to run payloads on a :class:`Host`, open a
+    :class:`Tunnel` to it or use it as a pivot to reach new :class:`Endpoint`\ s
+
+    Attributes:
+        endpoint (:class:`Endpoint`): the `Connection`\ 's endpoint
+        user (:class:`User`): the `Connection`\ 's user
+        creds (:class:`Creds`): the `Connection`\ 's credentials
+        id (int): the `Connection`\ 's id
+        tested (bool): whether the connection was tested
+        working (bool): whether the connection works
+    """
     def __init__(self,endpoint,user,cred):
         self.endpoint = endpoint
         self.user = user
@@ -22,36 +36,61 @@ class Connection():
             self.root = savedConnection[3] != 0
 
     def getId(self):
+        """Returns the `Connection`\ 's id"""
         return self.id
 
     def inScope(self):
+        """Returns whether the `Connection` is in scope
+        
+        The `Connection` is in scope if its :class:`User`, its :class:`Creds`
+        AND it :class:`Endpoint` are all in scope
+        """
+
         return self.user.inScope() and self.endpoint.inScope() and self.cred.inScope()
 
     def getUser(self):
+        """Returns the `Connection`\ 's :class:`User`"""
         return self.user
 
     def getEndpoint(self):
+        """Returns the `Connection`\ 's :class:`Endpoint`"""
         return self.endpoint
 
     def getCred(self):
+        """Returns the `Connection`\ 's :class:`Creds`"""
         return self.cred
 
     def setTested(self, tested):
+        """Set whether the `Connection` was tested
+
+        Args:
+            tested (bool): whether the `Connection` was tested
+        """
+
         self.tested = tested == True
 
     def isTested(self):
+        """Returns whether the `Connection` was tested"""
         return self.tested == True
 
     def setWorking(self, working):
+        """Set whether the `Connection` is working
+
+        Args:
+            working (bool): whether the `Connection` is working
+        """
+
         self.working = working == True
 
     def isWorking(self):
+        """Returns whether the `Connection` is working"""
         return self.working == True
 
     def setRoot(self, root):
         self.root = root == True
 
     def save(self):
+        """Save the `Connection` to the :class:`Workspace`\ 's database"""
         c = dbConn.get().cursor()
         if self.id is not None:
             #If we have an ID, the endpoint is already saved in the database : UPDATE
@@ -78,6 +117,7 @@ class Connection():
         dbConn.get().commit()
 
     def delete(self):
+        """Delete the `Connection` from the :class:`Workspace`\ 's database"""
         if self.id is None:
             return
         c = dbConn.get().cursor()
@@ -89,6 +129,15 @@ class Connection():
 
     @classmethod
     def find(cls,connectionId):
+        """Find a `Connection` by its id
+
+        Args:
+            connectionId (int): the `Connection` id to search
+
+        Returns:
+            A single `Connection` or `None`.
+        """
+
         c = dbConn.get().cursor()
         c.execute('SELECT endpoint,user,cred FROM connections WHERE id=?',(connectionId,))
         row = c.fetchone()
@@ -99,6 +148,15 @@ class Connection():
 
     @classmethod
     def findByEndpoint(cls,endpoint):
+        """Find all `Connection`\ s to an :class:`Endpoint`
+
+        Args:
+            endpoint (:class:`Endpoint`): the `Endpoint` to find `Connection`\ s for
+
+        Returns:
+            A `List` of corresponding `Connection`\ s
+        """
+
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT user,cred FROM connections WHERE endpoint=?',(endpoint.getId(),)):
@@ -108,6 +166,15 @@ class Connection():
 
     @classmethod
     def findByUser(cls,user):
+        """Find all `Connection`\ s using a :class:`User`
+
+        Args:
+            user (:class:`User`): the `User` to find `Connection`\ s for
+
+        Returns:
+            A `List` of corresponding `Connection`\ s
+        """
+
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT endpoint,cred FROM connections WHERE user=?',(user.getId(),)):
@@ -117,6 +184,15 @@ class Connection():
 
     @classmethod
     def findByCreds(cls,creds):
+        """Find all `Connection`\ s using a :class:`Creds`
+
+        Args:
+            creds (:class:`Creds`): the `Creds` to find `Connection`\ s for
+
+        Returns:
+            A `List` of corresponding `Connection`\ s
+        """
+
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT endpoint,user FROM connections WHERE cred=?',(creds.getId(),)):
