@@ -39,40 +39,58 @@ class Host():
             self.id = savedHost[0]
 
     def getId(self):
+        """Returns the `Host` id"""
         return self.id
 
     def getName(self):
+        """Returns the `Host` name"""
         return self.name
 
     def getUname(self):
+        """Returns the `Host` uname"""
         return self.uname
 
     def getIssue(self):
+        """Returns the `Host` issue"""
         return self.issue
 
     def getMachineId(self):
+        """Returns the `Host` machine-id"""
         return self.machineId
 
     def getMacs(self):
+        """Returns the `Host` macs"""
         return self.macs
 
     def inScope(self):
+        """Returns whether the `Host` is in scope
+
+        A `Host` is in scope if all its :class:`Endpoint`\ s are in scope
+        """
+
         for e in self.getEndpoints():
             if not e.inScope():
                 return False
         return True
 
     def rescope(self):
+        """Add the `Host` and all its :class:`Endpoint`\ s to scope"""
         for e in self.getEndpoints():
             e.rescope()
             e.save()
 
     def unscope(self):
+        """Remove the `Host` and all its :class:`Endpoint`\ s from scope"""
         for e in self.getEndpoints():
             e.unscope()
             e.save()
 
     def getClosestEndpoint(self):
+        """Returns the `Host`\ 's closest :class:`Endpoint`
+
+        Get the Endpoint with the shortest path from `"Local"`
+        """
+        
         from baboossh import Path
         endpoints = self.getEndpoints()
         shortestLen = None
@@ -87,6 +105,7 @@ class Host():
         return shortest
 
     def getEndpoints(self):
+        """Returns a `List` of the `Host`\ 's :class:`Endpoint`\ s"""
         from baboossh import Endpoint
         endpoints = []
         c = dbConn.get().cursor()
@@ -96,6 +115,7 @@ class Host():
         return endpoints
 
     def save(self):
+        """Saves the `Host` in the :class:`Workspace`\ 's database"""
         c = dbConn.get().cursor()
         if self.id is not None:
             #If we have an ID, the host is already saved in the database : UPDATE
@@ -121,6 +141,11 @@ class Host():
         dbConn.get().commit()
 
     def delete(self):
+        """Removes the `Host` from the :class:`Workspace`
+
+        Recursively removes all :class:`Path`\ s starting from this `Host`
+        """
+
         from baboossh import Path
         if self.id is None:
             return
@@ -137,6 +162,16 @@ class Host():
 
     @classmethod
     def findAll(cls,scope=None):
+        """Returns a `List` of all `Host`\ s in the :class:`Workspace`
+
+        Args:
+            scope (bool): whether to return only `Host`\s in scope (`True`),
+                out of scope (`False`) or both (`None`)
+
+        Returns:
+            the `List` of `Host`\ s
+        """
+
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT name,uname,issue,machineId,macs FROM hosts'):
@@ -150,6 +185,15 @@ class Host():
 
     @classmethod
     def find(cls,hostId):
+        """Find a `Host` by its id
+
+        Args:
+            hostId (int): the desired `Host`\ 's id
+
+        Returns:
+            A `Host` or `None`
+        """
+
         c = dbConn.get().cursor()
         c.execute('''SELECT name,uname,issue,machineId,macs FROM hosts WHERE id=?''',(hostId,))
         row = c.fetchone()
@@ -160,6 +204,15 @@ class Host():
 
     @classmethod
     def findByName(cls,name):
+        """Find `Host`\ s by name
+
+        Args:
+            name (int): the desired `Host`\ 's name
+
+        Returns:
+            A `List` of `Host`\ s with the name `name`
+        """
+
         c = dbConn.get().cursor()
         hosts = []
         for row in c.execute('''SELECT id FROM hosts WHERE name=?''',(name,)):
@@ -169,6 +222,16 @@ class Host():
 
     @classmethod
     def findAllNames(cls,scope=None):
+        """Returns a `List` of all `Host`\ s' `names` in the :class:`Workspace`
+
+        Args:
+            scope (bool): whether to return only `Host`\s in scope (`True`),
+                out of scope (`False`) or both (`None`)
+
+        Returns:
+            the `List` of `str` of the `Host`\ s' names
+        """
+
         ret = []
         hosts = Host.findAll(scope=scope)
         for host in hosts:
@@ -177,10 +240,27 @@ class Host():
 
     @classmethod
     def getSearchFields(cls):
+        """List available fields to perform a search on
+        
+        Returns:
+            A list of `str` corresponding to the searchable attributes' names
+        """
+
         return ['name','uname']
 
     @classmethod
     def search(cls,field,val,showAll=False):
+        """Search in the workspace for a `Host`
+
+        Args:
+            field (str): the `Host` attribute to search in
+            val (str): the value to search for
+            showAll (bool): whether to include out-of scope `Host`\ s in search results
+
+        Returns:
+            A `List` of `Host`\ s corresponding to the search.
+        """
+
         if field not in cls.getSearchFields():
             raise ValueError
         ret = []
@@ -193,9 +273,5 @@ class Host():
             ret.append(Host(row[0],row[1],row[2],row[3],json.loads(row[4])))
         return ret
 
-
-
-
     def __str__(self):
         return self.name
-

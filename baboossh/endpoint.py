@@ -340,15 +340,15 @@ class Endpoint():
 
     @classmethod
     def search(cls,field,val,showAll=False):
-        """Search in the workspace for an endpoint
+        """Search in the workspace for an `Endpoint`
 
         Args:
-            field (str): the Endpoint attribute to search in
+            field (str): the `Endpoint` attribute to search in
             val (str): the value to search for
-            showAll (bool): whether to include out-of scope Endpoints in search results
+            showAll (bool): whether to include out-of scope `Endpoint`\ s in search results
 
         Returns:
-            A list of `Endpoints` corresponding to the search.
+            A `List` of `Endpoint`\ s corresponding to the search.
         """
 
         if field not in cls.getSearchFields():
