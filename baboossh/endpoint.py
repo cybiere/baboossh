@@ -19,7 +19,6 @@ class Endpoint():
         reachable (bool): Whether the Endpoint was reached using :func:`scan` or :func:`.Connection.connect`
         found (:class:`.Endpoint`): The Endpoint on which the current Endpoint was discovered
         auth ([str...]): A list of allowed authentication methods, populated by a :func:`scan`
-
     """
 
     def __init__(self,ip,port):
@@ -258,10 +257,10 @@ class Endpoint():
 
     @classmethod
     def find(cls,endpointId):
-        """Find an endpoint by its id
+        """Find an `Endpoint` by its id
 
         Args:
-            endpointId (int): the endpoint id to search
+            endpointId (int): the `Endpoint` id to search
 
         Returns:
             A single `Endpoint` or `None`.
@@ -285,7 +284,7 @@ class Endpoint():
         saved. This functions finds and returns endpoints discovered on a given endpoint.
 
         Args:
-            endpoint (:class:`.Endpoint`):
+            endpoint (:class:`Endpoint`):
                 the `Endpoint` the endpoints were discovered on
             scope (bool):
                 look only for endpoints in scope (`True`), out of scope (`False`) or vboth (`None`)

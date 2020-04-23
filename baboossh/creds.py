@@ -3,6 +3,24 @@ from baboossh import dbConn,Extensions
 
 
 class Creds():
+    """The credentials to authenticate with on servers.
+
+    The Creds class is an interface to handle various :class:`Extension`\ s for
+    different authentication methods. It provides a set of methods that are
+    agnostic of the underlying method, and delegate dedicated work to the
+    corresponding :class:`Extension`
+
+    Attributes:
+        credsType (str): the key of the corresponding authentication method
+            extension
+        credsContent (str): the credentials content as serialized by the method's
+            extension class
+        obj (Object): the credentials as an Object corresponding to its type
+        id (int): the credentials id
+        scope (bool): Whether the `Creds` is in scope or not
+        found (:class:`.Endpoint`): The Endpoint on which the `Creds` was discovered
+    """
+
     def __init__(self,credsType,credsContent):
         self.credsType = credsType
         self.credsContent = credsContent
@@ -22,24 +40,31 @@ class Creds():
                 self.found = Endpoint.find(savedCreds[2])
 
     def getId(self):
+        """Returns the `Creds` id"""
         return self.id
 
     def inScope(self):
+        """Returns whether the `Creds` is in scope"""
         return self.scope
 
     def rescope(self):
+        """Set the `Creds` as in scope"""
         self.scope = True
 
     def unscope(self):
+        """Set the `Creds` as out of scope"""
         self.scope = False
 
     def getFound(self):
+        """Returns the `Creds` discovery :class:`Endpoint`"""
         return self.found
 
     def setFound(self,found):
+        """Set the `Creds` discovery :class:`Endpoint`"""
         self.found = found
 
     def save(self):
+        """Save the `Creds` to the :class:`Workspace`\ 's database"""
         c = dbConn.get().cursor()
         if self.id is not None:
             #If we have an ID, the creds is already saved in the database : UPDATE
@@ -65,6 +90,7 @@ class Creds():
         dbConn.get().commit()
 
     def delete(self):
+        """Delete a `Creds` from the :class:`.Workspace`"""
         from baboossh import Connection
         if self.id is None:
             return
@@ -77,12 +103,23 @@ class Creds():
         dbConn.get().commit()
         return
 
-
     def getKwargs(self):
+        """Return the `Creds` as a dict compatible with `asyncssh.connect`"""
         return self.obj.getKwargs()
 
     @classmethod
     def findAll(cls, scope=None):
+        """Find all `Creds`
+
+        Args:
+            scope (bool): List `Creds` in scope (`True`), out of scope 
+                (`False`), or both (`None`)
+    
+        Returns:
+            A list of all `Creds` in the :class:`.Workspace`
+        """
+
+        ret = []
         ret = []
         c = dbConn.get().cursor()
         if scope is None:
@@ -95,6 +132,15 @@ class Creds():
 
     @classmethod
     def find(cls,credId):
+        """Find a `Creds` by its id
+
+        Args:
+            credId (int): the `Creds` id to search
+
+        Returns:
+            A single `Creds` or `None`.
+        """
+
         c = dbConn.get().cursor()
         c.execute('''SELECT type,content FROM creds WHERE id=?''',(credId,))
         row = c.fetchone()
@@ -105,6 +151,21 @@ class Creds():
 
     @classmethod
     def findByFound(cls, endpoint, scope=None):
+        """Find `Creds` found on an `Endpoint`
+
+        When a `Creds` is found by `gather` payload, the endpoint he was found on is
+        saved. This functions finds and returns `Creds` discovered on a given endpoint.
+
+        Args:
+            endpoint (:class:`Endpoint`):
+                the `Endpoint` the `Creds` were discovered on
+            scope (bool):
+                look only for endpoints in scope (`True`), out of scope (`False`) or both (`None`)
+
+        Returns:
+            A `List` of `Creds` found on given `Endpoint`.
+        """
+
         ret = []
         c = dbConn.get().cursor()
         if scope is None:
@@ -116,9 +177,11 @@ class Creds():
         return ret
 
     def show(self):
+        """Show the `Creds` object and its parameters"""
         self.obj.show()
 
     def edit(self):
+        """Edit the `Creds` object parameters"""
         self.obj.edit()
         self.credsContent = self.obj.serialize()
         self.save()
@@ -127,5 +190,6 @@ class Creds():
         return "#"+str(self.getId())
 
     def getIdentifier(self):
+        """Returns an identifier to distinguish the `Creds`"""
         return self.obj.getIdentifier()
 
