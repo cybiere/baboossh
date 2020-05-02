@@ -307,6 +307,9 @@ class Workspace():
             return
 
         for endpoint in endpoints:
+            if not endpoint.isScanned():
+                print("You must scan an endpoint before connecting to it")
+                continue
             t = threading.Thread(target=self.threadConnect, args=(verbose, endpoint, users, creds))
             t.start()
         main_thread = threading.main_thread()
@@ -349,6 +352,9 @@ class Workspace():
         else:
             gateway = "auto"
         connection = Connection.fromTarget(arg)
+        if not connection.getEndpoint().isScanned():
+            print("You must scan an endpoint before connecting to it")
+            return None
         working = connection.testConnect(gateway=gateway, verbose=verbose)
         if working:
             if gateway != "auto":

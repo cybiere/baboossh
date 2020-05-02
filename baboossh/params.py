@@ -103,8 +103,6 @@ class dbConn():
             )''')
         c.execute('''CREATE TABLE connections (
             id INTEGER PRIMARY KEY ASC,
-            tested INTEGER NOT NULL,
-            working INTEGER NOT NULL,
             root INTEGER NOT NULL,
             endpoint INTEGER NOT NULL,
             user INTEGER NOT NULL,

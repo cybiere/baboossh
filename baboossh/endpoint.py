@@ -101,18 +101,16 @@ class Endpoint():
     def setFound(self,found):
         self.found = found
 
-    def getConnection(self,working=True,scope=True):
+    def getConnection(self,scope=True):
         """Get a :class:`.Connection` to the Endpoint
 
-        Find a :class:`.Connection` (working and in scope depending on the 
-        arguments) to the Endpoint. 
+        Find a :class:`.Connection` (in scope depending on the arguments) to 
+        the Endpoint. 
 
         Connections are sorted to prioritize non-root. The first Connection 
         matching the arguments is returned.
 
         Args:
-            working (bool):
-                Filter :class:`.Connection` on their `working` flag value. (default: `True`)
             scope (bool):
                 Find :class:`.Connection` in scope (`True`), out of scope (`False`) or both (`None`)
 
@@ -122,11 +120,7 @@ class Endpoint():
 
         from baboossh import Connection
         c = dbConn.get().cursor()
-        if working:
-            req = c.execute('''SELECT id FROM connections WHERE endpoint=? AND working=? ORDER BY root DESC''',(self.getId(),1))
-        else:
-            req = c.execute('''SELECT id FROM connections WHERE endpoint=? ORDER BY root DESC''',(self.getId(),))
-        for row in req:
+        for row in c.execute('''SELECT id FROM connections WHERE endpoint=? ORDER BY root DESC''',(self.getId(),)):
             connection = Connection.find(row[0])
             if scope is None:
                 c.close()
@@ -199,7 +193,7 @@ class Endpoint():
         return
 
     @classmethod
-    def findAll(cls,scope=True,working=None):
+    def findAll(cls,scope=True):
         """Find all Endpoints
 
         Args:
@@ -220,7 +214,7 @@ class Endpoint():
         return ret
 
     @classmethod
-    def findAllWithWorkingConn(cls):
+    def findAllWithConn(cls):
         """Find all endpoints with a working :class:`.Connection`
 
         Returns:
@@ -229,7 +223,7 @@ class Endpoint():
 
         ret = []
         c = dbConn.get().cursor()
-        for row in c.execute('SELECT DISTINCT e.ip, e.port FROM connections c LEFT JOIN endpoints e ON c.endpoint = e.id WHERE working=?',(True,)):
+        for row in c.execute('SELECT DISTINCT e.ip, e.port FROM connections c LEFT JOIN endpoints e ON c.endpoint = e.id'):
             ret.append(Endpoint(row[0],row[1]))
         return ret
 
@@ -445,7 +439,6 @@ class Endpoint():
             gw = gateway.initConnect()
         else:
             gw = None
-        print(gw)
         done = asyncio.get_event_loop().run_until_complete(self.__asyncScan(gw,silent))
         try:
             gw.close()
