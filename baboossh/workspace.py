@@ -300,6 +300,9 @@ class Workspace():
             return
         nbIter = len(endpoints)*len(users)*len(creds)
         if nbIter == 1:
+            if not endpoints[0].isScanned():
+                print("You must scan an endpoint before connecting to it")
+                return
             self.connect(endpoints[0], users[0], creds[0], verbose)
             return
 

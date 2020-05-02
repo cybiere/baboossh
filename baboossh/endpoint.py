@@ -16,7 +16,8 @@ class Endpoint():
         host (:class:`.Host`): The Endpoint's :class:`.Host`
         scope (bool): Whether the Endpoint is in scope or not
         scanned (bool): Whether :func:`scan` has been run on the Endpoint
-        reachable (bool): Whether the Endpoint was reached using :func:`scan` or :func:`.Connection.connect`
+        reachable (bool): Whether the Endpoint was reached using :func:`scan`
+        distance (int): The number of hops to reach the Endpoint, determined by :func:`scan`
         found (:class:`.Endpoint`): The Endpoint on which the current Endpoint was discovered
         auth ([str...]): A list of allowed authentication methods, populated by a :func:`scan`
     """
@@ -29,10 +30,11 @@ class Endpoint():
         self.scope = True
         self.scanned = False
         self.reachable = None
+        self.distance = None
         self.found = None
         self.auth = []
         c = dbConn.get().cursor()
-        c.execute('SELECT id,host,scanned,reachable,auth,scope,found FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
+        c.execute('SELECT id,host,scanned,reachable,distance,auth,scope,found FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
         savedEndpoint = c.fetchone()
         c.close()
         if savedEndpoint is not None:
@@ -43,11 +45,13 @@ class Endpoint():
                 self.reachable = None
             else:
                 self.reachable = savedEndpoint[3] != 0
-            if savedEndpoint[4] is not None :
-                self.auth = json.loads(savedEndpoint[4])
-            self.scope = savedEndpoint[5] != 0
-            if savedEndpoint[6] is not None :
-                self.found = Endpoint.find(savedEndpoint[6])
+            if savedEndpoint[4] is not None:
+                self.distance = savedEndpoint[4]
+            if savedEndpoint[5] is not None :
+                self.auth = json.loads(savedEndpoint[5])
+            self.scope = savedEndpoint[6] != 0
+            if savedEndpoint[7] is not None :
+                self.found = Endpoint.find(savedEndpoint[7])
 
     def getId(self):
         return self.id
@@ -55,6 +59,12 @@ class Endpoint():
     def inScope(self):
         return self.scope
 
+    def getDistance(self):
+        return self.distance
+    
+    def setDistance(self,dist):
+        self.distance = dist
+    
     def rescope(self):
         self.scope = True
 
@@ -154,16 +164,17 @@ class Endpoint():
                     host = ?,
                     scanned = ?,
                     reachable = ?,
+                    distance = ?,
                     auth = ?,
                     scope = ?,
                     found = ?
                 WHERE id = ?''',
-                (self.ip, self.port, self.host.getId() if self.host is not None else None, self.scanned, self.reachable, jauth, self.scope, self.found.getId() if self.found is not None else None, self.id))
+                (self.ip, self.port, self.host.getId() if self.host is not None else None, self.scanned, self.reachable, self.distance, jauth, self.scope, self.found.getId() if self.found is not None else None, self.id))
         else:
             #The endpoint doesn't exists in database : INSERT
-            c.execute('''INSERT INTO endpoints(ip,port,host,scanned,reachable,auth,scope,found)
-                VALUES (?,?,?,?,?,?,?,?) ''',
-                (self.ip,self.port,self.host.getId() if self.host is not None else None, self.scanned, self.reachable, jauth, self.scope, self.found.getId() if self.found is not None else None))
+            c.execute('''INSERT INTO endpoints(ip,port,host,scanned,reachable,distance,auth,scope,found)
+                VALUES (?,?,?,?,?,?,?,?,?) ''',
+                (self.ip,self.port,self.host.getId() if self.host is not None else None, self.scanned, self.reachable, self.distance, jauth, self.scope, self.found.getId() if self.found is not None else None))
             c.close()
             c = dbConn.get().cursor()
             c.execute('SELECT id FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
@@ -359,7 +370,7 @@ class Endpoint():
             ret.append(Endpoint(row[0],row[1]))
         return ret
 
-    async def __asyncScan(self,gw,silent):
+    async def __asyncScan(self,gateway,gw,silent):
         #This inner class access the endpoint through the "endpoint" var as "self" keywork is changed
         endpoint = self
         class ScanSSHClient(asyncssh.SSHClient):
@@ -406,6 +417,10 @@ class Endpoint():
             pass
         if not silent:
             print("Done")
+        if gateway is None:
+            self.setDistance(0)
+        else:
+            self.setDistance(gateway.getDistance()+1)
         self.save()
         return True
 
@@ -439,7 +454,7 @@ class Endpoint():
             gw = gateway.initConnect()
         else:
             gw = None
-        done = asyncio.get_event_loop().run_until_complete(self.__asyncScan(gw,silent))
+        done = asyncio.get_event_loop().run_until_complete(self.__asyncScan(gateway,gw,silent))
         try:
             gw.close()
         except:

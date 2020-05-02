@@ -278,12 +278,16 @@ class Shell(cmd2.Cmd):
                 reachable = "?"
             else:
                 reachable = str(endpoint.isReachable())
+            if endpoint.getDistance() is None:
+                distance = ""
+            else:
+                distance = str(endpoint.getDistance())
             if not endpoint.getAuth():
                 auth = "?"
             else:
                 auth = str(endpoint.getAuth())
-            data.append([scope, endpoint, host, scanned, reachable, auth, conn])
-        print(tabulate.tabulate(data, headers=["", "Endpoint", "Host", "Scanned", "Reachable", "Authentication", "Working connection"]))
+            data.append([scope, endpoint, host, scanned, reachable, distance, auth, conn])
+        print(tabulate.tabulate(data, headers=["", "Endpoint", "Host", "Scanned", "Reachable", "Dist", "Authentication", "Working connection"]))
 
     def __endpoint_list(self, stmt):
         print("Current endpoints in workspace:")

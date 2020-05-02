@@ -50,6 +50,10 @@ class Connection():
         """Returns the `Connection`\ 's :class:`Endpoint`"""
         return self.endpoint
 
+    def getDistance(self):
+        """Returns the number of hops between `"Local"` and the :class:`Endpoint`"""
+        return self.endpoint.getDistance()
+
     def getCred(self):
         """Returns the `Connection`\ 's :class:`Creds`"""
         return self.cred
@@ -73,7 +77,7 @@ class Connection():
         else:
             #The endpoint doesn't exists in database : INSERT
             c.execute('''INSERT INTO connections(endpoint,user,cred,root)
-                VALUES (?,?,?,?,?,?) ''',
+                VALUES (?,?,?,?) ''',
                 (self.endpoint.getId(), self.user.getId(), self.cred.getId(), self.root ))
             c.close()
             c = dbConn.get().cursor()

@@ -80,6 +80,7 @@ class dbConn():
             port TEXT NOT NULL,
             scanned INTEGER NOT NULL,
             reachable INTEGER,
+            distance INTEGER,
             auth TEXT,
             found INTEGER,
             FOREIGN KEY(found) REFERENCES endpoints(id),

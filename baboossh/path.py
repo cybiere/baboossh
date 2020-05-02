@@ -194,7 +194,7 @@ class Path():
             adj[0].append(row[0])
         c.close()
 
-        for endpoint in Endpoint.findAllWithWorkingConn():
+        for endpoint in Endpoint.findAllWithConn():
             adj[endpoint.getId()] = []
             c = dbConn.get().cursor()
             for row in c.execute('SELECT dst FROM paths WHERE src=?',(endpoint.getHost().getId(), )):
