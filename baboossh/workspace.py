@@ -274,16 +274,11 @@ class Workspace():
             else:
                 gw = None
         workingQueue = []
-        dunnoQueue = []
         for user in users:
             for cred in creds:
                 connection = Connection(endpoint, user, cred)
-                if connection.isWorking():
-                    workingQueue.append(connection)
-                else:
-                    dunnoQueue.append(connection)
-        queue = workingQueue + dunnoQueue
-        for connection in queue:
+                workingQueue.append(connection)
+        for connection in workingQueue:
             try:
                 working = connection.testConnect(gw, verbose=True)
             except:
@@ -295,6 +290,8 @@ class Workspace():
             gw.close()
         dbConn.close()
 
+    def get_targets(self):
+        return []
 
     def massConnect(self, verbose):
         try:
@@ -324,7 +321,7 @@ class Workspace():
 
     def run(self, endpoint, user, cred, payload, stmt):
         connection = Connection(endpoint, user, cred)
-        if not connection.working:
+        if not connection.getId():
             #print("Please check connection "+str(connection)+" with connect first")
             return False
         return connection.run(payload, self.workspace_folder, stmt)
@@ -373,7 +370,7 @@ class Workspace():
                 return False
             arg = str(hosts[0].getClosestEndpoint())
         connection = Connection.fromTarget(arg)
-        if not connection.working:
+        if not connection.getId():
             print("Please check connection "+str(connection)+" with connect first")
             return False
         payload = Extensions.getPayload(payloadName)
@@ -603,7 +600,7 @@ class Workspace():
 
     def getTargetsValidList(self, scope=None):
         connections = []
-        for connection in Connection.findWorking():
+        for connection in Connection.findAll():
             if scope is None:
                 connections.append(str(connection))
             elif connection.inScope() == scope:
@@ -628,11 +625,7 @@ class Workspace():
     def getCreds(self, scope=None):
         return Creds.findAll(scope=scope)
 
-    def getConnections(self, tested=False, working=False):
-        if working:
-            return Connection.findWorking()
-        if tested:
-            return Connection.findTested()
+    def getConnections(self):
         return Connection.findAll()
 
     def getOptionsValues(self):

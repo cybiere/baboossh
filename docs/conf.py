@@ -19,8 +19,8 @@ sys.path.insert(0, os.path.abspath('../baboossh'))
 # -- Project information -----------------------------------------------------
 
 project = 'BabooSSH'
-copyright = '2020, Nicolas Cosnard'
-author = 'Nicolas Cosnard'
+copyright = '2020, Cybiere'
+author = 'Cybiere'
 
 # The full version, including alpha/beta/rc tags
 release = '1.0.2'

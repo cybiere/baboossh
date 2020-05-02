@@ -11,7 +11,6 @@ from baboossh.endpoint import Endpoint
 from baboossh.user import User
 from baboossh.path import Path
 from baboossh.creds import Creds
-from baboossh.connection import Connection
 
 class ExtStr(type):
     def __str__(self):
@@ -26,7 +25,6 @@ class BaboosshExt(object,metaclass=ExtStr):
         self.newCreds = []
         self.newUsers = []
         self.newEndpoints = []
-        self.newConnections = []
 
         self.keysHash = {}
         for c in Creds.findAll():
@@ -90,9 +88,6 @@ class BaboosshExt(object,metaclass=ExtStr):
         print("\nEndpoints :")
         for endpoint in self.newEndpoints:
             print(" - "+str(endpoint))
-        print("\nConnections :")
-        for connection in self.newConnections:
-            print(" - "+str(connection))
 
     async def hostnameToIP(self,hostname,port=None):
         endpoints = []
@@ -177,11 +172,6 @@ class BaboosshExt(object,metaclass=ExtStr):
                             self.newUsers.append(user)
                     if "identity" in curHost.keys():
                         identity = await self.getKeyToCreds(curHost["identity"],".")
-                    if user is not None and identity is not None:
-                        for endpoint in endpoints:
-                            conn = Connection(endpoint,user,identity)
-                            conn.save()
-                            self.newConnections.append(conn)
                 curHost = {}
                 curHost["name"] = line.split()[1]
             else:
@@ -220,11 +210,6 @@ class BaboosshExt(object,metaclass=ExtStr):
                     user.save()
             if "identity" in curHost.keys():
                 identity = await self.getKeyToCreds(curHost["identity"],".")
-            if user is not None and identity is not None:
-                for endpoint in endpoints:
-                    conn = Connection(endpoint,user,identity)
-                    conn.save()
-                    self.newConnections.append(conn)
         print("End")
 
     async def gatherFromKnown(self):
@@ -358,9 +343,4 @@ class BaboosshExt(object,metaclass=ExtStr):
                         self.newUsers.append(user)
                 if identity is not None:
                     identity = await self.getKeyToCreds(identity,".")
-                if user is not None and identity is not None:
-                    for endpoint in endpoints:
-                        conn = Connection(endpoint,user,identity)
-                        conn.save()
-                        self.newConnections.append(conn)
 

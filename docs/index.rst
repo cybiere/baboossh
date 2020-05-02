@@ -5,11 +5,17 @@ Welcome to BabooSSH's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-Automodapi
+Command reference
 =================
+
+Code reference
+==============
 
 .. automodapi:: baboossh
    :no-inheritance-diagram:
+   :skip: yesNo
+   :no-heading:
+
 
 Indices and tables
 ==================

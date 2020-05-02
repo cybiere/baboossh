@@ -438,13 +438,14 @@ class Endpoint():
         Returns:
             `True` if the endpoint was reached and the scan successful, `False` otherwise.
         """
-
         if gateway == "auto":
             gateway = self.findGatewayConnection()
+            #TODO if gateway is none either from local or no path... This is shit
         if gateway is not None:
             gw = gateway.initConnect()
         else:
             gw = None
+        print(gw)
         done = asyncio.get_event_loop().run_until_complete(self.__asyncScan(gw,silent))
         try:
             gw.close()

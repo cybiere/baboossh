@@ -549,8 +549,6 @@ class Shell(cmd2.Cmd):
     def __connection_list(self, stmt):
         print("Available connections:")
         show_all = getattr(stmt, 'all', False)
-        working = getattr(stmt, 'working', None)
-        tested = getattr(stmt, 'tested', None)
         connections = self.workspace.getConnections()
         if not connections:
             print("No connections in current workspace")
@@ -560,16 +558,8 @@ class Shell(cmd2.Cmd):
             if not show_all:
                 if not connection.inScope():
                     continue
-                if working is not None:
-                    flag_working = working == "true"
-                    if connection.isWorking() != flag_working:
-                        continue
-                if tested is not None:
-                    flag_tested = tested == "true"
-                    if connection.isTested() != flag_tested:
-                        continue
-            data.append([connection.getEndpoint(), connection.getUser(), connection.getCred(), connection.isTested(), connection.isWorking()])
-        print(tabulate.tabulate(data, headers=["Endpoint", "User", "Creds", "Tested", "Working"]))
+            data.append([connection.getEndpoint(), connection.getUser(), connection.getCred()])
+        print(tabulate.tabulate(data, headers=["Endpoint", "User", "Creds"]))
 
     def __connection_del(self, stmt):
         connection = getattr(stmt, "connection", None)
@@ -579,8 +569,6 @@ class Shell(cmd2.Cmd):
     __subparser_connection = __parser_connection.add_subparsers(title='Actions', help='Available actions')
     __parser_connection_list = __subparser_connection.add_parser("list", help='List connections')
     __parser_connection_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
-    __parser_connection_list.add_argument("-w", "--working", help="Show only working connections", nargs='?', choices=["true", "false"], const="true")
-    __parser_connection_list.add_argument("-t", "--tested", help="Show only tested connections", nargs='?', choices=["true", "false"], const="true")
     __parser_connection_del = __subparser_connection.add_parser("delete", help='Delete connection')
     __parser_connection_del.add_argument('connection', help='Connection string', choices_method=__get_option_connection)
 

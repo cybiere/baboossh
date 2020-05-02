@@ -5,8 +5,8 @@ import asyncio, asyncssh, sys
 class Connection():
     """A :class:`User` and :class:`Creds` to authenticate on an :class:`Endpoint`
     
-    A connection represents the association of those 3 objects and its results.
-    If it is working, it can be used to run payloads on a :class:`Host`, open a
+    A connection represents the working association of those 3 objects to connect
+    a target. It can be used to run payloads on a :class:`Host`, open a
     :class:`Tunnel` to it or use it as a pivot to reach new :class:`Endpoint`\ s
 
     Attributes:
@@ -14,26 +14,20 @@ class Connection():
         user (:class:`User`): the `Connection`\ 's user
         creds (:class:`Creds`): the `Connection`\ 's credentials
         id (int): the `Connection`\ 's id
-        tested (bool): whether the connection was tested
-        working (bool): whether the connection works
     """
     def __init__(self,endpoint,user,cred):
         self.endpoint = endpoint
         self.user = user
         self.cred = cred
         self.id = None
-        self.tested = False
-        self.working = False
         self.root = False
         c = dbConn.get().cursor()
-        c.execute('SELECT id,tested,working,root FROM connections WHERE endpoint=? AND user=? AND cred=?',(self.endpoint.getId(),self.user.getId(),self.cred.getId()))
+        c.execute('SELECT id,root FROM connections WHERE endpoint=? AND user=? AND cred=?',(self.endpoint.getId(),self.user.getId(),self.cred.getId()))
         savedConnection = c.fetchone()
         c.close()
         if savedConnection is not None:
             self.id = savedConnection[0]
-            self.tested = savedConnection[1] != 0
-            self.working = savedConnection[2] != 0
-            self.root = savedConnection[3] != 0
+            self.root = savedConnection[1] != 0
 
     def getId(self):
         """Returns the `Connection`\ 's id"""
@@ -60,32 +54,6 @@ class Connection():
         """Returns the `Connection`\ 's :class:`Creds`"""
         return self.cred
 
-    def setTested(self, tested):
-        """Set whether the `Connection` was tested
-
-        Args:
-            tested (bool): whether the `Connection` was tested
-        """
-
-        self.tested = tested == True
-
-    def isTested(self):
-        """Returns whether the `Connection` was tested"""
-        return self.tested == True
-
-    def setWorking(self, working):
-        """Set whether the `Connection` is working
-
-        Args:
-            working (bool): whether the `Connection` is working
-        """
-
-        self.working = working == True
-
-    def isWorking(self):
-        """Returns whether the `Connection` is working"""
-        return self.working == True
-
     def setRoot(self, root):
         self.root = root == True
 
@@ -99,16 +67,14 @@ class Connection():
                     endpoint= ?,
                     user = ?,
                     cred = ?,
-                    tested = ?,
-                    working = ?,
                     root = ?
                 WHERE id = ?''',
-                (self.endpoint.getId(), self.user.getId(), self.cred.getId(), self.tested,self.working,self.root, self.id))
+                (self.endpoint.getId(), self.user.getId(), self.cred.getId(), self.root, self.id))
         else:
             #The endpoint doesn't exists in database : INSERT
-            c.execute('''INSERT INTO connections(endpoint,user,cred,tested,working,root)
+            c.execute('''INSERT INTO connections(endpoint,user,cred,root)
                 VALUES (?,?,?,?,?,?) ''',
-                (self.endpoint.getId(), self.user.getId(), self.cred.getId(), self.tested , self.working , self.root ))
+                (self.endpoint.getId(), self.user.getId(), self.cred.getId(), self.root ))
             c.close()
             c = dbConn.get().cursor()
             c.execute('SELECT id FROM connections WHERE endpoint=? AND user=? AND cred=?',(self.endpoint.getId(),self.user.getId(),self.cred.getId()))
@@ -203,7 +169,7 @@ class Connection():
     @classmethod
     def findWorkingByEndpoint(cls,endpoint):
         c = dbConn.get().cursor()
-        c.execute('SELECT user,cred FROM connections WHERE working=1 AND endpoint=? ORDER BY root ASC',(endpoint.getId(),))
+        c.execute('SELECT user,cred FROM connections WHERE endpoint=? ORDER BY root ASC',(endpoint.getId(),))
         row = c.fetchone()
         c.close()
         if row is None:
@@ -214,7 +180,7 @@ class Connection():
     def findAllWorkingByEndpoint(cls,endpoint):
         ret = []
         c = dbConn.get().cursor()
-        for row in c.execute('SELECT user,cred FROM connections WHERE working=1 AND endpoint=? ORDER BY root ASC',(endpoint.getId(),)):
+        for row in c.execute('SELECT user,cred FROM connections WHERE endpoint=? ORDER BY root ASC',(endpoint.getId(),)):
             ret.append(Connection(endpoint,User.find(row[0]),Creds.find(row[1])))
         c.close()
         return ret
@@ -224,24 +190,6 @@ class Connection():
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT id FROM connections'):
-            ret.append(cls.find(row[0]))
-        c.close()
-        return ret
-
-    @classmethod
-    def findTested(cls):
-        ret = []
-        c = dbConn.get().cursor()
-        for row in c.execute('SELECT id FROM connections where tested=?',(True,)):
-            ret.append(cls.find(row[0]))
-        c.close()
-        return ret
-
-    @classmethod
-    def findWorking(cls):
-        ret = []
-        c = dbConn.get().cursor()
-        for row in c.execute('SELECT id FROM connections where working=?',(True,)):
             ret.append(cls.find(row[0]))
         c.close()
         return ret
@@ -361,9 +309,8 @@ class Connection():
         except asyncio.TimeoutError:
             raise
         else:
-            self.setTested(True)
-            self.setWorking(c is not None)
-            self.save()
+            if c is not None:
+                self.save()
         return c
 
     def testConnect(self,gateway="auto",verbose=False):
