@@ -1,3 +1,4 @@
+from baboossh.exceptions import *
 from baboossh.params import *
 from baboossh.creds import *
 from baboossh.user import *

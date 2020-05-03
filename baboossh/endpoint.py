@@ -1,5 +1,6 @@
 from baboossh import dbConn
 from baboossh import Host
+from baboossh.exceptions import *
 import asyncio, asyncssh, sys
 import json
 
@@ -327,7 +328,7 @@ class Endpoint():
         if not Path.hasDirectPath(self):
             paths = Path.getPath(None,self)
             if paths is None:
-                return None
+                raise NoPathException()
             else:
                 prevHop = paths[-1].getSrc().getClosestEndpoint()
                 return Connection.findWorkingByEndpoint(prevHop)
@@ -448,8 +449,10 @@ class Endpoint():
             `True` if the endpoint was reached and the scan successful, `False` otherwise.
         """
         if gateway == "auto":
-            gateway = self.findGatewayConnection()
-            #TODO if gateway is none either from local or no path... This is shit
+            try:
+                gateway = self.findGatewayConnection()
+            except NoPathException as exc:
+                raise exc
         if gateway is not None:
             gw = gateway.initConnect()
         else:

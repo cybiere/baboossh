@@ -19,6 +19,7 @@ import argparse
 import shutil
 import cmd2
 import tabulate
+from baboossh.exceptions import *
 from baboossh.params import Extensions, workspacesDir, yesNo
 from baboossh.workspace import Workspace
 
@@ -739,6 +740,8 @@ class Shell(cmd2.Cmd):
         if target is not None:
             try:
                 self.workspace.scanTarget(target, gateway=gateway)
+            except NoPathException:
+                print("No path to target, try `path find "+str(target)+"` first.")
             except Exception as e:
                 print("Targeted scan failed : "+str(e))
             return
