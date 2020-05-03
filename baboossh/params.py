@@ -153,14 +153,6 @@ class dbConn():
         cls.__conn.close()
         cls.__conn = None
 
-    @classmethod
-    def cleanThreadsConn(cls):
-        """Closes sqlite connection in non-main threads"""
-
-        for c in cls.__threadsConn.values():
-            c.close()
-        cls.__threadsConn = {}
-
 class Extensions():
     """Load and access available extensions"""
 

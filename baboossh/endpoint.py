@@ -226,20 +226,6 @@ class Endpoint():
         return ret
 
     @classmethod
-    def findAllWithConn(cls):
-        """Find all endpoints with a working :class:`.Connection`
-
-        Returns:
-            A list of all `Endpoint`\ s in a working `Connection`
-        """
-
-        ret = []
-        c = dbConn.get().cursor()
-        for row in c.execute('SELECT DISTINCT e.ip, e.port FROM connections c LEFT JOIN endpoints e ON c.endpoint = e.id'):
-            ret.append(Endpoint(row[0],row[1]))
-        return ret
-
-    @classmethod
     def findByIpPort(cls,endpoint):
         """Find an Endpoint by it's IP address and port
 
@@ -384,7 +370,8 @@ class Endpoint():
                 endpoint.setReachable(True)
         
             def auth_banner_received(self, msg, lang):
-                print(msg)
+                #TODO
+                pass
         
             def public_key_auth_requested(self):
                 endpoint.addAuth("privkey")

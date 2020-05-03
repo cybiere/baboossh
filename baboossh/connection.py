@@ -181,15 +181,6 @@ class Connection():
         return Connection(endpoint,User.find(row[0]),Creds.find(row[1]))
 
     @classmethod
-    def findAllWorkingByEndpoint(cls,endpoint):
-        ret = []
-        c = dbConn.get().cursor()
-        for row in c.execute('SELECT user,cred FROM connections WHERE endpoint=? ORDER BY root ASC',(endpoint.getId(),)):
-            ret.append(Connection(endpoint,User.find(row[0]),Creds.find(row[1])))
-        c.close()
-        return ret
-
-    @classmethod
     def findAll(cls):
         ret = []
         c = dbConn.get().cursor()
