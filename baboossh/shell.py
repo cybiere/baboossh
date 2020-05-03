@@ -649,8 +649,9 @@ class Shell(cmd2.Cmd):
                 value = " ".join(vars(stmt)['params'])
             try:
                 self.workspace.setOption(option, value)
-            except ValueError:
+            except:
                 print("Invalid value for "+option)
+
         else:
             self.__options_list()
 
@@ -708,7 +709,7 @@ class Shell(cmd2.Cmd):
     __parser_path_del.add_argument('src', help='Source host', choices_method=__get_host_or_local)
     __parser_path_del.add_argument('dst', help='Destination endpoint', choices_method=__get_option_endpoint)
     __parser_path_find = __subparser_path.add_parser("find", help='Find shortest path to endpoint or host')
-    __parser_path_find.add_argument('dst', help='Destination', choices_method=__get_endpoint_or_host)
+    __parser_path_find.add_argument('dst', help='Destination', choices_method=__get_option_endpoint)
 
     __parser_path_list.set_defaults(func=__path_list)
     __parser_path_get.set_defaults(func=__path_get)

@@ -474,13 +474,6 @@ class Workspace():
         print("Path saved")
 
     def findPath(self, dst):
-        #DST is HOST
-        #if dst in self.getHostsNames():
-        #    hosts = Host.findByName(dst)
-        #    if len(hosts) > 1:
-        #        print("Several hosts corresponding. Please target endpoint.")
-        #        return False
-        #    dst = str(hosts[0].getClosestEndpoint())
         try:
             dst = Endpoint.findByIpPort(dst)
         except:
@@ -499,7 +492,7 @@ class Workspace():
             p.save()
             print("Could reach target directly, path added.")
             return
-
+        
         for h in Path.getHostsOrderedClosest():
             e = h.getClosestEndpoint()
             gateway = Connection.findWorkingByEndpoint(e)

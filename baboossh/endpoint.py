@@ -1,7 +1,7 @@
 from baboossh import dbConn
 from baboossh import Host
 from baboossh.exceptions import *
-import asyncio, asyncssh, sys
+import asyncio, asyncssh, sys, errno
 import json
 
 class Endpoint():
@@ -411,6 +411,12 @@ class Endpoint():
             else:
                 print("asyncssh Error: "+str(e))
                 return False
+        except OSError as e:
+            #No route to Host
+            if e.errno == errno.EHOSTUNREACH:
+                if not silent:
+                    print("No route to host")
+            return False
         except asyncio.TimeoutError:
             self.setReachable(False)
             self.save()
