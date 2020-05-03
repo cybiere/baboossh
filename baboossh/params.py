@@ -7,20 +7,6 @@ import os
 home = os.path.expanduser("~")
 workspacesDir = os.path.join(home,".baboossh")
 
-def yesNo(prompt,default=None):
-    if default is None:
-        choices = "[y,n]"
-    elif default:
-        choices = "[Y,n]"
-    else:
-        choices = "[y,N]"
-    a = ""
-    while a not in ["y","n"]:
-        a = input(prompt+" "+choices+" ").lower()
-        if a == "" and default is not None:
-            a = "y" if default else "n"
-    return a == "y"
-
 class dbConn():
     """A singleton handling the database connection
 

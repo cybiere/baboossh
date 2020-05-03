@@ -20,8 +20,23 @@ import shutil
 import cmd2
 import tabulate
 from baboossh.exceptions import *
-from baboossh.params import Extensions, workspacesDir, yesNo
+from baboossh.params import Extensions, workspacesDir
 from baboossh.workspace import Workspace
+
+def yesNo(prompt,default=None):
+    if default is None:
+        choices = "[y,n]"
+    elif default:
+        choices = "[Y,n]"
+    else:
+        choices = "[y,N]"
+    a = ""
+    while a not in ["y","n"]:
+        a = input(prompt+" "+choices+" ").lower()
+        if a == "" and default is not None:
+            a = "y" if default else "n"
+    return a == "y"
+
 
 Extensions.load()
 
