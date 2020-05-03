@@ -28,14 +28,11 @@ class Path():
         self.dst = dst
         self.id = None
         c = dbConn.get().cursor()
-        c.execute('SELECT id FROM paths WHERE src=? AND dst=?',(self.src.getId() if self.src is not None else 0,self.dst.getId()))
+        c.execute('SELECT id FROM paths WHERE src=? AND dst=?',(self.src.id if self.src is not None else 0,self.dst.id))
         savedPath = c.fetchone()
         c.close()
         if savedPath is not None:
             self.id = savedPath[0]
-
-    def getId(self):
-        return self.id
 
     def inScope(self):
         if not self.dst.inScope():
@@ -65,14 +62,14 @@ class Path():
                     src = ?,
                     dst = ?
                 WHERE id = ?''',
-                (self.src.getId() if self.src is not None else 0,self.dst.getId(), self.id))
+                (self.src.id if self.src is not None else 0,self.dst.id, self.id))
         else:
             c.execute('''INSERT INTO paths(src,dst)
                 VALUES (?,?) ''',
-                (self.src.getId() if self.src is not None else 0,self.dst.getId()))
+                (self.src.id if self.src is not None else 0,self.dst.id))
             c.close()
             c = dbConn.get().cursor()
-            c.execute('SELECT id FROM paths WHERE src=? AND dst=?',(self.src.getId() if self.src is not None else 0,self.dst.getId()))
+            c.execute('SELECT id FROM paths WHERE src=? AND dst=?',(self.src.id if self.src is not None else 0,self.dst.id))
             self.id = c.fetchone()[0]
         c.close()
         dbConn.get().commit()
@@ -135,7 +132,7 @@ class Path():
 
         ret = []
         c = dbConn.get().cursor()
-        for row in c.execute('SELECT src,dst FROM paths WHERE dst=?',(dst.getId(), )):
+        for row in c.execute('SELECT src,dst FROM paths WHERE dst=?',(dst.id, )):
             ret.append(Path(Host.find(row[0]),Endpoint.find(row[1])))
         c.close()
         return ret
@@ -154,7 +151,7 @@ class Path():
         if src==None:
             srcId = 0
         else:
-            srcId = src.getId()
+            srcId = src.id
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT dst FROM paths WHERE src=?',(srcId, )):
@@ -174,7 +171,7 @@ class Path():
         """
 
         c = dbConn.get().cursor()
-        c.execute('''SELECT id FROM paths WHERE src=0 and dst=?''',(dst.getId(),))
+        c.execute('''SELECT id FROM paths WHERE src=0 and dst=?''',(dst.id,))
         row = c.fetchone()
         c.close()
         return row is not None
@@ -202,11 +199,11 @@ class Path():
                 return None
             if closest is None:
                 closest = path.src
-                smallestDistance = path.src.getDistance()
+                smallestDistance = path.src.distance
                 continue
-            if path.src.getDistance() < smallestDistance:
+            if path.src.distance < smallestDistance:
                 closest = path.src
-                smallestDistance = path.src.getDistance()
+                smallestDistance = path.src.distance
                 continue
         if closest is None:
             raise NoPathException
@@ -237,7 +234,7 @@ class Path():
             chain.append(dst)
             return chain
         else:
-            chain.append(dst.getHost())
+            chain.append(dst.host)
             return chain
     
     @classmethod
@@ -259,10 +256,10 @@ class Path():
                 s = queue.popleft()
                 for p in cls.findBySrc(s):
                     e = p.getDst()
-                    h = e.getHost()
+                    h = e.host
                     if h is not None:
-                        if h.getId() not in done:
-                            done.append(h.getId())
+                        if h.id not in done:
+                            done.append(h.id)
                             ret.append(h)
                             queue.append(h)
         except IndexError:
@@ -275,8 +272,8 @@ class Path():
             src = str(self.src)
         else:
             src = "local"
-        if self.dst.getHost() is not None:
-            dst = str(self.dst.getHost())
+        if self.dst.host is not None:
+            dst = str(self.dst.host)
         else:
             dst = str(self.dst)
         return src+" -> "+dst

@@ -29,8 +29,8 @@ class BaboosshExt(object,metaclass=ExtStr):
         dotcode = 'digraph compromission_graph {\nnode [shape=plain,fontname="monospace"];\nrankdir="LR";\n'
         for endpoint in workspace.getEndpoints():
             label = "<table cellborder='1' cellspacing='0'><tr><td>"+str(endpoint)+"</td></tr>"
-            if endpoint.getHost() is not None:
-                label = label + '<tr><td>'+str(endpoint.getHost())+'</td></tr>'
+            if endpoint.host is not None:
+                label = label + '<tr><td>'+str(endpoint.host)+'</td></tr>'
             if findings:
                 foundEndpoints = workspace.getFoundEndpoints(endpoint)
                 foundUsers = workspace.getFoundUsers(endpoint)
@@ -74,11 +74,11 @@ class BaboosshExt(object,metaclass=ExtStr):
                     label = label + "</table></td></tr>"
             label = label + "</table>"
 
-            dotcode = dotcode + 'node_'+str(endpoint.getId())+' [label=<'+label+'>]\n'
-            if endpoint.getFound() is None:
-                dotcode = dotcode + '"local" -> "node_'+str(endpoint.getId())+'"\n'
+            dotcode = dotcode + 'node_'+str(endpoint.id)+' [label=<'+label+'>]\n'
+            if endpoint.found is None:
+                dotcode = dotcode + '"local" -> "node_'+str(endpoint.id)+'"\n'
             else:
-                dotcode = dotcode + '"node_'+str(endpoint.getFound().getId())+'" -> "node_'+str(endpoint.getId())+'"\n'
+                dotcode = dotcode + '"node_'+str(endpoint.found.id)+'" -> "node_'+str(endpoint.id)+'"\n'
         dotcode = dotcode + '}'
         with open(outfile,"w") as f:
             f.write(dotcode)

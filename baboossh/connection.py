@@ -18,20 +18,16 @@ class Connection():
     def __init__(self,endpoint,user,cred):
         self.endpoint = endpoint
         self.user = user
-        self.cred = cred
+        self.creds = cred
         self.id = None
         self.root = False
         c = dbConn.get().cursor()
-        c.execute('SELECT id,root FROM connections WHERE endpoint=? AND user=? AND cred=?',(self.endpoint.getId(),self.user.getId(),self.cred.getId()))
+        c.execute('SELECT id,root FROM connections WHERE endpoint=? AND user=? AND cred=?',(self.endpoint.id,self.user.id,self.creds.id))
         savedConnection = c.fetchone()
         c.close()
         if savedConnection is not None:
             self.id = savedConnection[0]
             self.root = savedConnection[1] != 0
-
-    def getId(self):
-        """Returns the `Connection`\ 's id"""
-        return self.id
 
     def inScope(self):
         """Returns whether the `Connection` is in scope
@@ -40,23 +36,12 @@ class Connection():
         AND it :class:`Endpoint` are all in scope
         """
 
-        return self.user.inScope() and self.endpoint.inScope() and self.cred.inScope()
+        return self.user.inScope() and self.endpoint.inScope() and self.creds.inScope()
 
-    def getUser(self):
-        """Returns the `Connection`\ 's :class:`User`"""
-        return self.user
-
-    def getEndpoint(self):
-        """Returns the `Connection`\ 's :class:`Endpoint`"""
-        return self.endpoint
-
-    def getDistance(self):
+    @property
+    def distance(self):
         """Returns the number of hops between `"Local"` and the :class:`Endpoint`"""
-        return self.endpoint.getDistance()
-
-    def getCred(self):
-        """Returns the `Connection`\ 's :class:`Creds`"""
-        return self.cred
+        return self.endpoint.distance
 
     def setRoot(self, root):
         self.root = root == True
@@ -73,15 +58,15 @@ class Connection():
                     cred = ?,
                     root = ?
                 WHERE id = ?''',
-                (self.endpoint.getId(), self.user.getId(), self.cred.getId(), self.root, self.id))
+                (self.endpoint.id, self.user.id, self.creds.id, self.root, self.id))
         else:
             #The endpoint doesn't exists in database : INSERT
             c.execute('''INSERT INTO connections(endpoint,user,cred,root)
                 VALUES (?,?,?,?) ''',
-                (self.endpoint.getId(), self.user.getId(), self.cred.getId(), self.root ))
+                (self.endpoint.id, self.user.id, self.creds.id, self.root ))
             c.close()
             c = dbConn.get().cursor()
-            c.execute('SELECT id FROM connections WHERE endpoint=? AND user=? AND cred=?',(self.endpoint.getId(),self.user.getId(),self.cred.getId()))
+            c.execute('SELECT id FROM connections WHERE endpoint=? AND user=? AND cred=?',(self.endpoint.id,self.user.id,self.creds.id))
             self.id  = c.fetchone()[0]
         c.close()
         dbConn.get().commit()
@@ -129,7 +114,7 @@ class Connection():
 
         ret = []
         c = dbConn.get().cursor()
-        for row in c.execute('SELECT user,cred FROM connections WHERE endpoint=?',(endpoint.getId(),)):
+        for row in c.execute('SELECT user,cred FROM connections WHERE endpoint=?',(endpoint.id,)):
             ret.append(Connection(endpoint,User.find(row[0]),Creds.find(row[1])))
         c.close()
         return ret
@@ -147,7 +132,7 @@ class Connection():
 
         ret = []
         c = dbConn.get().cursor()
-        for row in c.execute('SELECT endpoint,cred FROM connections WHERE user=?',(user.getId(),)):
+        for row in c.execute('SELECT endpoint,cred FROM connections WHERE user=?',(user.id,)):
             ret.append(Connection(Endpoint.find(row[0]),user,Creds.find(row[1])))
         c.close()
         return ret
@@ -165,7 +150,7 @@ class Connection():
 
         ret = []
         c = dbConn.get().cursor()
-        for row in c.execute('SELECT endpoint,user FROM connections WHERE cred=?',(creds.getId(),)):
+        for row in c.execute('SELECT endpoint,user FROM connections WHERE cred=?',(creds.id,)):
             ret.append(Connection(Endpoint.find(row[0]),User.find(row[1]),creds))
         c.close()
         return ret
@@ -173,7 +158,7 @@ class Connection():
     @classmethod
     def findWorkingByEndpoint(cls,endpoint):
         c = dbConn.get().cursor()
-        c.execute('SELECT user,cred FROM connections WHERE endpoint=? ORDER BY root ASC',(endpoint.getId(),))
+        c.execute('SELECT user,cred FROM connections WHERE endpoint=? ORDER BY root ASC',(endpoint.id,))
         row = c.fetchone()
         c.close()
         if row is None:
@@ -234,15 +219,15 @@ class Connection():
             macStr = result.stdout.rstrip()
             macs = macStr.split()
             newHost = Host(hostname,uname,issue,machineId,macs)
-            e = self.getEndpoint()
-            if newHost.getId() is None:
+            e = self.endpoint
+            if newHost.id is None:
                 print("\t"+str(self)+" is a new host: "+hostname)
             else:
                 print("\t"+str(self)+" is an existing host: "+hostname)
                 if not newHost.inScope():
                     e.unscope()
             newHost.save()
-            e.setHost(newHost)
+            e.host = newHost
             e.save()
         except Exception as e:
             print("Error : "+str(e))
@@ -252,12 +237,12 @@ class Connection():
     async def async_openConnection(self,gw=None,verbose=True,target=False):
         if target:
             verbose=True
-        authArgs = self.getCred().getKwargs()
+        authArgs = self.creds.getKwargs()
         hostname = ""
-        if self.getEndpoint().getHost() is not None:
-            hostname = " ("+str(self.getEndpoint().getHost())+")"
+        if self.endpoint.host is not None:
+            hostname = " ("+str(self.endpoint.host)+")"
         try:
-            conn = await asyncio.wait_for(asyncssh.connect(self.getEndpoint().getIp(), port=self.getEndpoint().getPort(), tunnel=gw, known_hosts=None, username=self.getUser().getName(),**authArgs), timeout=5)
+            conn = await asyncio.wait_for(asyncssh.connect(self.endpoint.ip, port=self.endpoint.port, tunnel=gw, known_hosts=None, username=self.user.name,**authArgs), timeout=5)
         except Exception as e:
             if verbose:
                 if e.__class__.__name__ == 'TimeoutError':
@@ -274,7 +259,7 @@ class Connection():
             if isinstance(gateway,asyncssh.SSHClientConnection):
                 gw=gateway
             elif gateway == "auto":
-                gateway = self.getEndpoint().getGatewayConnection()
+                gateway = self.endpoint.getGatewayConnection()
                 if gateway is not None:
                     gw = gateway.initConnect(verbose=verbose)
                 else:
@@ -292,9 +277,9 @@ class Connection():
                 if gateway is None:
                     pathSrc = None
                 else:
-                    if gateway.getEndpoint().getHost() is not None:
-                        pathSrc = gateway.getEndpoint().getHost()
-                p = Path(pathSrc,self.getEndpoint())
+                    if gateway.endpoint.host is not None:
+                        pathSrc = gateway.endpoint.host
+                p = Path(pathSrc,self.endpoint)
                 p.save()
         return c
 
@@ -312,7 +297,7 @@ class Connection():
         c = self.connect(gateway=gateway,verbose=verbose,target=True)
         if c is None:
             return False
-        if self.getEndpoint().getHost() is None:
+        if self.endpoint.host is None:
             asyncio.get_event_loop().run_until_complete(self.identify(c))
         c.close()
         return True
@@ -329,6 +314,6 @@ class Connection():
         return True
 
     def __str__(self):
-        return str(self.user)+":"+str(self.cred)+"@"+str(self.endpoint)
+        return str(self.user)+":"+str(self.creds)+"@"+str(self.endpoint)
 
 

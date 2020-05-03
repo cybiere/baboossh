@@ -25,7 +25,7 @@ class Endpoint():
 
     def __init__(self,ip,port):
         self.ip = ip
-        self.port = port
+        self.__port = port
         self.host = None
         self.id = None
         self.scope = True
@@ -54,35 +54,22 @@ class Endpoint():
             if savedEndpoint[7] is not None :
                 self.found = Endpoint.find(savedEndpoint[7])
 
-    def getId(self):
-        return self.id
+    @property
+    def port(self):
+        return int(self.__port)
+
+    @port.setter
+    def port(self, port):
+        self.__port = int(port)
 
     def inScope(self):
         return self.scope
 
-    def getDistance(self):
-        return self.distance
-    
-    def setDistance(self,dist):
-        self.distance = dist
-    
     def rescope(self):
         self.scope = True
 
     def unscope(self):
         self.scope = False
-
-    def getIp(self):
-        return self.ip
-
-    def getPort(self):
-        return int(self.port)
-
-    def getHost(self):
-        return self.host
-
-    def setHost(self,host):
-        self.host = host
 
     def isScanned(self):
         return self.scanned
@@ -106,12 +93,6 @@ class Endpoint():
         if auth not in self.auth:
             self.auth.append(auth)
 
-    def getFound(self):
-        return self.found
-
-    def setFound(self,found):
-        self.found = found
-
     def getConnection(self,scope=True):
         """Get a :class:`.Connection` to the Endpoint
 
@@ -131,7 +112,7 @@ class Endpoint():
 
         from baboossh import Connection
         c = dbConn.get().cursor()
-        for row in c.execute('''SELECT id FROM connections WHERE endpoint=? ORDER BY root DESC''',(self.getId(),)):
+        for row in c.execute('''SELECT id FROM connections WHERE endpoint=? ORDER BY root DESC''',(self.id,)):
             connection = Connection.find(row[0])
             if scope is None:
                 c.close()
@@ -170,12 +151,12 @@ class Endpoint():
                     scope = ?,
                     found = ?
                 WHERE id = ?''',
-                (self.ip, self.port, self.host.getId() if self.host is not None else None, self.scanned, self.reachable, self.distance, jauth, self.scope, self.found.getId() if self.found is not None else None, self.id))
+                (self.ip, self.port, self.host.id if self.host is not None else None, self.scanned, self.reachable, self.distance, jauth, self.scope, self.found.id if self.found is not None else None, self.id))
         else:
             #The endpoint doesn't exists in database : INSERT
             c.execute('''INSERT INTO endpoints(ip,port,host,scanned,reachable,distance,auth,scope,found)
                 VALUES (?,?,?,?,?,?,?,?,?) ''',
-                (self.ip,self.port,self.host.getId() if self.host is not None else None, self.scanned, self.reachable, self.distance, jauth, self.scope, self.found.getId() if self.found is not None else None))
+                (self.ip,self.port,self.host.id if self.host is not None else None, self.scanned, self.reachable, self.distance, jauth, self.scope, self.found.id if self.found is not None else None))
             c.close()
             c = dbConn.get().cursor()
             c.execute('SELECT id FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
@@ -191,7 +172,7 @@ class Endpoint():
         if self.id is None:
             return
         if self.host is not None:
-            endpoints = self.host.getEndpoints()
+            endpoints = self.host.endpoints
             if len(endpoints) == 1:
                 self.host.delete()
         for connection in Connection.findByEndpoint(self):
@@ -288,9 +269,9 @@ class Endpoint():
         ret = []
         c = dbConn.get().cursor()
         if scope is None:
-            req = c.execute('SELECT ip,port FROM endpoints WHERE found=?',(endpoint.getId() if endpoint is not None else None,))
+            req = c.execute('SELECT ip,port FROM endpoints WHERE found=?',(endpoint.id if endpoint is not None else None,))
         else:
-            req = c.execute('SELECT ip,port FROM endpoints WHERE scope=? and found=?',(scope,endpoint.getId() if endpoint is not None else None))
+            req = c.execute('SELECT ip,port FROM endpoints WHERE scope=? and found=?',(scope,endpoint.id if endpoint is not None else None))
         for row in req:
             ret.append(Endpoint(row[0],row[1]))
         return ret
@@ -390,7 +371,7 @@ class Endpoint():
 
         self.setScanned(True)
         try:
-            conn, client = await asyncio.wait_for(asyncssh.create_connection(ScanSSHClient, self.getIp(), port=self.getPort(),tunnel=gw,known_hosts=None,username="user"), timeout=3.0)
+            conn, client = await asyncio.wait_for(asyncssh.create_connection(ScanSSHClient, self.ip, port=self.port,tunnel=gw,known_hosts=None,username="user"), timeout=3.0)
         except asyncssh.Error as e:
             #Permission denied => expected behaviour
             if e.code == 14:
@@ -417,9 +398,9 @@ class Endpoint():
         if not silent:
             print("Done")
         if gateway is None:
-            self.setDistance(0)
+            self.distance = 0
         else:
-            self.setDistance(gateway.getDistance()+1)
+            self.distance = gateway.distance+1
         self.save()
         return True
 
@@ -464,7 +445,7 @@ class Endpoint():
         if gateway is None:
             gwHost = None
         else:
-            gwHost = gateway.getEndpoint().getHost()
+            gwHost = gateway.endpoint.host
             if gwHost is None:
                 return done
         from baboossh import Path
@@ -472,6 +453,6 @@ class Endpoint():
         if done:
             p.save()
         else:
-            if p.getId() is not None:
+            if p.id is not None:
                 p.delete()
         return done 

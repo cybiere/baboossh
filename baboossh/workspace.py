@@ -144,7 +144,7 @@ class Workspace():
         credsContent = Extensions.getAuthMethod(credsType).fromStatement(stmt)
         newCreds = Creds(credsType, credsContent)
         newCreds.save()
-        return newCreds.getId()
+        return newCreds.id
 
     def showCreds(self, credsId):
         if credsId[0] == '#':
@@ -191,9 +191,9 @@ class Workspace():
             connection = Connection.fromTarget(value)
             if connection == None:
                 return
-            self.options['endpoint'] = connection.getEndpoint()
-            self.options['user'] = connection.getUser()
-            self.options['creds'] = connection.getCred()
+            self.options['endpoint'] = connection.endpoint
+            self.options['user'] = connection.user
+            self.options['creds'] = connection.creds
             for option in ['endpoint', 'user', 'creds']:
                 print(option+" => "+str(self.getOption(option)))
             return
@@ -250,17 +250,17 @@ class Workspace():
             if user is None:
                 users = User.findAll(scope=True)
             else:
-                users = [User.find(user.getId())]
+                users = [User.find(user.id)]
             endpoint = self.getOption("endpoint")
             if endpoint is None:
                 endpoints = Endpoint.findAll(scope=True)
             else:
-                endpoints = [Endpoint.find(endpoint.getId())]
+                endpoints = [Endpoint.find(endpoint.id)]
             cred = self.getOption("creds")
             if cred is None:
                 creds = Creds.findAll(scope=True)
             else:
-                creds = [Creds.find(cred.getId())]
+                creds = [Creds.find(cred.id)]
         else:
             if '@' not in connection:
                 #TODO
@@ -309,7 +309,7 @@ class Workspace():
                     if working is None:
                         ret.append(c)
                     else:
-                        if (c.getId() is not None) == working:
+                        if (c.id is not None) == working:
                             ret.append(c)
         return ret
 
@@ -338,7 +338,7 @@ class Workspace():
             gateway = Connection.fromTarget(gateway)
 
         for connection in targets:
-            if not connection.getEndpoint().isScanned():
+            if not connection.endpoint.isScanned():
                 print(str(connection)+"> You must scan an endpoint before connecting to it")
                 continue
 
@@ -347,11 +347,11 @@ class Workspace():
                 if gateway != "auto":
                     if gateway is None:
                         pathSrc = None
-                    elif gateway.getEndpoint().getHost() is None:
+                    elif gateway.endpoint.host is None:
                         continue
                     else:
-                        pathSrc = gateway.getEndpoint().getHost()
-                    p = Path(pathSrc, connection.getEndpoint())
+                        pathSrc = gateway.endpoint.host
+                    p = Path(pathSrc, connection.endpoint)
                     p.save()
 
 #################################################################
@@ -411,7 +411,7 @@ class Workspace():
             print("The destination endpoint provided doesn't exist in this workspace")
             return False
         p = Path(src, dst)
-        if p.getId() is None:
+        if p.id is None:
             print("The specified Path doesn't exist in this workspace.")
             return False
         return p.delete()
@@ -552,9 +552,6 @@ class Workspace():
 #################################################################
 ###################          GETTERS          ###################
 #################################################################
-
-    def getName(self):
-        return self.name
 
     def getHosts(self, scope=None):
         return Host.findAll(scope=scope)

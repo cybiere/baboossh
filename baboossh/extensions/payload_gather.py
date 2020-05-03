@@ -102,12 +102,12 @@ class BaboosshExt(object,metaclass=ExtStr):
                 if ipobj.is_loopback:
                     continue
                 endpoint = Endpoint(ip,port if port is not None else 22)
-                if endpoint.getId() is None:
-                    endpoint.setFound(self.connection.getEndpoint())
+                if endpoint.id is None:
+                    endpoint.found = self.connection.endpoint
                 if not self.connection.inScope():
                     endpoint.unscope()
                 try:
-                    path = Path(self.connection.getEndpoint().getHost(),endpoint)
+                    path = Path(self.connection.endpoint.host,endpoint)
                 except ValueError:
                     pass
                 else:
@@ -118,15 +118,15 @@ class BaboosshExt(object,metaclass=ExtStr):
             if ipobj.is_loopback:
                 return []
             endpoint = Endpoint(hostname,port if port is not None else 22)
-            if endpoint.getId() is None:
-                endpoint.setFound(self.connection.getEndpoint())
+            if endpoint.id is None:
+                endpoint.found = self.connection.endpoint
             if not self.connection.inScope():
                 endpoint.unscope()
-            if endpoint.getId() is None:
+            if endpoint.id is None:
                 endpoint.save()
                 self.newEndpoints.append(endpoint)
             try:
-                path = Path(self.connection.getEndpoint().getHost(),endpoint)
+                path = Path(self.connection.endpoint.host,endpoint)
             except ValueError:
                 pass
             else:
@@ -136,7 +136,7 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     async def gatherFromConfig(self):
         lootFolder = os.path.join(self.wspaceFolder,"loot")
-        filename = str(self.connection.getEndpoint()).replace(":","-")+"_"+str(self.connection.getUser())+"_.ssh_config"
+        filename = str(self.connection.endpoint).replace(":","-")+"_"+str(self.connection.user)+"_.ssh_config"
         filepath = os.path.join(lootFolder,filename)
         try:
             await asyncssh.scp((self.socket,".ssh/config"),filepath)
@@ -166,8 +166,8 @@ class BaboosshExt(object,metaclass=ExtStr):
                         user = User(curHost["user"])
                         if not self.connection.inScope():
                             user.unscope()
-                        if user.getId() is None:
-                            user.setFound(self.connection.getEndpoint())
+                        if user.id is None:
+                            user.found = self.connection.endpoint
                             user.save()
                             self.newUsers.append(user)
                     if "identity" in curHost.keys():
@@ -204,8 +204,8 @@ class BaboosshExt(object,metaclass=ExtStr):
                 user = User(curHost["user"])
                 if not self.connection.inScope():
                     user.unscope()
-                if user.getId() is None:
-                    user.setFound(self.connection.getEndpoint())
+                if user.id is None:
+                    user.found = self.connection.endpoint
                     self.newUsers.append(user)
                     user.save()
             if "identity" in curHost.keys():
@@ -214,7 +214,7 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     async def gatherFromKnown(self):
         lootFolder = os.path.join(self.wspaceFolder,"loot")
-        filename = str(self.connection.getEndpoint()).replace(':','-')+"_"+str(self.connection.getUser())+"_.ssh_known_hosts"
+        filename = str(self.connection.endpoint).replace(':','-')+"_"+str(self.connection.user)+"_.ssh_known_hosts"
         filepath = os.path.join(lootFolder,filename)
         try:
             await asyncssh.scp((self.socket,".ssh/known_hosts"),filepath)
@@ -248,7 +248,7 @@ class BaboosshExt(object,metaclass=ExtStr):
             keyfile = os.path.join(basePath,keyfile)
         from baboossh.params import Extensions
         keysFolder = os.path.join(self.wspaceFolder,"keys")
-        filename = str(self.connection.getEndpoint()).replace(":","-")+"_"+str(self.connection.getUser())+"_"+keyfile.replace("/","_")
+        filename = str(self.connection.endpoint).replace(":","-")+"_"+str(self.connection.user)+"_"+keyfile.replace("/","_")
         filepath = os.path.join(keysFolder,filename)
         try:
             await asyncssh.scp((self.socket,keyfile),filepath)
@@ -270,8 +270,8 @@ class BaboosshExt(object,metaclass=ExtStr):
             cred = Creds("privkey",json.dumps(c))
             if not self.connection.inScope():
                 cred.unscope()
-            if cred.getId() is None:
-                cred.setFound(self.connection.getEndpoint())
+            if cred.id is None:
+                cred.found = self.connection.endpoint
                 cred.save()
                 self.newCreds.append(cred)
             return cred
@@ -289,7 +289,7 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     async def gatherFromHistory(self,historyFile):
         lootFolder = os.path.join(self.wspaceFolder,"loot")
-        filename = str(self.connection.getEndpoint()).replace(":","-")+"_"+str(self.connection.getUser())+"_"+historyFile.replace("/","_")
+        filename = str(self.connection.endpoint).replace(":","-")+"_"+str(self.connection.user)+"_"+historyFile.replace("/","_")
         filepath = os.path.join(lootFolder,filename)
         try:
             await asyncssh.scp((self.socket,historyFile),filepath)
@@ -337,8 +337,8 @@ class BaboosshExt(object,metaclass=ExtStr):
                     user = User(user)
                     if not self.connection.inScope():
                         user.unscope()
-                    if user.getId() is None:
-                        user.setFound(self.connection.getEndpoint())
+                    if user.id is None:
+                        user.found = self.connection.endpoint
                         user.save()
                         self.newUsers.append(user)
                 if identity is not None:

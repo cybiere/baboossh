@@ -61,7 +61,7 @@ class BaboosshExt(object,metaclass=ExtStr):
                 if s.service == "ssh" and s.open():
                     count = count + 1
                     newEndpoint = Endpoint(host.address,s.port)
-                    if newEndpoint.getId() is None:
+                    if newEndpoint.id is None:
                         countNew = countNew + 1
                     newEndpoint.save()
                     newPath = Path(src,newEndpoint)

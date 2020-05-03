@@ -41,7 +41,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         self.stmt = stmt
     
     async def start(self):
-        lootFolder = join(self.wspaceFolder,"loot",str(self.connection.getEndpoint()).replace(':','-'),"")
+        lootFolder = join(self.wspaceFolder,"loot",str(self.connection.endpoint).replace(':','-'),"")
         if not exists(lootFolder):
             mkdir(lootFolder)
         filepath = getattr(self.stmt,'file',None)

@@ -38,54 +38,31 @@ class Host():
         if savedHost is not None:
             self.id = savedHost[0]
 
-    def getId(self):
-        """Returns the `Host` id"""
-        return self.id
-
-    def getName(self):
-        """Returns the `Host` name"""
-        return self.name
-
-    def getUname(self):
-        """Returns the `Host` uname"""
-        return self.uname
-
-    def getIssue(self):
-        """Returns the `Host` issue"""
-        return self.issue
-
-    def getMachineId(self):
-        """Returns the `Host` machine-id"""
-        return self.machineId
-
-    def getMacs(self):
-        """Returns the `Host` macs"""
-        return self.macs
-
     def inScope(self):
         """Returns whether the `Host` is in scope
 
         A `Host` is in scope if all its :class:`Endpoint`\ s are in scope
         """
 
-        for e in self.getEndpoints():
+        for e in self.endpoints:
             if not e.inScope():
                 return False
         return True
 
     def rescope(self):
         """Add the `Host` and all its :class:`Endpoint`\ s to scope"""
-        for e in self.getEndpoints():
+        for e in self.endpoints:
             e.rescope()
             e.save()
 
     def unscope(self):
         """Remove the `Host` and all its :class:`Endpoint`\ s from scope"""
-        for e in self.getEndpoints():
+        for e in self.endpoints:
             e.unscope()
             e.save()
 
-    def getDistance(self):
+    @property
+    def distance(self):
         """Returns the `Host`\ 's number of hops from `"Local"`"""
 
         c = dbConn.get().cursor()
@@ -104,7 +81,8 @@ class Host():
         from baboossh import Endpoint
         return Endpoint(row[0],row[1]);
 
-    def getEndpoints(self):
+    @property
+    def endpoints(self):
         """Returns a `List` of the `Host`\ 's :class:`Endpoint`\ s"""
         from baboossh import Endpoint
         endpoints = []
@@ -151,8 +129,8 @@ class Host():
             return
         for path in Path.findBySrc(self):
             path.delete()
-        for endpoint in self.getEndpoints():
-            endpoint.setHost(None)
+        for endpoint in self.endpoints:
+            endpoint.host = None
             endpoint.save()
         c = dbConn.get().cursor()
         c.execute('DELETE FROM hosts WHERE id = ?',(self.id,))
@@ -235,7 +213,7 @@ class Host():
         ret = []
         hosts = Host.findAll(scope=scope)
         for host in hosts:
-            ret.append(host.getName())
+            ret.append(host.name)
         return ret
 
     @classmethod

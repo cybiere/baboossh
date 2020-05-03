@@ -122,7 +122,7 @@ class Shell(cmd2.Cmd):
         print("Existing workspaces :")
         workspaces = [name for name in os.listdir(workspacesDir) if os.path.isdir(os.path.join(workspacesDir, name))]
         for workspace in workspaces:
-            if workspace == self.workspace.getName():
+            if workspace == self.workspace.name:
                 print(" -["+workspace+"]")
             else:
                 print(" - "+workspace)
@@ -208,13 +208,13 @@ class Shell(cmd2.Cmd):
         data = []
         for host in hosts:
             endpoints = ""
-            for endpoint in host.getEndpoints():
+            for endpoint in host.endpoints:
                 if endpoints == "":
                     endpoints = str(endpoint)
                 else:
                     endpoints = endpoints + ", "+str(endpoint)
             scope = "o" if host.inScope() else ""
-            data.append([scope, host.getId(), host.getName(), host.getDistance(), endpoints])
+            data.append([scope, host.id, host.name, host.distance, endpoints])
         print(tabulate.tabulate(data, headers=["", "ID", "Hostname", "Dist", "Endpoints"]))
 
     def __host_list(self, stmt):
@@ -286,7 +286,7 @@ class Shell(cmd2.Cmd):
             conn = endpoint.getConnection()
             if conn is None:
                 conn = ""
-            host = endpoint.getHost()
+            host = endpoint.host
             if host is None:
                 host = ""
             scanned = str(endpoint.isScanned())
@@ -294,10 +294,10 @@ class Shell(cmd2.Cmd):
                 reachable = "?"
             else:
                 reachable = str(endpoint.isReachable())
-            if endpoint.getDistance() is None:
+            if endpoint.distance is None:
                 distance = ""
             else:
-                distance = str(endpoint.getDistance())
+                distance = str(endpoint.distance)
             if not endpoint.getAuth():
                 auth = "?"
             else:
@@ -475,7 +475,7 @@ class Shell(cmd2.Cmd):
             if not cred.inScope() and not show_all:
                 continue
             scope = "o" if cred.inScope() else ""
-            data.append([scope, "#"+str(cred.getId()), cred.obj.getKey(), cred.obj.toList()])
+            data.append([scope, "#"+str(cred.id), cred.obj.getKey(), cred.obj.toList()])
         print(tabulate.tabulate(data, headers=["", "ID", "Type", "Value"]))
 
     def __creds_show(self, stmt):
@@ -578,7 +578,7 @@ class Shell(cmd2.Cmd):
             if not show_all:
                 if not connection.inScope():
                     continue
-            data.append([connection.getEndpoint(), connection.getUser(), connection.getCred()])
+            data.append([connection.endpoint, connection.user, connection.creds])
         print(tabulate.tabulate(data, headers=["Endpoint", "User", "Creds"]))
 
     def __connection_del(self, stmt):
@@ -1009,7 +1009,7 @@ class Shell(cmd2.Cmd):
         'Build prompt to output currect workspace & active options'
 
         new_prompt = "\033[1;33m"
-        new_prompt = new_prompt+"["+self.workspace.getName()+"]\033[1;34m"
+        new_prompt = new_prompt+"["+self.workspace.name+"]\033[1;34m"
         if self.workspace.getOption("endpoint"):
             if self.workspace.getOption("user"):
                 new_prompt = new_prompt+str(self.workspace.getOption("user"))
