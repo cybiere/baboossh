@@ -266,7 +266,7 @@ class Workspace():
         if Path.hasDirectPath(endpoint):
             gw = None
         else:
-            gateway = endpoint.findGatewayConnection()
+            gateway = endpoint.getGatewayConnection()
             if gateway is not None:
                 if verbose:
                     print("Connecting to gateway "+str(gateway)+" to reach "+str(endpoint)+"...")
@@ -389,7 +389,7 @@ class Workspace():
 ###################           PATHS           ###################
 #################################################################
 
-    def getPathToDst(self, dst):
+    def getPathToDst(self, dst, asIp=False):
         if dst in self.getHostsNames():
             hosts = Host.findByName(dst)
             if len(hosts) > 1:
@@ -407,12 +407,17 @@ class Workspace():
         if Path.hasDirectPath(dst):
             print("The destination should be reachable from the host")
             return
-        chain = Path.getPath(None, dst)
-        if chain is None:
+        try:
+            chain = Path.getPath(dst)
+        except NoPathException:
             print("No path could be found to the destination")
             return
-        for path in chain:
-            print(path)
+        if chain[0] is None:
+            chain[0] = "Local"
+        if asIp:
+            print(" > ".join(str(link.getClosestEndpoint()) if isinstance(link,Host) else str(link) for link in chain))
+        else:
+            print(" > ".join(str(link) for link in chain))
 
     def delPath(self, src, dst):
         if src.lower() != "local":

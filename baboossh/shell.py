@@ -677,7 +677,8 @@ class Shell(cmd2.Cmd):
 
     def __path_get(self, stmt):
         endpoint = vars(stmt)['endpoint']
-        self.workspace.getPathToDst(endpoint)
+        asIp = getattr(stmt,"numeric",False)
+        self.workspace.getPathToDst(endpoint,asIp)
 
     def __path_add(self, stmt):
         src = vars(stmt)['src']
@@ -698,6 +699,7 @@ class Shell(cmd2.Cmd):
     __parser_path_list = __subparser_path.add_parser("list", help='List paths')
     __parser_path_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
     __parser_path_get = __subparser_path.add_parser("get", help='Get path to endpoint')
+    __parser_path_get.add_argument("-n", "--numeric", help="Show Endpoint instead of Host", action="store_true")
     __parser_path_get.add_argument('endpoint', help='Endpoint', choices_method=__get_endpoint_or_host)
     __parser_path_add = __subparser_path.add_parser("add", help='Add path to endpoint')
     __parser_path_add.add_argument('src', help='Source host', choices_method=__get_host_or_local)
@@ -741,7 +743,7 @@ class Shell(cmd2.Cmd):
             try:
                 self.workspace.scanTarget(target, gateway=gateway)
             except NoPathException:
-                print("No path to target, try `path find "+str(target)+"` first.")
+                print("No path to target, try `path find "+str(target)+"` first or force a gateway with `-g`.")
             except Exception as e:
                 print("Targeted scan failed : "+str(e))
             return

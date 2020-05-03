@@ -1,5 +1,6 @@
 import sqlite3
 import collections
+from baboossh.exceptions import *
 from baboossh import dbConn, Endpoint, Host
 
 class Path():
@@ -179,90 +180,65 @@ class Path():
         return row is not None
 
     @classmethod
-    def getAdjacencyList(cls):
-        """Build a lightweight adjacency matrix to find the shortest path
-        
-        Returns:
-            A `Dict` of `List`, with for each endpoint with a working connection as source,
-            references a `List` of all reachable endpoints as a destination
-        """
-
-        adj = {}
-        adj[0] = []
-        c = dbConn.get().cursor()
-        for row in c.execute('SELECT dst FROM paths WHERE src=0'):
-            adj[0].append(row[0])
-        c.close()
-
-        for endpoint in Endpoint.findAllWithConn():
-            adj[endpoint.getId()] = []
-            c = dbConn.get().cursor()
-            for row in c.execute('SELECT dst FROM paths WHERE src=?',(endpoint.getHost().getId(), )):
-                adj[endpoint.getId()].append(row[0])
-            c.close()
-        return adj
-
-    @classmethod
-    def easyPath(cls,srcId,dstId):
-        """Simplified Dijkstra to find the shortes path from an :class:`Endpoint` to another
+    def getPrevHop(cls,dst):
+        """Returns the closest :class:`Host` which can reach an :class:`Endpoint`
 
         Args:
-            srcId (int): The id of the starting endpoint
-            dstId (int): The id of the destination endpoint
-
-        Returns:
-            A `List` of :class:`Endpoint` id forming a chain from src to dst
-        """
-
-        adj = cls.getAdjacencyList()
-        queue = [[srcId]]
-        done = []
-        while len(queue) > 0:
-            road = queue.pop(0)
-            head = road[-1]
-            if head not in adj.keys():
-                done.append(head)
-            if head in done:
-                continue
-            if dstId in adj[head]:
-                road.append(dstId)
-                return road
-            for nextHop in adj[head]:
-                newRoad = road.copy()
-                newRoad.append(nextHop)
-                queue.append(newRoad)
-            done.append(head)
-        return []
-
-    @classmethod
-    def getPath(cls,src,dst):
-        """Get a path from an `Endpoint` to another
-
-        Args:
-            src (:class:`Endpoint` or `None`): the starting `Endpoint`, or `"Local"` if `None`
             dst (:class:`Endpoint`): the destination `Endpoint`
 
         Returns:
-            A `List` of :class:`Path` forming a chain from src to dst
+            The closest :class:`Host` which can reach the :class:`Endpoint`, or `None` if it is reachable from `"Local"`.
+
+        Raises:
+            NoPathException: if no path cloud be found to `dst`
         """
 
-        if src == None:
-            srcId = 0
+        paths = cls.findByDst(dst)
+        smallestDistance = None
+        closest = None
+        for path in paths:
+            if path.src is None:
+                #Direct path found, we can stop here
+                return None
+            if closest is None:
+                closest = path.src
+                smallestDistance = path.src.getDistance()
+                continue
+            if path.src.getDistance() < smallestDistance:
+                closest = path.src
+                smallestDistance = path.src.getDistance()
+                continue
+        if closest is None:
+            raise NoPathException
+        return closest
+
+    @classmethod
+    def getPath(cls,dst,first=True):
+        """Get the chain of paths from `"Local"` to an `Endpoint`
+
+        Args:
+            dst (:class:`Endpoint`): the destination `Endpoint`
+
+        Returns:
+            A `List` of :class:`Hosts` forming a chain from `"Local"` to dst
+
+        Raises:
+            NoPathException: if no path could be found to `dst`
+        """
+        
+        try:
+            prevHop = cls.getPrevHop(dst)
+        except NoPathException as exc:
+            raise exc
+        if prevHop == None:
+            return [None]
+        chain = cls.getPath(prevHop.getClosestEndpoint(),first=False)
+        if first:
+            chain.append(dst)
+            return chain
         else:
-            srcId = src.getId()
-        dstId = dst.getId()
-        chainId = cls.easyPath(srcId,dstId)
-        if len(chainId) == 0:
-            return None
-        chain = []
-        for i in range(0,len(chainId)-1):
-            if chainId[i] == 0:
-                srcHost = None
-            else:
-                srcEndpoint=Endpoint.find(chainId[i])
-                srcHost=srcEndpoint.getHost()
-            chain.append(Path(srcHost,Endpoint.find(chainId[i+1])))
-        return chain
+            chain.append(dst.getHost())
+            return chain
     
     @classmethod
     def getHostsOrderedClosest(cls):

@@ -283,7 +283,7 @@ class Connection():
             if isinstance(gateway,asyncssh.SSHClientConnection):
                 gw=gateway
             elif gateway == "auto":
-                gateway = self.getEndpoint().findGatewayConnection()
+                gateway = self.getEndpoint().getGatewayConnection()
                 if gateway is not None:
                     gw = gateway.initConnect(verbose=verbose)
                 else:

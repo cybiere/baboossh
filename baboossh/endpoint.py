@@ -312,8 +312,8 @@ class Endpoint():
     def __str__(self):
         return self.ip+":"+str(self.port)
 
-    def findGatewayConnection(self):
-        """Find a working connection to a gateway for the Endpoint
+    def getGatewayConnection(self):
+        """Returns a working connection to a gateway for the Endpoint
 
         Return a connection to an endpoint from which the current Endpoint can be
         reached. If you're familiar with the "NextHop" in a network, think of it
@@ -321,18 +321,23 @@ class Endpoint():
 
         Returns:
             A working :class:`.Connection` to the gateway or `None`
+
+        Raises:
+            NoPathException: if no :class:`Path` exists to the Endpoint
         """
 
+        #Direct access from Local
+        if self.distance is not None and self.distance == 0:
+            return None
+
         from baboossh import Path
-        from baboossh import Connection
-        if not Path.hasDirectPath(self):
-            paths = Path.getPath(None,self)
-            if paths is None:
-                raise NoPathException()
-            else:
-                prevHop = paths[-1].getSrc().getClosestEndpoint()
-                return Connection.findWorkingByEndpoint(prevHop)
-        return None
+        try:
+            closest = Path.getPrevHop(self)
+        except NoPathException as exc:
+            raise exc
+        if closest is None:
+            return None
+        return closest.getClosestEndpoint().getConnection()
 
     @classmethod
     def getSearchFields(cls):
@@ -439,7 +444,7 @@ class Endpoint():
                 gateway to use to reach the Endpoint: 
 
                 * `None` disable the use of any gateway to try to reach directly the endpoint, 
-                * `"auto"` finds an existing gateway using :func:`~endpoint.Endpoint.findGatewayConnection`
+                * `"auto"` finds an existing gateway using :func:`~endpoint.Endpoint.getGatewayConnection`
                 * :class:`.Connection` uses the provided connection as a gateway
 
                 Defaults to `"auto"`
@@ -450,7 +455,7 @@ class Endpoint():
         """
         if gateway == "auto":
             try:
-                gateway = self.findGatewayConnection()
+                gateway = self.getGatewayConnection()
             except NoPathException as exc:
                 raise exc
         if gateway is not None:
