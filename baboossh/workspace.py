@@ -238,99 +238,84 @@ class Workspace():
             return false
         return connection.delete()
 
-    def parseOptionsTarget(self):
-        user = self.getOption("user")
-        if user is None:
-            users = self.getUsers(scope=True)
-        else:
-            users = [User.find(user.getId())]
-        endpoint = self.getOption("endpoint")
-        if endpoint is None:
-            endpoints = self.getEndpoints(scope=True)
-        else:
-            endpoints = [Endpoint.find(endpoint.getId())]
-        cred = self.getOption("creds")
-        if cred is None:
-            creds = self.getCreds(scope=True)
-        else:
-            creds = [Creds.find(cred.getId())]
-        return (endpoints, users, creds)
+    def enumTargets(self,connection=None,working=None):
+        """Returns a list of all the :class:`Connections` to target
+    
+        Args:
+            connection: The target string passed to the command (if any)
+        """
 
-    def threadConnect(self, verbose, endpoint, users, creds):
-        try:
-            loop = asyncio.get_event_loop()
-        except:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        c = dbConn.get()
-        if Path.hasDirectPath(endpoint):
-            gw = None
-        else:
-            gateway = endpoint.getGatewayConnection()
-            if gateway is not None:
-                if verbose:
-                    print("Connecting to gateway "+str(gateway)+" to reach "+str(endpoint)+"...")
-                gw = gateway.initConnect(verbose=verbose)
+        if connection is None:
+            user = self.getOption("user")
+            if user is None:
+                users = User.findAll(scope=True)
             else:
-                gw = None
-        workingQueue = []
-        for user in users:
-            for cred in creds:
-                connection = Connection(endpoint, user, cred)
-                workingQueue.append(connection)
-        for connection in workingQueue:
-            try:
-                working = connection.testConnect(gw, verbose=True)
-            except:
-                print("Due to timeout, subsequent connections to endpoint will be ignored.")
-                break
-            if working:
-                break
-        if gw is not None:
-            gw.close()
-        dbConn.close()
+                users = [User.find(user.getId())]
+            endpoint = self.getOption("endpoint")
+            if endpoint is None:
+                endpoints = Endpoint.findAll(scope=True)
+            else:
+                endpoints = [Endpoint.find(endpoint.getId())]
+            cred = self.getOption("creds")
+            if cred is None:
+                creds = Creds.findAll(scope=True)
+            else:
+                creds = [Creds.find(cred.getId())]
+        else:
+            if '@' not in connection:
+                #TODO
+                hosts = Host.findByName(connection)
+                if len(hosts) == 0:
+                    raise ValueError("No matching Host name in workspace")
+                ret = []
+                for host in hosts:
+                    ret.append(Connection.findWorkingByEndpoint(host.getClosestEndpoint()))
+                return ret
+            else:
+                auth,sep,endpoint = connection.partition('@')
+                if endpoint == "*":
+                    endpoints = Endpoint.findAll(scope=True)
+                else:
+                    endpoint  = Endpoint.findByIpPort(endpoint)
+                    if endpoint is None:
+                        raise ValueError("Supplied endpoint isn't in workspace")
+                    endpoints = [endpoint]
 
-    def get_targets(self):
-        return []
+                user,sep,cred = auth.partition(":")
+                if sep == "":
+                    raise ValueError("No credentials supplied")
 
-    def massConnect(self, verbose):
-        try:
-            endpoints, users, creds = self.parseOptionsTarget()
-        except:
-            return
-        nbIter = len(endpoints)*len(users)*len(creds)
-        if nbIter == 1:
-            if not endpoints[0].isScanned():
-                print("You must scan an endpoint before connecting to it")
-                return
-            self.connect(endpoints[0], users[0], creds[0], verbose)
-            return
-
-        if not yesNo("This will attempt up to "+str(nbIter)+" connections. Proceed ?", False):
-            return
-
+                if user == "*":
+                    users = User.findAll(scope=True)
+                else:
+                    user = User.findByUsername(user)
+                    if user is None:
+                        raise ValueError("Supplied user isn't in workspace")
+                    users = [user]
+                if cred == "*":
+                    creds = Creds.findAll(scope=True)
+                else:
+                    if cred[0] == "#":
+                        cred = cred[1:]
+                    cred = Creds.find(cred)
+                    if cred is None:
+                        raise ValueError("Supplied credentials aren't in workspace")
+                    creds = [cred]
+        ret = []
         for endpoint in endpoints:
-            if not endpoint.isScanned():
-                print("You must scan an endpoint before connecting to it")
-                continue
-            t = threading.Thread(target=self.threadConnect, args=(verbose, endpoint, users, creds))
-            t.start()
-        main_thread = threading.main_thread()
-        for t in threading.enumerate():
-            if t is main_thread:
-                continue
-            t.join()
+            for user in users:
+                for cred in creds:
+                    c = Connection(endpoint,user,cred)
+                    if working is None:
+                        ret.append(c)
+                    else:
+                        if (c.getId() is not None) == working:
+                            ret.append(c)
+        return ret
 
-    def connect(self, endpoint, user, cred, verbose):
-        connection = Connection(endpoint, user, cred)
-        return connection.testConnect(verbose=verbose)
-
-    def run(self, endpoint, user, cred, payload, stmt):
-        connection = Connection(endpoint, user, cred)
-        if not connection.getId():
-            #print("Please check connection "+str(connection)+" with connect first")
-            return False
-        return connection.run(payload, self.workspace_folder, stmt)
+    def run(self, targets, payload, stmt):
+        for connection in targets:
+            connection.run(payload, self.workspace_folder, stmt)
 
     def scanTarget(self, target, gateway=None):
         if not isinstance(target, Endpoint):
@@ -346,44 +331,28 @@ class Workspace():
         return working
 
 
-    def connectTarget(self, arg, verbose, gateway):
-        if gateway is not None:
-            if gateway == "local":
-                gateway = None
-            else:
-                gateway = Connection.fromTarget(gateway)
-        else:
-            gateway = "auto"
-        connection = Connection.fromTarget(arg)
-        if not connection.getEndpoint().isScanned():
-            print("You must scan an endpoint before connecting to it")
-            return None
-        working = connection.testConnect(gateway=gateway, verbose=verbose)
-        if working:
-            if gateway != "auto":
-                if gateway is None:
-                    pathSrc = None
-                elif gateway.getEndpoint().getHost() is None:
-                    return working
-                else:
-                    pathSrc = gateway.getEndpoint().getHost()
-                p = Path(pathSrc, connection.getEndpoint())
-                p.save()
-        return working
+    def connect(self, targets, gateway, verbose):
+        if gateway == "local":
+            gateway = None
+        elif gateway != "auto":
+            gateway = Connection.fromTarget(gateway)
 
-    def runTarget(self, arg, payloadName, stmt):
-        if arg in self.getHostsNames():
-            hosts = Host.findByName(arg)
-            if len(hosts) > 1:
-                print("Several hosts corresponding. Please target endpoint.")
-                return False
-            arg = str(hosts[0].getClosestEndpoint())
-        connection = Connection.fromTarget(arg)
-        if not connection.getId():
-            print("Please check connection "+str(connection)+" with connect first")
-            return False
-        payload = Extensions.getPayload(payloadName)
-        return connection.run(payload, self.workspace_folder, stmt)
+        for connection in targets:
+            if not connection.getEndpoint().isScanned():
+                print(str(connection)+"> You must scan an endpoint before connecting to it")
+                continue
+
+            working = connection.testConnect(gateway=gateway, verbose=verbose)
+            if working:
+                if gateway != "auto":
+                    if gateway is None:
+                        pathSrc = None
+                    elif gateway.getEndpoint().getHost() is None:
+                        continue
+                    else:
+                        pathSrc = gateway.getEndpoint().getHost()
+                    p = Path(pathSrc, connection.getEndpoint())
+                    p.save()
 
 #################################################################
 ###################           PATHS           ###################

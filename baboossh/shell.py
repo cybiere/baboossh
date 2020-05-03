@@ -763,24 +763,44 @@ class Shell(cmd2.Cmd):
 ###################          CONNECT          ###################
 #################################################################
 
+    __parser_enum = argparse.ArgumentParser(prog="enum")
+    __parser_enum.add_argument("-w", "--working", help="Show only working endpoints", nargs='?', choices=["true", "false"], const="true")
+    __parser_enum.add_argument('connection', help='Connection string', nargs="?", choices_method=__get_option_connection)
+
+    @cmd2.with_argparser(__parser_enum)
+    def do_enum(self, stmt):
+        '''List all targets with current parameters'''
+        connection = getattr(stmt,'connection',None)
+        working = getattr(stmt, 'working', None)
+        if working is not None:
+            working = working == "true"
+        targets = self.workspace.enumTargets(connection,working=working)
+        for t in targets:
+            print(t)
+
     __parser_connect = argparse.ArgumentParser(prog="connect")
     __parser_connect.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
+    __parser_connect.add_argument("-f", "--force", help="force connection even if already existing", action="store_true")
     __parser_connect.add_argument("-g", "--gateway", help="force specific gateway", choices_method=__get_option_gateway)
     __parser_connect.add_argument('connection', help='Connection string', nargs="?", choices_method=__get_option_connection)
 
     @cmd2.with_argparser(__parser_connect)
     def do_connect(self, stmt):
         '''Try connection to endpoint and identify host'''
-        connect = vars(stmt)['connection']
+        connection = getattr(stmt,'connection',None)
         verbose = vars(stmt)['verbose']
-        gateway = getattr(stmt, 'gateway', None)
-        if connect is not None:
-            try:
-                self.workspace.connectTarget(connect, verbose, gateway)
-            except Exception as e:
-                print("Targeted connect failed : "+str(e))
-            return
-        self.workspace.massConnect(verbose)
+        force = vars(stmt)['force']
+        gateway = getattr(stmt, 'gateway', "auto")
+        if gateway is None:
+            gateway = "auto"
+
+        targets = self.workspace.enumTargets(connection,working=None if force else False)
+        nb_targets = len(targets)
+        if nb_targets > 1:
+            if not yesNo("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):
+                return
+
+        self.workspace.connect(targets,gateway,verbose)
 
 
     __parser_run = argparse.ArgumentParser(prog="run")
@@ -795,40 +815,33 @@ class Shell(cmd2.Cmd):
     @cmd2.with_argparser(__parser_run)
     def do_run(self, stmt):
         '''Run a payload on a connection'''
-        connect = getattr(stmt, 'connection', None)
+        connection = getattr(stmt,'connection',None)
         payload = getattr(stmt, 'type', None)
         self._reset_completion_defaults()
-        if connect is not None and payload is not None:
-            try:
-                self.workspace.runTarget(connect, payload, stmt)
-            except Exception as e:
-                print("Run failed : "+str(e))
-            return
-        payload = self.workspace.getOption("payload")
+
+        if payload is not None:
+            payload = Extensions.getPayload(payload)
+        else:
+            payload = self.workspace.getOption("payload")
+
+            params = self.workspace.getOption("params")
+            __parser = argparse.ArgumentParser(description='Params __parser')
+            payload.buildParser(__parser)
+            if params is None:
+                params = ""
+            stmt, junk = __parser.parse_known_args(params.split())
+
         if payload is None:
             print("Error : No payload specified")
             return
-        params = self.workspace.getOption("params")
 
-        __parser = argparse.ArgumentParser(description='Params __parser')
-        payload.buildParser(__parser)
-        if params is None:
-            params = ""
-        stmt, unk = __parser.parse_known_args(params.split())
-
-        try:
-            endpoints, users, creds = self.workspace.parseOptionsTarget()
-        except:
-            return
-        nb_iter = len(endpoints)*len(users)*len(creds)
-        if nb_iter > 1:
-            if not yesNo("This will attempt up to "+str(nb_iter)+" connections. Proceed ?", False):
+        targets = self.workspace.enumTargets(connection,working=True)
+        nb_targets = len(targets)
+        if nb_targets > 1:
+            if not yesNo("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):
                 return
-        for endpoint in endpoints:
-            for user in users:
-                for cred in creds:
-                    if self.workspace.run(endpoint, user, cred, payload, stmt):
-                        break
+
+        self.workspace.run(targets, payload, stmt)
 
 #################################################################
 ###################          TUNNELS          ###################

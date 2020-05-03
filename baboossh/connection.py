@@ -270,12 +270,12 @@ class Connection():
         except Exception as e:
             if verbose:
                 if e.__class__.__name__ == 'TimeoutError':
-                    print("Connecting to \033[1;34;40m"+str(self)+"\033[0m"+hostname+" > \033[1;31;40mKO\033[0m. Timeout: could not reach destination")
+                    print("Connecting to \033[1;34m"+str(self)+"\033[0m"+hostname+" > \033[1;31mKO\033[0m. Timeout: could not reach destination")
                     raise e
-                print("Connecting to \033[1;34;40m"+str(self)+"\033[0m"+hostname+" > \033[1;31;40mKO\033[0m. Error was: "+str(e))
+                print("Connecting to \033[1;34m"+str(self)+"\033[0m"+hostname+" > \033[1;31mKO\033[0m. Error was: "+str(e))
             return None
         if verbose:
-            print("Connecting to \033[1;34;40m"+str(self)+"\033[0m"+hostname+" > \033[1;32;40mOK\033[0m")
+            print("Connecting to \033[1;34m"+str(self)+"\033[0m"+hostname+" > \033[1;32mOK\033[0m")
         return conn
 
     def initConnect(self,gateway="auto",verbose=False,target=False):
