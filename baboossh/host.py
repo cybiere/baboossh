@@ -85,24 +85,24 @@ class Host():
             e.unscope()
             e.save()
 
-    def getClosestEndpoint(self):
-        """Returns the `Host`\ 's closest :class:`Endpoint`
+    def getDistance(self):
+        """Returns the `Host`\ 's number of hops from `"Local"`"""
 
-        Get the Endpoint with the shortest path from `"Local"`
-        """
+        c = dbConn.get().cursor()
+        c.execute('SELECT distance FROM endpoints WHERE host=? ORDER BY distance DESC',(self.id,))
+        row = c.fetchone()
+        c.close()
+        return row[0];
+
+    def getClosestEndpoint(self):
+        """Returns the `Host`\ 's closest :class:`Endpoint`"""
         
-        from baboossh import Path
-        endpoints = self.getEndpoints()
-        shortestLen = None
-        shortest = None
-        for endpoint in endpoints:
-            if Path.hasDirectPath(endpoint):
-                return endpoint
-            chain = Path.getPath(None,endpoint)
-            if shortestLen is None or len(chain) < shortestLen:
-                shortest = endpoint
-                shortestLen = len(chain)
-        return shortest
+        c = dbConn.get().cursor()
+        c.execute('SELECT ip,port FROM endpoints WHERE host=? ORDER BY distance DESC',(self.id,))
+        row = c.fetchone()
+        c.close()
+        from baboossh import Endpoint
+        return Endpoint(row[0],row[1]);
 
     def getEndpoints(self):
         """Returns a `List` of the `Host`\ 's :class:`Endpoint`\ s"""

@@ -198,8 +198,8 @@ class Shell(cmd2.Cmd):
                 else:
                     endpoints = endpoints + ", "+str(endpoint)
             scope = "o" if host.inScope() else ""
-            data.append([scope, host.getId(), host.getName(), endpoints])
-        print(tabulate.tabulate(data, headers=["", "ID", "Hostname", "Endpoints"]))
+            data.append([scope, host.getId(), host.getName(), host.getDistance(), endpoints])
+        print(tabulate.tabulate(data, headers=["", "ID", "Hostname", "Dist", "Endpoints"]))
 
     def __host_list(self, stmt):
         print("Current hosts in workspace:")
