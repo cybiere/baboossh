@@ -24,6 +24,8 @@ class Host():
         macs ([str,...]): a list of the MAC addresses of the Host interfaces
     """
 
+    search_fields = ['name','uname']
+
     def __init__(self,name,uname,issue,machineId,macs):
         self.name = name
         self.id = None
@@ -38,27 +40,22 @@ class Host():
         if savedHost is not None:
             self.id = savedHost[0]
 
-    def inScope(self):
+    @property
+    def scope(self):
         """Returns whether the `Host` is in scope
 
         A `Host` is in scope if all its :class:`Endpoint`\ s are in scope
         """
 
         for e in self.endpoints:
-            if not e.inScope():
+            if not e.scope:
                 return False
         return True
 
-    def rescope(self):
-        """Add the `Host` and all its :class:`Endpoint`\ s to scope"""
+    @scope.setter
+    def scope(self,scope):
         for e in self.endpoints:
-            e.rescope()
-            e.save()
-
-    def unscope(self):
-        """Remove the `Host` and all its :class:`Endpoint`\ s from scope"""
-        for e in self.endpoints:
-            e.unscope()
+            e.scope = scope
             e.save()
 
     @property
@@ -156,7 +153,7 @@ class Host():
             h = Host(row[0],row[1],row[2],row[3],json.loads(row[4]))
             if scope is None:
                 ret.append(h)
-            elif h.inScope() == scope:
+            elif h.scope == scope:
                 ret.append(h)
         c.close()
         return ret
@@ -217,16 +214,6 @@ class Host():
         return ret
 
     @classmethod
-    def getSearchFields(cls):
-        """List available fields to perform a search on
-        
-        Returns:
-            A list of `str` corresponding to the searchable attributes' names
-        """
-
-        return ['name','uname']
-
-    @classmethod
     def search(cls,field,val,showAll=False):
         """Search in the workspace for a `Host`
 
@@ -239,7 +226,7 @@ class Host():
             A `List` of `Host`\ s corresponding to the search.
         """
 
-        if field not in cls.getSearchFields():
+        if field not in cls.search_fields:
             raise ValueError
         ret = []
         print(field);

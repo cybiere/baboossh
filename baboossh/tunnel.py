@@ -63,15 +63,6 @@ class Tunnel():
             raise ValueError(msg)
         print("Tunnel to "+str(self.connection)+" open on port "+str(self.port))
 
-    def getPort(self):
-        """Get the tunnel port
-
-        Returns:
-            The tunnel entrance port (int)
-        """
-
-        return self.port
-
     def close(self):
         """Close a previously opened port"""
         self.subprocess.terminate()

@@ -338,7 +338,7 @@ class Workspace():
             gateway = Connection.fromTarget(gateway)
 
         for connection in targets:
-            if not connection.endpoint.isScanned():
+            if not connection.endpoint.scanned:
                 print(str(connection)+"> You must scan an endpoint before connecting to it")
                 continue
 
@@ -507,14 +507,7 @@ class Workspace():
         obj = self.identifyObject(target)
         if obj is None:
             return False
-        obj.rescope()
-        obj.save()
-
-    def unscope(self, target):
-        obj = self.identifyObject(target)
-        if obj is None:
-            return False
-        obj.unscope()
+        obj.scope = not obj.scope
         obj.save()
 
 #################################################################
@@ -537,7 +530,7 @@ class Workspace():
         except Exception as e:
             print("Error opening tunnel: "+str(e))
             return False
-        self.tunnels[t.getPort()] = t
+        self.tunnels[t.port] = t
         return True
 
     def closeTunnel(self, port):
@@ -576,7 +569,7 @@ class Workspace():
         for connection in Connection.findAll():
             if scope is None:
                 connections.append(str(connection))
-            elif connection.inScope() == scope:
+            elif connection.scope == scope:
                 connections.append(str(connection))
         return connections
 
@@ -585,7 +578,7 @@ class Workspace():
         for connection in Connection.findAll():
             if scope is None:
                 connections.append(str(connection))
-            elif connection.inScope() == scope:
+            elif connection.scope == scope:
                 connections.append(str(connection))
         return connections
 
@@ -625,9 +618,9 @@ class Workspace():
 
     def getSearchFields(self, obj):
         if obj == "Endpoint":
-            return Endpoint.getSearchFields()
+            return Endpoint.search_fields
         if obj == "Host":
-            return Host.getSearchFields()
+            return Host.search_fields
         return []
 
     def close(self):

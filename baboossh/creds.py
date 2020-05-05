@@ -39,18 +39,6 @@ class Creds():
                 from baboossh import Endpoint
                 self.found = Endpoint.find(savedCreds[2])
 
-    def inScope(self):
-        """Returns whether the `Creds` is in scope"""
-        return self.scope
-
-    def rescope(self):
-        """Set the `Creds` as in scope"""
-        self.scope = True
-
-    def unscope(self):
-        """Set the `Creds` as out of scope"""
-        self.scope = False
-
     def save(self):
         """Save the `Creds` to the :class:`Workspace`\ 's database"""
         c = dbConn.get().cursor()
@@ -91,7 +79,8 @@ class Creds():
         dbConn.get().commit()
         return
 
-    def getKwargs(self):
+    @property
+    def kwargs(self):
         """Return the `Creds` as a dict compatible with `asyncssh.connect`"""
         return self.obj.getKwargs()
 

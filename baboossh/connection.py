@@ -29,22 +29,20 @@ class Connection():
             self.id = savedConnection[0]
             self.root = savedConnection[1] != 0
 
-    def inScope(self):
+    @property
+    def scope(self):
         """Returns whether the `Connection` is in scope
         
         The `Connection` is in scope if its :class:`User`, its :class:`Creds`
         AND it :class:`Endpoint` are all in scope
         """
 
-        return self.user.inScope() and self.endpoint.inScope() and self.creds.inScope()
+        return self.user.scope and self.endpoint.scope and self.creds.scope
 
     @property
     def distance(self):
         """Returns the number of hops between `"Local"` and the :class:`Endpoint`"""
         return self.endpoint.distance
-
-    def setRoot(self, root):
-        self.root = root == True
 
     def save(self):
         """Save the `Connection` to the :class:`Workspace`\ 's database"""
@@ -224,8 +222,8 @@ class Connection():
                 print("\t"+str(self)+" is a new host: "+hostname)
             else:
                 print("\t"+str(self)+" is an existing host: "+hostname)
-                if not newHost.inScope():
-                    e.unscope()
+                if not newHost.scope:
+                    e.scope = False
             newHost.save()
             e.host = newHost
             e.save()
@@ -237,7 +235,7 @@ class Connection():
     async def async_openConnection(self,gw=None,verbose=True,target=False):
         if target:
             verbose=True
-        authArgs = self.creds.getKwargs()
+        authArgs = self.creds.kwargs
         hostname = ""
         if self.endpoint.host is not None:
             hostname = " ("+str(self.endpoint.host)+")"

@@ -27,15 +27,6 @@ class User():
                 from baboossh import Endpoint
                 self.found = Endpoint.find(saved_user[2])
 
-    def inScope(self):
-        return self.scope
-
-    def rescope(self):
-        self.scope = True
-
-    def unscope(self):
-        self.scope = False
-
     def save(self):
         """Save the user in database
 

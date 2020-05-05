@@ -34,18 +34,13 @@ class Path():
         if savedPath is not None:
             self.id = savedPath[0]
 
-    def inScope(self):
-        if not self.dst.inScope():
+    @property
+    def scope(self):
+        if not self.dst.scope:
             return False
         if self.src is None:
             return True
-        return self.src.inScope()
-
-    def getSrc(self):
-        return self.src
-
-    def getDst(self):
-        return self.dst
+        return self.src.scope
 
     def save(self):
         """Save the Path in database
@@ -255,7 +250,7 @@ class Path():
             while True:
                 s = queue.popleft()
                 for p in cls.findBySrc(s):
-                    e = p.getDst()
+                    e = p.dst
                     h = e.host
                     if h is not None:
                         if h.id not in done:

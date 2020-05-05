@@ -213,7 +213,7 @@ class Shell(cmd2.Cmd):
                     endpoints = str(endpoint)
                 else:
                     endpoints = endpoints + ", "+str(endpoint)
-            scope = "o" if host.inScope() else ""
+            scope = "o" if host.scope else ""
             data.append([scope, host.id, host.name, host.distance, endpoints])
         print(tabulate.tabulate(data, headers=["", "ID", "Hostname", "Dist", "Endpoints"]))
 
@@ -226,7 +226,7 @@ class Shell(cmd2.Cmd):
             return
         data = []
         for host in hosts:
-            if not host.inScope() and not show_all:
+            if not host.scope and not show_all:
                 continue
             data.append(host)
         self.__host_print(data)
@@ -282,26 +282,26 @@ class Shell(cmd2.Cmd):
     def __endpoint_print(self, endpoints):
         data = []
         for endpoint in endpoints:
-            scope = "o" if endpoint.inScope() else ""
+            scope = "o" if endpoint.scope else ""
             conn = endpoint.getConnection()
             if conn is None:
                 conn = ""
             host = endpoint.host
             if host is None:
                 host = ""
-            scanned = str(endpoint.isScanned())
-            if endpoint.isReachable() is None:
+            scanned = str(endpoint.scanned)
+            if endpoint.reachable is None:
                 reachable = "?"
             else:
-                reachable = str(endpoint.isReachable())
+                reachable = str(endpoint.reachable)
             if endpoint.distance is None:
                 distance = ""
             else:
                 distance = str(endpoint.distance)
-            if not endpoint.getAuth():
+            if not endpoint.auth:
                 auth = "?"
             else:
-                auth = str(endpoint.getAuth())
+                auth = str(endpoint.auth)
             data.append([scope, endpoint, host, scanned, reachable, distance, auth, conn])
         print(tabulate.tabulate(data, headers=["", "Endpoint", "Host", "Scanned", "Reachable", "Dist", "Authentication", "Working connection"]))
 
@@ -319,15 +319,15 @@ class Shell(cmd2.Cmd):
         endpoint_list = []
         for endpoint in endpoints:
             if not show_all:
-                if not endpoint.inScope():
+                if not endpoint.scope:
                     continue
                 if scanned is not None:
                     flag_scanned = scanned == "true"
-                    if endpoint.isScanned() != flag_scanned:
+                    if endpoint.scanned != flag_scanned:
                         continue
                 if reachable is not None:
                     flag_reachable = reachable == "true"
-                    if endpoint.isReachable() != flag_reachable:
+                    if endpoint.reachable != flag_reachable:
                         continue
                 if conn is not None:
                     flag_conn = conn == "true"
@@ -411,9 +411,9 @@ class Shell(cmd2.Cmd):
             return
         data = []
         for user in users:
-            if not user.inScope() and not show_all:
+            if not user.scope and not show_all:
                 continue
-            scope = "o" if user.inScope() else ""
+            scope = "o" if user.scope else ""
             data.append([scope, user])
         print(tabulate.tabulate(data, headers=["", "Username"]))
 
@@ -472,9 +472,9 @@ class Shell(cmd2.Cmd):
             return
         data = []
         for cred in creds:
-            if not cred.inScope() and not show_all:
+            if not cred.scope and not show_all:
                 continue
-            scope = "o" if cred.inScope() else ""
+            scope = "o" if cred.scope else ""
             data.append([scope, "#"+str(cred.id), cred.obj.getKey(), cred.obj.toList()])
         print(tabulate.tabulate(data, headers=["", "ID", "Type", "Value"]))
 
@@ -576,7 +576,7 @@ class Shell(cmd2.Cmd):
         data = []
         for connection in connections:
             if not show_all:
-                if not connection.inScope():
+                if not connection.scope:
                     continue
             data.append([connection.endpoint, connection.user, connection.creds])
         print(tabulate.tabulate(data, headers=["Endpoint", "User", "Creds"]))
@@ -683,7 +683,7 @@ class Shell(cmd2.Cmd):
             return
         data = []
         for path in paths:
-            if not path.inScope() and not show_all:
+            if not path.scope and not show_all:
                 continue
             src = path.src
             if src is None:
@@ -972,27 +972,16 @@ class Shell(cmd2.Cmd):
 ###################           SCOPE           ###################
 #################################################################
 
-    def __get_scope_object(self):
-        return self.workspace.getBaseObjects(scope=False)
-
-    def __get_unscope_object(self):
-        return self.workspace.getBaseObjects(scope=True)
+    def __get_all_objects(self):
+        return self.workspace.getBaseObjects()
 
     __parser_scope = argparse.ArgumentParser(prog="scope")
-    __parser_scope.add_argument('target', help='Object to scope', choices_method=__get_scope_object)
+    __parser_scope.add_argument('target', help='Object to scope', choices_method=__get_all_objects)
     @cmd2.with_argparser(__parser_scope)
     def do_scope(self, stmt):
-        '''Add object to scope'''
+        '''Toggle object in/out of scope'''
         key = getattr(stmt, 'target', None)
         self.workspace.scope(key)
-
-    __parser_unscope = argparse.ArgumentParser(prog="unscope")
-    __parser_unscope.add_argument('target', help='Object to unscope', choices_method=__get_unscope_object)
-    @cmd2.with_argparser(__parser_unscope)
-    def do_unscope(self, stmt):
-        '''Remove object from scope'''
-        key = getattr(stmt, 'target', None)
-        self.workspace.unscope(key)
 
 #################################################################
 ###################            CMD            ###################

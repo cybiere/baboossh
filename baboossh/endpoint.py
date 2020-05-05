@@ -23,6 +23,8 @@ class Endpoint():
         auth ([str...]): A list of allowed authentication methods, populated by a :func:`scan`
     """
 
+    search_fields = ['ip','port','auth']
+
     def __init__(self,ip,port):
         self.ip = ip
         self.__port = port
@@ -33,7 +35,7 @@ class Endpoint():
         self.reachable = None
         self.distance = None
         self.found = None
-        self.auth = []
+        self.auth = set()
         c = dbConn.get().cursor()
         c.execute('SELECT id,host,scanned,reachable,distance,auth,scope,found FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
         savedEndpoint = c.fetchone()
@@ -49,7 +51,7 @@ class Endpoint():
             if savedEndpoint[4] is not None:
                 self.distance = savedEndpoint[4]
             if savedEndpoint[5] is not None :
-                self.auth = json.loads(savedEndpoint[5])
+                self.auth = set(json.loads(savedEndpoint[5]))
             self.scope = savedEndpoint[6] != 0
             if savedEndpoint[7] is not None :
                 self.found = Endpoint.find(savedEndpoint[7])
@@ -61,37 +63,6 @@ class Endpoint():
     @port.setter
     def port(self, port):
         self.__port = int(port)
-
-    def inScope(self):
-        return self.scope
-
-    def rescope(self):
-        self.scope = True
-
-    def unscope(self):
-        self.scope = False
-
-    def isScanned(self):
-        return self.scanned
-
-    def setScanned(self,scanned):
-        self.scanned = scanned
-
-    def isReachable(self):
-        return self.reachable
-
-    def setReachable(self,reachable):
-        self.reachable = reachable
-
-    def getAuth(self):
-        return self.auth
-
-    def hasAuth(self,auth):
-        return auth in self.auth
-
-    def addAuth(self,auth):
-        if auth not in self.auth:
-            self.auth.append(auth)
 
     def getConnection(self,scope=True):
         """Get a :class:`.Connection` to the Endpoint
@@ -117,7 +88,7 @@ class Endpoint():
             if scope is None:
                 c.close()
                 return connection
-            elif scope == connection.inScope():
+            elif scope == connection.scope:
                 c.close()
                 return connection
         c.close()
@@ -136,7 +107,7 @@ class Endpoint():
         if not self.auth:
             jauth = None
         else:
-            jauth = json.dumps(self.auth)
+            jauth = json.dumps(list(self.auth))
         if self.id is not None:
             #If we have an ID, the endpoint is already saved in the database : UPDATE
             c.execute('''UPDATE endpoints 
@@ -307,15 +278,6 @@ class Endpoint():
         return closest.getClosestEndpoint().getConnection()
 
     @classmethod
-    def getSearchFields(cls):
-        """List available fields to perform a search on
-        
-        Returns:
-            A list of `str` corresponding to the searchable attributes' names
-        """
-        return ['ip','port','auth']
-
-    @classmethod
     def search(cls,field,val,showAll=False):
         """Search in the workspace for an `Endpoint`
 
@@ -328,7 +290,7 @@ class Endpoint():
             A `List` of `Endpoint`\ s corresponding to the search.
         """
 
-        if field not in cls.getSearchFields():
+        if field not in cls.search_fields:
             raise ValueError
         ret = []
         print(field);
@@ -348,28 +310,28 @@ class Endpoint():
         endpoint = self
         class ScanSSHClient(asyncssh.SSHClient):
             def connection_made(self, conn):
-                endpoint.setReachable(True)
+                endpoint.reachable = True
         
             def auth_banner_received(self, msg, lang):
                 #TODO
                 pass
         
             def public_key_auth_requested(self):
-                endpoint.addAuth("privkey")
+                endpoint.auth.add("privkey")
                 return None
         
             def password_auth_requested(self):
-                endpoint.addAuth("password")
+                endpoint.auth.add("password")
                 return None
         
             def kbdint_auth_requested(self):
-                endpoint.addAuth("kbdint")
+                endpoint.auth.add("kbdint")
                 return None
         
             def auth_completed(self):
                 pass
 
-        self.setScanned(True)
+        self.scanned = True
         try:
             conn, client = await asyncio.wait_for(asyncssh.create_connection(ScanSSHClient, self.ip, port=self.port,tunnel=gw,known_hosts=None,username="user"), timeout=3.0)
         except asyncssh.Error as e:
@@ -386,7 +348,7 @@ class Endpoint():
                     print("No route to host")
             return False
         except asyncio.TimeoutError:
-            self.setReachable(False)
+            self.reachable = False
             self.save()
             if not silent:
                 print("Timeout")
