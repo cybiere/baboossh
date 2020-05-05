@@ -97,7 +97,7 @@ class Connection():
         c.close()
         if row is None:
             return None
-        return Connection(Endpoint.find(row[0]),User.find_one(user_id=row[1]),Creds.find_one(creds_id=row[2]))
+        return Connection(Endpoint.find_one(endpoint_id=row[0]),User.find_one(user_id=row[1]),Creds.find_one(creds_id=row[2]))
 
     @classmethod
     def findByEndpoint(cls,endpoint):
@@ -131,7 +131,7 @@ class Connection():
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT endpoint,cred FROM connections WHERE user=?',(user.id,)):
-            ret.append(Connection(Endpoint.find(row[0]),user,Creds.find_one(creds_id=row[1])))
+            ret.append(Connection(Endpoint.find_one(endpoint_id=row[0]),user,Creds.find_one(creds_id=row[1])))
         c.close()
         return ret
 
@@ -149,7 +149,7 @@ class Connection():
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT endpoint,user FROM connections WHERE cred=?',(creds.id,)):
-            ret.append(Connection(Endpoint.find(row[0]),User.find_one(user_id=row[1]),creds))
+            ret.append(Connection(Endpoint.find_one(endpoint_id=row[0]),User.find_one(user_id=row[1]),creds))
         c.close()
         return ret
 
@@ -176,7 +176,7 @@ class Connection():
     def fromTarget(cls,arg):
         if '@' in arg and ':' in arg:
             auth,sep,endpoint = arg.partition('@')
-            endpoint  = Endpoint.findByIpPort(endpoint)
+            endpoint  = Endpoint.find_one(ip_port=endpoint)
             if endpoint is None:
                 raise ValueError("Supplied endpoint isn't in workspace")
             user,sep,cred = auth.partition(":")
@@ -194,7 +194,7 @@ class Connection():
         else:    
             if ':' not in arg:
                 arg = arg+':22'
-            endpoint = Endpoint.findByIpPort(arg)
+            endpoint = Endpoint.find_one(ip_port=arg)
             if endpoint is None:
                 raise ValueError("Supplied endpoint isn't in workspace")
             connection = endpoint.getConnection()

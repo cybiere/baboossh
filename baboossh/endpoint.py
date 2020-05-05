@@ -54,7 +54,7 @@ class Endpoint():
                 self.auth = set(json.loads(savedEndpoint[5]))
             self.scope = savedEndpoint[6] != 0
             if savedEndpoint[7] is not None :
-                self.found = Endpoint.find(savedEndpoint[7])
+                self.found = Endpoint.find_one(endpoint_id=savedEndpoint[7])
 
     @property
     def port(self):
@@ -148,7 +148,7 @@ class Endpoint():
                 self.host.delete()
         for connection in Connection.findByEndpoint(self):
             connection.delete()
-        for path in Path.findByDst(self):
+        for path in Path.find_all(dst=self):
             path.delete()
         c = dbConn.get().cursor()
         c.execute('DELETE FROM endpoints WHERE id = ?',(self.id,))
@@ -157,11 +157,14 @@ class Endpoint():
         return
 
     @classmethod
-    def findAll(cls,scope=True):
-        """Find all Endpoints
+    def find_all(cls, scope=None, found=None):
+        """Find all Endpoints matching the criteria
 
         Args:
-            scope (bool): List Endpoints in scope (`True`), out of scope (`False`), or both (`None`)
+            scope (bool): 
+                List Endpoints in scope (`True`), out of scope (`False`), or both (`None`)
+            found (:class:`Endpoint`):
+                The `Endpoint` the endpoints were discovered on
     
         Returns:
             A list of all `Endpoint`\ s in the :class:`.Workspace`
@@ -169,83 +172,53 @@ class Endpoint():
 
         ret = []
         c = dbConn.get().cursor()
-        if scope is None:
-            req = c.execute('SELECT ip,port FROM endpoints')
+        if found is None:
+            if scope is None:
+                req = c.execute('SELECT ip,port FROM endpoints')
+            else:
+                req = c.execute('SELECT ip,port FROM endpoints WHERE scope=?',(scope,))
         else:
-            req = c.execute('SELECT ip,port FROM endpoints WHERE scope=?',(scope,))
+            if scope is None:
+                req = c.execute('SELECT ip,port FROM endpoints WHERE found=?',(endpoint.id if endpoint is not None else None,))
+            else:
+                req = c.execute('SELECT ip,port FROM endpoints WHERE scope=? and found=?',(scope,endpoint.id if endpoint is not None else None))
         for row in req:
             ret.append(Endpoint(row[0],row[1]))
         return ret
 
     @classmethod
-    def findByIpPort(cls,endpoint):
-        """Find an Endpoint by it's IP address and port
+    def find_one(cls,endpoint_id=None,ip_port=None):
+        """Find an `Endpoint` by its id or it's IP address:Port
 
         Args:
-            endpoint (str): The IP and port as "<ip>:<port>"
-
-        Returns:
-            A single `Endpoint` or `None`
-        """
-
-        ip,sep,port = endpoint.partition(":")
-        if port == "":
-            raise ValueError
-        c = dbConn.get().cursor()
-        c.execute('''SELECT id FROM endpoints WHERE ip=? and port=?''',(ip,port))
-        row = c.fetchone()
-        c.close()
-        if row == None:
-            return None
-        return Endpoint(ip,port)
-
-    @classmethod
-    def find(cls,endpointId):
-        """Find an `Endpoint` by its id
-
-        Args:
-            endpointId (int): the `Endpoint` id to search
+            endpoint_id (int): the `Endpoint` id to search
+            ip_port (str): The IP and port as "<ip>:<port>"
 
         Returns:
             A single `Endpoint` or `None`.
         """
 
-        if endpointId == 0:
-            return None
         c = dbConn.get().cursor()
-        c.execute('''SELECT ip,port FROM endpoints WHERE id=?''',(endpointId,))
+
+        if endpoint_id is not None:
+            if endpoint_id == 0:
+                c.close()
+                return None
+            c.execute('''SELECT ip,port FROM endpoints WHERE id=?''',(endpoint_id,))
+        elif ip_port is not None:
+            ip,sep,port = endpoint.partition(":")
+            if port == "":
+                raise ValueError
+            c.execute('''SELECT id FROM endpoints WHERE ip=? and port=?''',(ip,port))
+        else:
+            c.close()
+            return None
+
         row = c.fetchone()
         c.close()
-        if row == None:
+        if row is None:
             return None
         return Endpoint(row[0],row[1])
-
-    @classmethod
-    def findByFound(cls,endpoint,scope=None):
-        """Find Endpoints found on an `Endpoint`
-
-        When an endpoint is found by `gather` payload, the endpoint he was found on is
-        saved. This functions finds and returns endpoints discovered on a given endpoint.
-
-        Args:
-            endpoint (:class:`Endpoint`):
-                the `Endpoint` the endpoints were discovered on
-            scope (bool):
-                look only for endpoints in scope (`True`), out of scope (`False`) or vboth (`None`)
-
-        Returns:
-            A list of `Endpoints`\ s found on given endpoint.
-        """
-
-        ret = []
-        c = dbConn.get().cursor()
-        if scope is None:
-            req = c.execute('SELECT ip,port FROM endpoints WHERE found=?',(endpoint.id if endpoint is not None else None,))
-        else:
-            req = c.execute('SELECT ip,port FROM endpoints WHERE scope=? and found=?',(scope,endpoint.id if endpoint is not None else None))
-        for row in req:
-            ret.append(Endpoint(row[0],row[1]))
-        return ret
 
     def __str__(self):
         return self.ip+":"+str(self.port)

@@ -8,7 +8,7 @@ BabooSSH allows you, from a simple SSH connection to a compromised host, to quic
 
 # Licence
 
-BabooSSH is developped by [Akerva](https://akerva.com/) and provided for free under the GNU/GPLv3.
+BabooSSH is developped by [Cybiere](https://twitter.com/Cybiere) for [Akerva](https://akerva.com/) and provided for free under the GNU/GPLv3.
 
 # Install and documentation
 

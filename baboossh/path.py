@@ -81,22 +81,45 @@ class Path():
         return
 
     @classmethod
-    def findAll(cls):
+    def find_all(cls,src=None,dst=None):
         """Find all Paths
+
+        if src==None:
+            srcId = 0
+        else:
+            srcId = src.id
+
+        Args:
+            src (:class:`.Host` or `None`): the Host to use as source, `"Local"` if `(int)0`
+            dst (:class:`.Endpoint`): the Endpoint to use as destination
 
         Returns:
             A list of all `Path`\ s in the :class:`.Workspace`
         """
 
+        if src is not None and src == 0:
+            src_id = 0
+        elif src is not None:
+            src_id = src.id
         ret = []
         c = dbConn.get().cursor()
-        for row in c.execute('SELECT src,dst FROM paths'):
-            ret.append(Path(Host.find_one(host_id=row[0]),Endpoint.find(row[1])))
+        if src is None:
+            if dst is None:
+                req = c.execute('SELECT src,dst FROM paths')
+            else:
+                req = c.execute('SELECT src,dst FROM paths WHERE dst=?',(dst.id, ))
+        else:
+            if dst is None:
+                req = c.execute('SELECT src,dst FROM paths WHERE src=?',(src_id, ))
+            else:
+                req = c.execute('SELECT src,dst FROM paths WHERE src=? AND dst=?',(src_id, dst.id ))
+        for row in req:
+            ret.append(Path(Host.find_one(host_id=row[0]),Endpoint.find_one(endpoint_id=row[1])))
         c.close()
         return ret
 
     @classmethod
-    def find(cls,pathId):
+    def find_one(cls,path_id=None):
         """Find an path by its id
 
         Args:
@@ -106,54 +129,16 @@ class Path():
             A single `Path` or `None`.
         """
 
+        if path_id is None:
+            return None
         c = dbConn.get().cursor()
-        c.execute('''SELECT src,dst FROM paths WHERE id=?''',(pathId,))
+        c.execute('''SELECT src,dst FROM paths WHERE id=?''',(path_id,))
         row = c.fetchone()
         c.close()
-        if row == None:
+        if row is None:
             return None
-        return Path(Host.find_one(host_id=row[0]),Endpoint.find(row[1]))
+        return Path(Host.find_one(host_id=row[0]),Endpoint.find_one(endpoint_id=row[1]))
     
-    @classmethod
-    def findByDst(cls,dst):
-        """Find all paths to an :class:`.Endpoint`
-
-        Args:
-            dst (:class:`.Endpoint`): the Endpoint to use as destination
-
-        Returns:
-            A list of `Path`\ s to provided Endpoint
-        """
-
-        ret = []
-        c = dbConn.get().cursor()
-        for row in c.execute('SELECT src,dst FROM paths WHERE dst=?',(dst.id, )):
-            ret.append(Path(Host.find_one(host_id=row[0]),Endpoint.find(row[1])))
-        c.close()
-        return ret
-
-    @classmethod
-    def findBySrc(cls,src):
-        """Find all paths from a :class:`.Host`
-
-        Args:
-            src (:class:`.Host` or `None`): the Host to use as source, `"Local"` if `None`
-
-        Returns:
-            A list of `Path`\ s from provided Host
-        """
-
-        if src==None:
-            srcId = 0
-        else:
-            srcId = src.id
-        ret = []
-        c = dbConn.get().cursor()
-        for row in c.execute('SELECT dst FROM paths WHERE src=?',(srcId, )):
-            ret.append(Path(src,Endpoint.find(row[0])))
-        c.close()
-        return ret
-
     @classmethod
     def hasDirectPath(cls,dst):
         """Check if there is a Path from `"Local"` to an Endpoint
@@ -185,7 +170,7 @@ class Path():
             NoPathException: if no path cloud be found to `dst`
         """
 
-        paths = cls.findByDst(dst)
+        paths = cls.find_all(dst=dst)
         smallestDistance = None
         closest = None
         for path in paths:
@@ -249,7 +234,7 @@ class Path():
         try:
             while True:
                 s = queue.popleft()
-                for p in cls.findBySrc(s):
+                for p in cls.find_all(src=s):
                     e = p.dst
                     h = e.host
                     if h is not None:

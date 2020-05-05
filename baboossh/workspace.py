@@ -97,7 +97,7 @@ class Workspace():
 
     def delEndpoint(self, endpoint):
         try:
-            endpoint = Endpoint.findByIpPort(endpoint)
+            endpoint = Endpoint.find_one(ip_port=endpoint)
         except ValueError:
             print("Could not find endpoint.")
             return False
@@ -202,7 +202,7 @@ class Workspace():
         if value != None:
             value = value.strip()
             if option == "endpoint":
-                endpoint = Endpoint.findByIpPort(value)
+                endpoint = Endpoint.find_one(ip_port=value)
                 if endpoint is None:
                     raise ValueError
                 value = endpoint
@@ -250,12 +250,15 @@ class Workspace():
             if user is None:
                 users = User.find_all(scope=True)
             else:
+                #WARNING the "find the object I already have" seems stupid but
+                #it refreshes its params from the database. Without this it
+                #would be stuck in the state it was when "set"
                 users = [User.find_one(user_id=user.id)]
             endpoint = self.getOption("endpoint")
             if endpoint is None:
-                endpoints = Endpoint.findAll(scope=True)
+                endpoints = Endpoint.find_all(scope=True)
             else:
-                endpoints = [Endpoint.find(endpoint.id)]
+                endpoints = [Endpoint.find_one(endpoint_id=endpoint.id)]
             cred = self.getOption("creds")
             if cred is None:
                 creds = Creds.find_all(scope=True)
@@ -274,9 +277,9 @@ class Workspace():
             else:
                 auth,sep,endpoint = connection.partition('@')
                 if endpoint == "*":
-                    endpoints = Endpoint.findAll(scope=True)
+                    endpoints = Endpoint.find_all(scope=True)
                 else:
-                    endpoint  = Endpoint.findByIpPort(endpoint)
+                    endpoint  = Endpoint.find_one(ip_port=endpoint)
                     if endpoint is None:
                         raise ValueError("Supplied endpoint isn't in workspace")
                     endpoints = [endpoint]
@@ -319,7 +322,7 @@ class Workspace():
 
     def scanTarget(self, target, gateway=None):
         if not isinstance(target, Endpoint):
-            target = Endpoint.findByIpPort(target)
+            target = Endpoint.find_one(ip_port=target)
         if gateway is not None:
             if gateway == "local":
                 gateway = None
@@ -366,7 +369,7 @@ class Workspace():
                 return False
             dst = str(hosts[0].getClosestEndpoint())
         try:
-            dst = Endpoint.findByIpPort(dst)
+            dst = Endpoint.find_one(ip_port=dst)
         except:
             print("Please specify a valid endpoint in the IP:PORT form")
             return
@@ -404,7 +407,7 @@ class Workspace():
         else:
             src = None
         try:
-            dst = Endpoint.findByIpPort(dst)
+            dst = Endpoint.find_one(ip_port=dst)
         except:
             print("Please specify valid destination endpoint in the IP:PORT form")
         if dst is None:
@@ -432,7 +435,7 @@ class Workspace():
         else:
             src = None
         try:
-            dst = Endpoint.findByIpPort(dst)
+            dst = Endpoint.find_one(ip_port=dst)
         except:
             print("Please specify valid destination endpoint in the IP:PORT form")
         if dst is None:
@@ -444,7 +447,7 @@ class Workspace():
 
     def findPath(self, dst):
         try:
-            dst = Endpoint.findByIpPort(dst)
+            dst = Endpoint.find_one(ip_port=dst)
         except:
             print("Please specify a valid endpoint in the IP:PORT form")
             return
@@ -489,7 +492,7 @@ class Workspace():
         if user is not None:
             return user
         try:
-            dst = Endpoint.findByIpPort(target)
+            dst = Endpoint.find_one(ip_port=target)
             if dst is not None:
                 return dst
         except:
@@ -557,7 +560,7 @@ class Workspace():
 
     def getEndpoints(self, scope=None):
         endpoints = []
-        for endpoint in Endpoint.findAll(scope=scope):
+        for endpoint in Endpoint.find_all(scope=scope):
             endpoints.append(endpoint)
         return endpoints
 
@@ -586,7 +589,7 @@ class Workspace():
         return connections
 
     def getPaths(self):
-        return Path.findAll()
+        return Path.find_all()
 
     def getUsers(self, scope=None):
         return User.find_all(scope=scope)
@@ -608,10 +611,10 @@ class Workspace():
         return self.options[key]
 
     def getBaseObjects(self, scope=None):
-        return Endpoint.findAll(scope=scope) + Creds.find_all(scope=scope) + User.find_all(scope=scope) + Host.find_all(scope=scope)
+        return Endpoint.find_all(scope=scope) + Creds.find_all(scope=scope) + User.find_all(scope=scope) + Host.find_all(scope=scope)
 
     def getFoundEndpoints(self, endpoint):
-        return Endpoint.findByFound(endpoint)
+        return Endpoint.find_all(found=endpoint)
 
     def getFoundUsers(self, endpoint):
         return User.find_all(found=endpoint)

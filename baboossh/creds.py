@@ -37,7 +37,7 @@ class Creds():
             self.scope = savedCreds[1] != 0
             if savedCreds[2] is not None :
                 from baboossh import Endpoint
-                self.found = Endpoint.find(savedCreds[2])
+                self.found = Endpoint.find_one(endpoint_id=savedCreds[2])
 
     def save(self):
         """Save the `Creds` to the :class:`Workspace`\ 's database"""

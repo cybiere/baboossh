@@ -25,7 +25,7 @@ class User():
             self.scope = saved_user[1] != 0
             if saved_user[2] is not None:
                 from baboossh import Endpoint
-                self.found = Endpoint.find(saved_user[2])
+                self.found = Endpoint.find_one(endpoint_id=saved_user[2])
 
     def save(self):
         """Save the user in database

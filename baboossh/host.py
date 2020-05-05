@@ -124,7 +124,7 @@ class Host():
         from baboossh import Path
         if self.id is None:
             return
-        for path in Path.findBySrc(self):
+        for path in Path.find_all(src=self):
             path.delete()
         for endpoint in self.endpoints:
             endpoint.host = None
