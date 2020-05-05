@@ -70,7 +70,7 @@ class Creds():
         from baboossh import Connection
         if self.id is None:
             return
-        for connection in Connection.findByCreds(self):
+        for connection in Connection.find_all(creds=self):
             connection.delete()
         self.obj.delete()
         c = dbConn.get().cursor()

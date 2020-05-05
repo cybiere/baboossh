@@ -84,7 +84,7 @@ class Endpoint():
         from baboossh import Connection
         c = dbConn.get().cursor()
         for row in c.execute('''SELECT id FROM connections WHERE endpoint=? ORDER BY root DESC''',(self.id,)):
-            connection = Connection.find(row[0])
+            connection = Connection.find_one(connection_id=row[0])
             if scope is None:
                 c.close()
                 return connection
@@ -146,7 +146,7 @@ class Endpoint():
             endpoints = self.host.endpoints
             if len(endpoints) == 1:
                 self.host.delete()
-        for connection in Connection.findByEndpoint(self):
+        for connection in Connection.find_all(endpoint=self):
             connection.delete()
         for path in Path.find_all(dst=self):
             path.delete()

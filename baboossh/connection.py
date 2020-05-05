@@ -81,18 +81,26 @@ class Connection():
 
 
     @classmethod
-    def find(cls,connectionId):
-        """Find a `Connection` by its id
+    def find_one(cls,connection_id=None, endpoint=None):
+        """Find a `Connection` by its id or endpoint
 
         Args:
-            connectionId (int): the `Connection` id to search
+            connection_id (int): the `Connection` id to search
+            connection_endpoint (:class:`Endpoint`): the `Connection` endpoint to search
 
         Returns:
             A single `Connection` or `None`.
         """
 
         c = dbConn.get().cursor()
-        c.execute('SELECT endpoint,user,cred FROM connections WHERE id=?',(connectionId,))
+        if connection_id is not None:
+            c.execute('SELECT endpoint,user,cred FROM connections WHERE id=?',(connection_id,))
+        elif endpoint is not None:
+            c.execute('SELECT endpoint,user,cred FROM connections WHERE endpoint=? ORDER BY root ASC',(endpoint.id,))
+        else:
+            c.close()
+            return None
+
         row = c.fetchone()
         c.close()
         if row is None:
@@ -100,75 +108,20 @@ class Connection():
         return Connection(Endpoint.find_one(endpoint_id=row[0]),User.find_one(user_id=row[1]),Creds.find_one(creds_id=row[2]))
 
     @classmethod
-    def findByEndpoint(cls,endpoint):
-        """Find all `Connection`\ s to an :class:`Endpoint`
-
-        Args:
-            endpoint (:class:`Endpoint`): the `Endpoint` to find `Connection`\ s for
-
-        Returns:
-            A `List` of corresponding `Connection`\ s
-        """
-
+    def find_all(cls,endpoint=None,user=None,creds=None):
         ret = []
         c = dbConn.get().cursor()
-        for row in c.execute('SELECT user,cred FROM connections WHERE endpoint=?',(endpoint.id,)):
-            ret.append(Connection(endpoint,User.find_one(user_id=row[0]),Creds.find_one(creds_id=row[1])))
-        c.close()
-        return ret
+        if endpoint is not None:
+            req = c.execute('SELECT endpoint,user,cred FROM connections WHERE endpoint=?',(endpoint.id,))
+        elif user is not None:
+            req = c.execute('SELECT endpoint,user,cred FROM connections WHERE user=?',(user.id,))
+        elif creds is not None:
+            req = c.execute('SELECT endpoint,user,cred FROM connections WHERE cred=?',(creds.id,))
+        else:
+            req = c.execute('SELECT endpoint,user,cred FROM connections')
 
-    @classmethod
-    def findByUser(cls,user):
-        """Find all `Connection`\ s using a :class:`User`
-
-        Args:
-            user (:class:`User`): the `User` to find `Connection`\ s for
-
-        Returns:
-            A `List` of corresponding `Connection`\ s
-        """
-
-        ret = []
-        c = dbConn.get().cursor()
-        for row in c.execute('SELECT endpoint,cred FROM connections WHERE user=?',(user.id,)):
-            ret.append(Connection(Endpoint.find_one(endpoint_id=row[0]),user,Creds.find_one(creds_id=row[1])))
-        c.close()
-        return ret
-
-    @classmethod
-    def findByCreds(cls,creds):
-        """Find all `Connection`\ s using a :class:`Creds`
-
-        Args:
-            creds (:class:`Creds`): the `Creds` to find `Connection`\ s for
-
-        Returns:
-            A `List` of corresponding `Connection`\ s
-        """
-
-        ret = []
-        c = dbConn.get().cursor()
-        for row in c.execute('SELECT endpoint,user FROM connections WHERE cred=?',(creds.id,)):
-            ret.append(Connection(Endpoint.find_one(endpoint_id=row[0]),User.find_one(user_id=row[1]),creds))
-        c.close()
-        return ret
-
-    @classmethod
-    def findWorkingByEndpoint(cls,endpoint):
-        c = dbConn.get().cursor()
-        c.execute('SELECT user,cred FROM connections WHERE endpoint=? ORDER BY root ASC',(endpoint.id,))
-        row = c.fetchone()
-        c.close()
-        if row is None:
-            return None
-        return Connection(endpoint,User.find_one(user_id=row[0]),Creds.find_one(creds_id=row[1]))
-
-    @classmethod
-    def findAll(cls):
-        ret = []
-        c = dbConn.get().cursor()
-        for row in c.execute('SELECT id FROM connections'):
-            ret.append(cls.find(row[0]))
+        for row in req:
+            ret.append(Connection(Endpoint.find_one(endpoint_id=row[0]),User.find_one(user_id=row[1]),Creds.find_one(creds_id=row[2])))
         c.close()
         return ret
 

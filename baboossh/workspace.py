@@ -272,7 +272,7 @@ class Workspace():
                     raise ValueError("No matching Host name in workspace")
                 ret = []
                 for host in hosts:
-                    ret.append(Connection.findWorkingByEndpoint(host.getClosestEndpoint()))
+                    ret.append(Connection.find_one(endpoint=host.getClosestEndpoint()))
                 return ret
             else:
                 auth,sep,endpoint = connection.partition('@')
@@ -467,7 +467,7 @@ class Workspace():
         
         for h in Path.getHostsOrderedClosest():
             e = h.getClosestEndpoint()
-            gateway = Connection.findWorkingByEndpoint(e)
+            gateway = Connection.find_one(endpoint=e)
             working = dst.scan(gateway=gateway, silent=True)
             if working:
                 p = Path(h, dst)
@@ -572,7 +572,7 @@ class Workspace():
 
     def getTargetsValidList(self, scope=None):
         connections = []
-        for connection in Connection.findAll():
+        for connection in Connection.find_all():
             if scope is None:
                 connections.append(str(connection))
             elif connection.scope == scope:
@@ -581,7 +581,7 @@ class Workspace():
 
     def getTargetsList(self, scope=None):
         connections = []
-        for connection in Connection.findAll():
+        for connection in Connection.find_all():
             if scope is None:
                 connections.append(str(connection))
             elif connection.scope == scope:
@@ -598,7 +598,7 @@ class Workspace():
         return Creds.find_all(scope=scope)
 
     def getConnections(self):
-        return Connection.findAll()
+        return Connection.find_all()
 
     def getOptionsValues(self):
         return self.options.items()

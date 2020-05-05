@@ -62,7 +62,7 @@ class User():
         from baboossh import Connection
         if self.id is None:
             return
-        for connection in Connection.findByUser(self):
+        for connection in Connection.find_all(user=self):
             connection.delete()
         c = dbConn.get().cursor()
         c.execute('DELETE FROM users WHERE id = ?', (self.id, ))
