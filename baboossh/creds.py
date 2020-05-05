@@ -85,73 +85,53 @@ class Creds():
         return self.obj.getKwargs()
 
     @classmethod
-    def findAll(cls, scope=None):
+    def find_all(cls, scope=None, found=None):
         """Find all `Creds`
 
         Args:
             scope (bool): List `Creds` in scope (`True`), out of scope 
                 (`False`), or both (`None`)
+            found (:class:`Endpoint`):
+                the `Endpoint` the `Creds` were discovered on
     
         Returns:
             A list of all `Creds` in the :class:`.Workspace`
         """
 
         ret = []
-        ret = []
         c = dbConn.get().cursor()
-        if scope is None:
-            req = c.execute('SELECT type,content FROM creds')
+        if found is None:
+            if scope is None:
+                req = c.execute('SELECT type,content FROM creds')
+            else:
+                req = c.execute('SELECT type,content FROM creds WHERE scope=?',(scope,))
         else:
-            req = c.execute('SELECT type,content FROM creds WHERE scope=?',(scope,))
+            if scope is None:
+                req = c.execute('SELECT type,content FROM creds WHERE found=?',(endpoint.id if endpoint is not None else None,))
+            else:
+                req = c.execute('SELECT type,content FROM creds WHERE found=? AND scope=?',(endpoint.id if endpoint is not None else None,scope))
         for row in req:
             ret.append(Creds(row[0],row[1]))
         return ret
 
     @classmethod
-    def find(cls,credId):
+    def find_one(cls,creds_id):
         """Find a `Creds` by its id
 
         Args:
-            credId (int): the `Creds` id to search
+            creds_id (int): the `Creds` id to search
 
         Returns:
             A single `Creds` or `None`.
         """
 
         c = dbConn.get().cursor()
-        c.execute('''SELECT type,content FROM creds WHERE id=?''',(credId,))
+        c.execute('''SELECT type,content FROM creds WHERE id=?''',(creds_id,))
         row = c.fetchone()
         c.close()
         if row == None:
             return None
         return Creds(row[0],row[1])
-
-    @classmethod
-    def findByFound(cls, endpoint, scope=None):
-        """Find `Creds` found on an `Endpoint`
-
-        When a `Creds` is found by `gather` payload, the endpoint he was found on is
-        saved. This functions finds and returns `Creds` discovered on a given endpoint.
-
-        Args:
-            endpoint (:class:`Endpoint`):
-                the `Endpoint` the `Creds` were discovered on
-            scope (bool):
-                look only for endpoints in scope (`True`), out of scope (`False`) or both (`None`)
-
-        Returns:
-            A `List` of `Creds` found on given `Endpoint`.
-        """
-
-        ret = []
-        c = dbConn.get().cursor()
-        if scope is None:
-            req = c.execute('SELECT type,content FROM creds WHERE found=?',(endpoint.id if endpoint is not None else None,))
-        else:
-            req = c.execute('SELECT type,content FROM creds WHERE found=? AND scope=?',(endpoint.id if endpoint is not None else None,scope))
-        for row in req:
-            ret.append(Creds(row[0],row[1]))
-        return ret
 
     def show(self):
         """Show the `Creds` object and its parameters"""

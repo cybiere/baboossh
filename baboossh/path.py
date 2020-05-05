@@ -91,7 +91,7 @@ class Path():
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT src,dst FROM paths'):
-            ret.append(Path(Host.find(row[0]),Endpoint.find(row[1])))
+            ret.append(Path(Host.find_one(host_id=row[0]),Endpoint.find(row[1])))
         c.close()
         return ret
 
@@ -112,7 +112,7 @@ class Path():
         c.close()
         if row == None:
             return None
-        return Path(Host.find(row[0]),Endpoint.find(row[1]))
+        return Path(Host.find_one(host_id=row[0]),Endpoint.find(row[1]))
     
     @classmethod
     def findByDst(cls,dst):
@@ -128,7 +128,7 @@ class Path():
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT src,dst FROM paths WHERE dst=?',(dst.id, )):
-            ret.append(Path(Host.find(row[0]),Endpoint.find(row[1])))
+            ret.append(Path(Host.find_one(host_id=row[0]),Endpoint.find(row[1])))
         c.close()
         return ret
 

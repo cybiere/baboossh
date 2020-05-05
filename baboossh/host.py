@@ -136,12 +136,13 @@ class Host():
         return
 
     @classmethod
-    def findAll(cls,scope=None):
-        """Returns a `List` of all `Host`\ s in the :class:`Workspace`
+    def find_all(cls,scope=None,name=None):
+        """Returns a `List` of all `Host`\ s in the :class:`Workspace` matching the criteria
 
         Args:
             scope (bool): whether to return only `Host`\s in scope (`True`),
                 out of scope (`False`) or both (`None`)
+            name (str): the `Host`\ s' name to match
 
         Returns:
             the `List` of `Host`\ s
@@ -149,7 +150,11 @@ class Host():
 
         ret = []
         c = dbConn.get().cursor()
-        for row in c.execute('SELECT name,uname,issue,machineId,macs FROM hosts'):
+        if name is None:
+            req = c.execute('SELECT name,uname,issue,machineId,macs FROM hosts')
+        else:
+            req = c.execute('''SELECT name,uname,issue,machineId,macs FROM hosts WHERE name=?''',(name,))
+        for row in req:
             h = Host(row[0],row[1],row[2],row[3],json.loads(row[4]))
             if scope is None:
                 ret.append(h)
@@ -159,59 +164,31 @@ class Host():
         return ret
 
     @classmethod
-    def find(cls,hostId):
+    def find_one(cls,host_id=None,name=None):
         """Find a `Host` by its id
 
         Args:
-            hostId (int): the desired `Host`\ 's id
+            host_id (int): the desired `Host`\ 's id
+            name (str): the `Host`\ 's name to match
 
         Returns:
             A `Host` or `None`
         """
 
         c = dbConn.get().cursor()
-        c.execute('''SELECT name,uname,issue,machineId,macs FROM hosts WHERE id=?''',(hostId,))
+        if host_id is not None:
+            c.execute('''SELECT name,uname,issue,machineId,macs FROM hosts WHERE id=?''',(host_id,))
+        elif name is not None:
+            c.execute('''SELECT name,uname,issue,machineId,macs FROM hosts WHERE name=?''',(name,))
+        else:
+            c.close()
+            return None
+
         row = c.fetchone()
         c.close()
         if row == None:
             return None
         return Host(row[0],row[1],row[2],row[3],json.loads(row[4]))
-
-    @classmethod
-    def findByName(cls,name):
-        """Find `Host`\ s by name
-
-        Args:
-            name (int): the desired `Host`\ 's name
-
-        Returns:
-            A `List` of `Host`\ s with the name `name`
-        """
-
-        c = dbConn.get().cursor()
-        hosts = []
-        for row in c.execute('''SELECT id FROM hosts WHERE name=?''',(name,)):
-            hosts.append(Host.find(row[0]))
-        c.close()
-        return hosts
-
-    @classmethod
-    def findAllNames(cls,scope=None):
-        """Returns a `List` of all `Host`\ s' `names` in the :class:`Workspace`
-
-        Args:
-            scope (bool): whether to return only `Host`\s in scope (`True`),
-                out of scope (`False`) or both (`None`)
-
-        Returns:
-            the `List` of `str` of the `Host`\ s' names
-        """
-
-        ret = []
-        hosts = Host.findAll(scope=scope)
-        for host in hosts:
-            ret.append(host.name)
-        return ret
 
     @classmethod
     def search(cls,field,val,showAll=False):

@@ -42,7 +42,7 @@ class Endpoint():
         c.close()
         if savedEndpoint is not None:
             self.id = savedEndpoint[0]
-            self.host = Host.find(savedEndpoint[1])
+            self.host = Host.find_one(host_id=savedEndpoint[1])
             self.scanned = savedEndpoint[2] != 0
             if savedEndpoint[3] is None:
                 self.reachable = None

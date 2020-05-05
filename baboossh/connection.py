@@ -97,7 +97,7 @@ class Connection():
         c.close()
         if row is None:
             return None
-        return Connection(Endpoint.find(row[0]),User.find_one(user_id=row[1]),Creds.find(row[2]))
+        return Connection(Endpoint.find(row[0]),User.find_one(user_id=row[1]),Creds.find_one(creds_id=row[2]))
 
     @classmethod
     def findByEndpoint(cls,endpoint):
@@ -113,7 +113,7 @@ class Connection():
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT user,cred FROM connections WHERE endpoint=?',(endpoint.id,)):
-            ret.append(Connection(endpoint,User.find_one(user_id=row[0]),Creds.find(row[1])))
+            ret.append(Connection(endpoint,User.find_one(user_id=row[0]),Creds.find_one(creds_id=row[1])))
         c.close()
         return ret
 
@@ -131,7 +131,7 @@ class Connection():
         ret = []
         c = dbConn.get().cursor()
         for row in c.execute('SELECT endpoint,cred FROM connections WHERE user=?',(user.id,)):
-            ret.append(Connection(Endpoint.find(row[0]),user,Creds.find(row[1])))
+            ret.append(Connection(Endpoint.find(row[0]),user,Creds.find_one(creds_id=row[1])))
         c.close()
         return ret
 
@@ -161,7 +161,7 @@ class Connection():
         c.close()
         if row is None:
             return None
-        return Connection(endpoint,User.find_one(user_id=row[0]),Creds.find(row[1]))
+        return Connection(endpoint,User.find_one(user_id=row[0]),Creds.find_one(creds_id=row[1]))
 
     @classmethod
     def findAll(cls):
@@ -187,7 +187,7 @@ class Connection():
                 raise ValueError("Supplied user isn't in workspace")
             if cred[0] == "#":
                 cred = cred[1:]
-            cred = Creds.find(cred)
+            cred = Creds.find_one(creds_id=cred)
             if cred is None:
                 raise ValueError("Supplied credentials aren't in workspace")
             return Connection(endpoint,user,cred)

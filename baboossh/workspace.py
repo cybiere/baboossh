@@ -129,7 +129,7 @@ class Workspace():
         if host not in self.getHostsNames():
             print("Not a known Host name.")
             return False
-        hosts = Host.findByName(host)
+        hosts = Host.find_all(name=host)
         if len(hosts) > 1:
             print("Several hosts corresponding. Please delete endpoints.")
             return False
@@ -149,7 +149,7 @@ class Workspace():
     def showCreds(self, credsId):
         if credsId[0] == '#':
             credsId = credsId[1:]
-        creds = Creds.find(credsId)
+        creds = Creds.find_one(creds_id=credsId)
         if creds == None:
             print("Specified creds not found")
             return
@@ -158,7 +158,7 @@ class Workspace():
     def editCreds(self, credsId):
         if credsId[0] == '#':
             credsId = credsId[1:]
-        creds = Creds.find(credsId)
+        creds = Creds.find_one(creds_id=credsId)
         if creds == None:
             print("Specified creds not found")
             return
@@ -167,7 +167,7 @@ class Workspace():
     def delCreds(self, credsId):
         if credsId[0] == '#':
             credsId = credsId[1:]
-        creds = Creds.find(credsId)
+        creds = Creds.find_one(creds_id=credsId)
         if creds == None:
             print("Specified creds not found")
             return False
@@ -216,7 +216,7 @@ class Workspace():
                     credId = value[1:]
                 else:
                     credId = value
-                creds = Creds.find(credId)
+                creds = Creds.find_one(creds_id=credId)
                 if creds is None:
                     raise ValueError
                 value = creds
@@ -258,13 +258,13 @@ class Workspace():
                 endpoints = [Endpoint.find(endpoint.id)]
             cred = self.getOption("creds")
             if cred is None:
-                creds = Creds.findAll(scope=True)
+                creds = Creds.find_all(scope=True)
             else:
-                creds = [Creds.find(cred.id)]
+                creds = [Creds.find_one(creds_id=cred.id)]
         else:
             if '@' not in connection:
                 #TODO
-                hosts = Host.findByName(connection)
+                hosts = Host.find_all(name=connection)
                 if len(hosts) == 0:
                     raise ValueError("No matching Host name in workspace")
                 ret = []
@@ -293,11 +293,11 @@ class Workspace():
                         raise ValueError("Supplied user isn't in workspace")
                     users = [user]
                 if cred == "*":
-                    creds = Creds.findAll(scope=True)
+                    creds = Creds.find_all(scope=True)
                 else:
                     if cred[0] == "#":
                         cred = cred[1:]
-                    cred = Creds.find(cred)
+                    cred = Creds.find_one(creds_id=cred)
                     if cred is None:
                         raise ValueError("Supplied credentials aren't in workspace")
                     creds = [cred]
@@ -360,7 +360,7 @@ class Workspace():
 
     def getPathToDst(self, dst, asIp=False):
         if dst in self.getHostsNames():
-            hosts = Host.findByName(dst)
+            hosts = Host.find_all(name=dst)
             if len(hosts) > 1:
                 print("Several hosts corresponding. Please target endpoint.")
                 return False
@@ -393,7 +393,7 @@ class Workspace():
             if src not in self.getHostsNames():
                 print("Not a known Host name.")
                 return False
-            hosts = Host.findByName(src)
+            hosts = Host.find_all(name=src)
             if len(hosts) > 1:
                 print("Several hosts corresponding. Add failed")
                 return False
@@ -421,7 +421,7 @@ class Workspace():
             if src not in self.getHostsNames():
                 print("Not a known Host name.")
                 return
-            hosts = Host.findByName(src)
+            hosts = Host.find_all(name=src)
             if len(hosts) > 1:
                 print("Several hosts corresponding. Add failed")
                 return
@@ -482,7 +482,7 @@ class Workspace():
             credsId = target[1:]
         else:
             credsId = target
-        creds = Creds.find(credsId)
+        creds = Creds.find_one(creds_id=credsId)
         if creds is not None:
             return creds
         user = User.find_one(name=target)
@@ -494,7 +494,7 @@ class Workspace():
                 return dst
         except:
             pass
-        hosts = Host.findByName(target)
+        hosts = Host.find_all(name=target)
         if len(hosts) > 1:
             print("Multiple hosts matching, use endpoints")
             return None
@@ -547,10 +547,13 @@ class Workspace():
 #################################################################
 
     def getHosts(self, scope=None):
-        return Host.findAll(scope=scope)
+        return Host.find_all(scope=scope)
 
     def getHostsNames(self, scope=None):
-        return Host.findAllNames(scope=scope)
+        ret = []
+        for host in Host.find_all(scope=scope):
+            ret.append(host.name)
+        return ret
 
     def getEndpoints(self, scope=None):
         endpoints = []
@@ -589,7 +592,7 @@ class Workspace():
         return User.find_all(scope=scope)
 
     def getCreds(self, scope=None):
-        return Creds.findAll(scope=scope)
+        return Creds.find_all(scope=scope)
 
     def getConnections(self):
         return Connection.findAll()
@@ -605,7 +608,7 @@ class Workspace():
         return self.options[key]
 
     def getBaseObjects(self, scope=None):
-        return Endpoint.findAll(scope=scope) + Creds.findAll(scope=scope) + User.find_all(scope=scope) + Host.findAll(scope=scope)
+        return Endpoint.findAll(scope=scope) + Creds.find_all(scope=scope) + User.find_all(scope=scope) + Host.find_all(scope=scope)
 
     def getFoundEndpoints(self, endpoint):
         return Endpoint.findByFound(endpoint)
@@ -614,7 +617,7 @@ class Workspace():
         return User.find_all(found=endpoint)
 
     def getFoundCreds(self, endpoint):
-        return Creds.findByFound(endpoint)
+        return Creds.find_all(found=endpoint)
 
     def getSearchFields(self, obj):
         if obj == "Endpoint":

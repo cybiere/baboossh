@@ -21,14 +21,18 @@ class BaboosshExt(object,metaclass=ExtStr):
     def descr(cls):
         return "Import endpoints from NMAP XML output file"
 
-    def testmeth(self):
-        allHosts = Host.findAllNames()
-        return allHosts + ['Local']
+    def params_parser_from(self):
+        all_hosts = Host.find_all()
+        ret = []
+        for host in all_hosts:
+            ret.append(host.name)
+        ret.append("Local")
+        return ret
 
     @classmethod
     def buildParser(cls,parser):
         parser.add_argument('nmapfile',help='NMAP file path',completer_method=cmd2.Cmd.path_complete)
-        parser.add_argument('from',help='Host from which scan was performed',nargs='?',choices_method=cls.testmeth)
+        parser.add_argument('from',help='Host from which scan was performed',nargs='?',choices_method=cls.params_parser_from)
 
     @classmethod
     def run(cls,stmt,workspace):
@@ -41,7 +45,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         elif fromHost == "Local":
             src = None
         else:
-            hosts = Host.findByName(fromHost)
+            hosts = Host.find_all(name=fromHost)
             if len(hosts) > 1:
                 print("Several hosts corresponding.")
                 return False

@@ -27,7 +27,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         self.newEndpoints = []
 
         self.keysHash = {}
-        for c in Creds.findAll():
+        for c in Creds.find_all():
             if c.credsType != "privkey":
                 continue
             path = c.obj.keypath

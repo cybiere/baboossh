@@ -119,7 +119,7 @@ class User():
             c.execute('''SELECT username FROM users WHERE username=?''', (name, ))
         else:
             c.close()
-            raise ValueError("No criterion specified")
+            return None
         row = c.fetchone()
         c.close()
         if row == None:
