@@ -115,7 +115,7 @@ class Workspace():
         newUser.save()
 
     def delUser(self, name):
-        user = User.findByUsername(name)
+        user = User.find_one(name=name)
         if user is None:
             print("Could not find user.")
             return False
@@ -207,7 +207,7 @@ class Workspace():
                     raise ValueError
                 value = endpoint
             elif option == "user":
-                user = User.findByUsername(value)
+                user = User.find_one(name=value)
                 if user is None:
                     raise ValueError
                 value = user
@@ -248,9 +248,9 @@ class Workspace():
         if connection is None:
             user = self.getOption("user")
             if user is None:
-                users = User.findAll(scope=True)
+                users = User.find_all(scope=True)
             else:
-                users = [User.find(user.id)]
+                users = [User.find_one(user_id=user.id)]
             endpoint = self.getOption("endpoint")
             if endpoint is None:
                 endpoints = Endpoint.findAll(scope=True)
@@ -286,9 +286,9 @@ class Workspace():
                     raise ValueError("No credentials supplied")
 
                 if user == "*":
-                    users = User.findAll(scope=True)
+                    users = User.find_all(scope=True)
                 else:
-                    user = User.findByUsername(user)
+                    user = User.find_one(name=user)
                     if user is None:
                         raise ValueError("Supplied user isn't in workspace")
                     users = [user]
@@ -485,7 +485,7 @@ class Workspace():
         creds = Creds.find(credsId)
         if creds is not None:
             return creds
-        user = User.findByUsername(target)
+        user = User.find_one(name=target)
         if user is not None:
             return user
         try:
@@ -586,7 +586,7 @@ class Workspace():
         return Path.findAll()
 
     def getUsers(self, scope=None):
-        return User.findAll(scope=scope)
+        return User.find_all(scope=scope)
 
     def getCreds(self, scope=None):
         return Creds.findAll(scope=scope)
@@ -605,13 +605,13 @@ class Workspace():
         return self.options[key]
 
     def getBaseObjects(self, scope=None):
-        return Endpoint.findAll(scope=scope) + Creds.findAll(scope=scope) + User.findAll(scope=scope) + Host.findAll(scope=scope)
+        return Endpoint.findAll(scope=scope) + Creds.findAll(scope=scope) + User.find_all(scope=scope) + Host.findAll(scope=scope)
 
     def getFoundEndpoints(self, endpoint):
         return Endpoint.findByFound(endpoint)
 
     def getFoundUsers(self, endpoint):
-        return User.findByFound(endpoint)
+        return User.find_all(found=endpoint)
 
     def getFoundCreds(self, endpoint):
         return Creds.findByFound(endpoint)

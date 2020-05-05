@@ -71,90 +71,60 @@ class User():
         return
 
     @classmethod
-    def findAll(cls, scope=None):
-        """Find all Users
+    def find_all(cls, scope=None, found=None):
+        """Find all Users corresponding to criteria
 
         Args:
-            scope (bool): List Users in scope (`True`), out of scope (`False`), or both (`None`)
-    
-        Returns:
-            A list of all `User`\ s in the :class:`.Workspace`
-        """
-
-        ret = []
-        c = dbConn.get().cursor()
-        if scope is None:
-            req = c.execute('SELECT username FROM users')
-        else:
-            req = c.execute('SELECT username FROM users WHERE scope=?', (scope, ))
-        for row in req:
-            ret.append(User(row[0]))
-        return ret
-
-    @classmethod
-    def find(cls, userId):
-        """Find a user by its id
-
-        Args:
-            userId (int): the user id to search
-
-        Returns:
-            A single `User` or `None`.
-        """
-
-        c = dbConn.get().cursor()
-        c.execute('''SELECT username FROM users WHERE id=?''', (userId, ))
-        row = c.fetchone()
-        c.close()
-        if row == None:
-            return None
-        return User(row[0])
-
-    @classmethod
-    def findByUsername(cls, name: str):
-        """Find a user by its username
-
-        Args:
-            name (str): the username to search
-        
-        Returns:
-            A single `User` or `None`.
-        """ 
-        
-        c = dbConn.get().cursor()
-        c.execute('''SELECT username FROM users WHERE username=?''', (name, ))
-        row = c.fetchone()
-        c.close()
-        if row == None:
-            return None
-        return User(row[0])
-
-    @classmethod
-    def findByFound(cls, endpoint, scope=True):
-        """Find users found on an `Endpoint`
-
-        When a user is found by `gather` payload, the endpoint he was found on is
-        saved. This functions finds and returns users discovered on a given endpoint.
-
-        Args:
+            scope (bool):
+                List Users in scope (`True`), out of scope (`False`), or both (`None`)
             endpoint (:class:`.Endpoint`):
                 the `Endpoint` the users were discovered on
-            scope (bool):
-                look only for user in scope (`True`), out of scope (`False`) or vboth (`None`)
 
         Returns:
-            A list of `User`\ s found on given endpoint.
+            A list of all `User`\ s in the :class:`.Workspace` matching the criteria
         """
 
         ret = []
         c = dbConn.get().cursor()
-        if scope is None:
-            req = c.execute('SELECT username FROM users WHERE found=?', (endpoint.id if endpoint is not None else None, ))
+        if found is None:
+            if scope is None:
+                req = c.execute('SELECT username FROM users')
+            else:
+                req = c.execute('SELECT username FROM users WHERE scope=?', (scope, ))
         else:
-            req = c.execute('SELECT username FROM users WHERE found=? AND scope=?', (endpoint.id if endpoint is not None else None, scope))
+            if scope is None:
+                req = c.execute('SELECT username FROM users WHERE found=?', (endpoint.id if endpoint is not None else None, ))
+            else:
+                req = c.execute('SELECT username FROM users WHERE found=? AND scope=?', (endpoint.id if endpoint is not None else None, scope))
         for row in req:
             ret.append(User(row[0]))
         return ret
+
+    @classmethod
+    def find_one(cls, user_id=None, name=None):
+        """Find a user matching the criteria
+
+        Args:
+            user_id (int): the user id to search
+            name (str): the username to search
+
+        Returns:
+            A single `User` or `None`.
+        """
+
+        c = dbConn.get().cursor()
+        if user_id is not None:
+            c.execute('''SELECT username FROM users WHERE id=?''', (user_id, ))
+        elif name is not None:
+            c.execute('''SELECT username FROM users WHERE username=?''', (name, ))
+        else:
+            c.close()
+            raise ValueError("No criterion specified")
+        row = c.fetchone()
+        c.close()
+        if row == None:
+            return None
+        return User(row[0])
 
     def __str__(self):
         return self.name
