@@ -1,6 +1,7 @@
 import sqlite3
 import json
 from baboossh import dbConn
+from baboossh.exceptions import *
 
 
 class Host():
@@ -165,7 +166,7 @@ class Host():
         return ret
 
     @classmethod
-    def find_one(cls,host_id=None,name=None):
+    def find_one(cls,host_id=None,name=None,prev_hop_to=None):
         """Find a `Host` by its id
 
         Args:
@@ -176,6 +177,27 @@ class Host():
             A `Host` or `None`
         """
 
+        if prev_hop_to is not None:
+            from baboossh import Path
+            paths = Path.find_all(dst=prev_hop_to)
+            smallest_distance = None
+            closest = None
+            for path in paths:
+                if path.src is None:
+                    #Direct path found, we can stop here
+                    return None
+                if closest is None:
+                    closest = path.src
+                    smallest_distance = path.src.distance
+                    continue
+                if path.src.distance < smallest_distance:
+                    closest = path.src
+                    smallest_distance = path.src.distance
+                    continue
+            if closest is None:
+                raise NoPathException
+            return closest
+        
         c = dbConn.get().cursor()
         if host_id is not None:
             c.execute('''SELECT name,uname,issue,machineId,macs FROM hosts WHERE id=?''',(host_id,))

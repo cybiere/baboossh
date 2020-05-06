@@ -157,39 +157,6 @@ class Path():
         return row is not None
 
     @classmethod
-    def getPrevHop(cls,dst):
-        """Returns the closest :class:`Host` which can reach an :class:`Endpoint`
-
-        Args:
-            dst (:class:`Endpoint`): the destination `Endpoint`
-
-        Returns:
-            The closest :class:`Host` which can reach the :class:`Endpoint`, or `None` if it is reachable from `"Local"`.
-
-        Raises:
-            NoPathException: if no path cloud be found to `dst`
-        """
-
-        paths = cls.find_all(dst=dst)
-        smallestDistance = None
-        closest = None
-        for path in paths:
-            if path.src is None:
-                #Direct path found, we can stop here
-                return None
-            if closest is None:
-                closest = path.src
-                smallestDistance = path.src.distance
-                continue
-            if path.src.distance < smallestDistance:
-                closest = path.src
-                smallestDistance = path.src.distance
-                continue
-        if closest is None:
-            raise NoPathException
-        return closest
-
-    @classmethod
     def getPath(cls,dst,first=True):
         """Get the chain of paths from `"Local"` to an `Endpoint`
 
@@ -204,10 +171,10 @@ class Path():
         """
         
         try:
-            previous_hop = cls.getPrevHop(dst)
+            previous_hop = Host.find_one(prev_hop_to=dst)
         except NoPathException as exc:
             raise exc
-        if prevHop == None:
+        if previous_hop is None:
             return [None]
         chain = cls.getPath(previous_hop.closest_endpoint,first=False)
         if first:
@@ -217,36 +184,6 @@ class Path():
             chain.append(dst.host)
             return chain
     
-    @classmethod
-    def getHostsOrderedClosest(cls):
-        """Get a List of :class:`Host`\ s ordered by their distance to `"Local"`
-
-        Lists the Hosts ordered by the number of pivots to reach them from
-        `"Local"`
-
-        Returns:
-            An ordered `List` of :class:`Host`
-        """
-
-        ret = []
-        done = []
-        queue = collections.deque([None])
-        try:
-            while True:
-                s = queue.popleft()
-                for p in cls.find_all(src=s):
-                    e = p.dst
-                    h = e.host
-                    if h is not None:
-                        if h.id not in done:
-                            done.append(h.id)
-                            ret.append(h)
-                            queue.append(h)
-        except IndexError:
-            #Queue is empty
-            pass
-        return ret
-
     def __str__(self):
         if self.src is not None:
             src = str(self.src)

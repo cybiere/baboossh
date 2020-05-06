@@ -238,6 +238,39 @@ class Workspace():
             return false
         return connection.delete()
 
+    def enumEndpointTargets(self,endpoint=None,scanned=None):
+        """Returns a list of all the :class:`Endpoints` to target for a scan
+    
+        Args:
+            endpoint: The target string passed to the command (if any)
+        """
+
+        if endpoint is None:
+            endpoint = self.getOption("endpoint")
+            if endpoint is None:
+                endpoints = Endpoint.find_all(scope=True)
+            else:
+                #WARNING the "find the object I already have" seems stupid but
+                #it refreshes its params from the database. Without this it
+                #would be stuck in the state it was when "set"
+                endpoints = [Endpoint.find_one(endpoint_id=endpoint.id)]
+        else:
+            if endpoint == "*":
+                endpoints = Endpoint.find_all(scope=True)
+            else:
+                endpoint  = Endpoint.find_one(ip_port=endpoint)
+                if endpoint is None:
+                    raise ValueError("Supplied endpoint isn't in workspace")
+                endpoints = [endpoint]
+        ret = []
+        for endpoint in endpoints:
+            if scanned is None:
+                ret.append(endpoint)
+            else:
+                if endpoint.scanned == scanned:
+                   ret.append(endpoint)
+        return ret
+
     def enumTargets(self,connection=None,working=None):
         """Returns a list of all the :class:`Connections` to target
     
@@ -320,19 +353,14 @@ class Workspace():
         for connection in targets:
             connection.run(payload, self.workspace_folder, stmt)
 
-    def scanTarget(self, target, gateway=None):
-        if not isinstance(target, Endpoint):
-            target = Endpoint.find_one(ip_port=target)
-        if gateway is not None:
-            if gateway == "local":
-                gateway = None
-            else:
-                gateway = Connection.fromTarget(gateway)
-        else:
-            gateway = "auto"
-        working = target.scan(gateway=gateway)
-        return working
-
+    def scan(self, targets, gateway=None):
+        if gateway == "local":
+            gateway = None
+        elif gateway != "auto":
+            gateway = Connection.fromTarget(gateway)
+        
+        for endpoint in targets:
+            endpoint.scan(gateway=gateway)
 
     def connect(self, targets, gateway, verbose):
         if gateway == "local":
@@ -465,14 +493,16 @@ class Workspace():
             print("Could reach target directly, path added.")
             return
         
-        for h in Path.getHostsOrderedClosest():
-            e = h.closest_endpoint
-            gateway = Connection.find_one(endpoint=e)
+        hosts = Host.find_all(scope=True)
+        hosts.sort(key=lambda h: h.distance)
+        for host in hosts:
+            endpoint = host.closest_endpoint
+            gateway = Connection.find_one(endpoint=endpoint)
             working = dst.scan(gateway=gateway, silent=True)
             if working:
-                p = Path(h, dst)
+                p = Path(host, dst)
                 p.save()
-                print("Working with gw "+str(e)+" (host "+str(h)+")")
+                print("Working with gw "+str(endpoint)+" (host "+str(host)+")")
                 return
         return
 

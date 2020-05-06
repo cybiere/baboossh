@@ -180,10 +180,10 @@ class Endpoint():
                 return None
             c.execute('''SELECT ip,port FROM endpoints WHERE id=?''',(endpoint_id,))
         elif ip_port is not None:
-            ip,sep,port = endpoint.partition(":")
+            ip,sep,port = ip_port.partition(":")
             if port == "":
                 raise ValueError
-            c.execute('''SELECT id FROM endpoints WHERE ip=? and port=?''',(ip,port))
+            c.execute('''SELECT ip,port FROM endpoints WHERE ip=? and port=?''',(ip,port))
         else:
             c.close()
             return None

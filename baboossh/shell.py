@@ -747,32 +747,27 @@ class Shell(cmd2.Cmd):
 #################################################################
 
     __parser_scan = argparse.ArgumentParser(prog="scan")
+    __parser_scan.add_argument("-f", "--force", help="force scanning even if already done", action="store_true")
     __parser_scan.add_argument("-g", "--gateway", help="force specific gateway", choices_method=__get_option_gateway)
     __parser_scan.add_argument('endpoint', help='Endpoint', nargs="?", choices_method=__get_option_endpoint)
 
     @cmd2.with_argparser(__parser_scan)
     def do_scan(self, stmt):
         '''Scan endpoint to check connectivity and supported authentication methods'''
-        target = vars(stmt)['endpoint']
+        endpoint = vars(stmt)['endpoint']
         gateway = vars(stmt)['gateway']
-        if target is not None:
-            try:
-                self.workspace.scanTarget(target, gateway=gateway)
-            except NoPathException:
-                print("No path to target, try `path find "+str(target)+"` first or force a gateway with `-g`.")
-            except Exception as e:
-                print("Targeted scan failed : "+str(e))
-            return
-        try:
-            endpoints, users, creds = self.workspace.parseOptionsTarget()
-        except:
-            return
-        nb_iter = len(endpoints)
-        if nb_iter > 1:
-            if not yesNo("This will attempt up to "+str(nb_iter)+" scans. Proceed ?", False):
+        force = vars(stmt)['force']
+        if gateway is None:
+            gateway = "auto"
+
+        targets = self.workspace.enumEndpointTargets(endpoint,scanned=None if force else False)
+
+        nb_targets = len(targets)
+        if nb_targets > 1:
+            if not yesNo("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):
                 return
-        for endpoint in endpoints:
-            self.workspace.scanTarget(endpoint, gateway=gateway)
+
+        self.workspace.scan(targets, gateway=gateway)
 
 #################################################################
 ###################          CONNECT          ###################

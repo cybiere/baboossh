@@ -98,7 +98,7 @@ class Connection():
             if gateway_to.distance is not None and gateway_to.distance == 0:
                 return None
             try:
-                closest_host = Path.getPrevHop(gateway_to)
+                closest_host = Host.find_one(prev_hop_to=gateway_to)
             except NoPathException as exc:
                 raise exc
             if closest_host is None:
