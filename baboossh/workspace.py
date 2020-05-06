@@ -272,7 +272,7 @@ class Workspace():
                     raise ValueError("No matching Host name in workspace")
                 ret = []
                 for host in hosts:
-                    ret.append(Connection.find_one(endpoint=host.getClosestEndpoint()))
+                    ret.append(Connection.find_one(endpoint=host.closest_endpoint))
                 return ret
             else:
                 auth,sep,endpoint = connection.partition('@')
@@ -367,7 +367,7 @@ class Workspace():
             if len(hosts) > 1:
                 print("Several hosts corresponding. Please target endpoint.")
                 return False
-            dst = str(hosts[0].getClosestEndpoint())
+            dst = str(hosts[0].closest_endpoint)
         try:
             dst = Endpoint.find_one(ip_port=dst)
         except:
@@ -387,7 +387,7 @@ class Workspace():
         if chain[0] is None:
             chain[0] = "Local"
         if asIp:
-            print(" > ".join(str(link.getClosestEndpoint()) if isinstance(link,Host) else str(link) for link in chain))
+            print(" > ".join(str(link.closest_endpoint) if isinstance(link,Host) else str(link) for link in chain))
         else:
             print(" > ".join(str(link) for link in chain))
 
@@ -466,7 +466,7 @@ class Workspace():
             return
         
         for h in Path.getHostsOrderedClosest():
-            e = h.getClosestEndpoint()
+            e = h.closest_endpoint
             gateway = Connection.find_one(endpoint=e)
             working = dst.scan(gateway=gateway, silent=True)
             if working:

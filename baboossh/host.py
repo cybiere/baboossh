@@ -68,7 +68,8 @@ class Host():
         c.close()
         return row[0];
 
-    def getClosestEndpoint(self):
+    @property
+    def closest_endpoint(self):
         """Returns the `Host`\ 's closest :class:`Endpoint`"""
         
         c = dbConn.get().cursor()

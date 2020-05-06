@@ -64,36 +64,10 @@ class Endpoint():
     def port(self, port):
         self.__port = int(port)
 
-    def getConnection(self,scope=True):
-        """Get a :class:`.Connection` to the Endpoint
-
-        Find a :class:`.Connection` (in scope depending on the arguments) to 
-        the Endpoint. 
-
-        Connections are sorted to prioritize non-root. The first Connection 
-        matching the arguments is returned.
-
-        Args:
-            scope (bool):
-                Find :class:`.Connection` in scope (`True`), out of scope (`False`) or both (`None`)
-
-        Returns:
-            A :class:`.Connection` matching the criteria or `None`
-        """
-
+    @property
+    def connection(self):
         from baboossh import Connection
-        c = dbConn.get().cursor()
-        for row in c.execute('''SELECT id FROM connections WHERE endpoint=? ORDER BY root DESC''',(self.id,)):
-            connection = Connection.find_one(connection_id=row[0])
-            if scope is None:
-                c.close()
-                return connection
-            elif scope == connection.scope:
-                c.close()
-                return connection
-        c.close()
-        return None
-
+        return Connection.find_one(endpoint=self)
 
     def save(self):
         """Save the Endpoint in database
@@ -223,33 +197,6 @@ class Endpoint():
     def __str__(self):
         return self.ip+":"+str(self.port)
 
-    def getGatewayConnection(self):
-        """Returns a working connection to a gateway for the Endpoint
-
-        Return a connection to an endpoint from which the current Endpoint can be
-        reached. If you're familiar with the "NextHop" in a network, think of it
-        as a "PreviousHop"
-
-        Returns:
-            A working :class:`.Connection` to the gateway or `None`
-
-        Raises:
-            NoPathException: if no :class:`Path` exists to the Endpoint
-        """
-
-        #Direct access from Local
-        if self.distance is not None and self.distance == 0:
-            return None
-
-        from baboossh import Path
-        try:
-            closest = Path.getPrevHop(self)
-        except NoPathException as exc:
-            raise exc
-        if closest is None:
-            return None
-        return closest.getClosestEndpoint().getConnection()
-
     @classmethod
     def search(cls,field,val,showAll=False):
         """Search in the workspace for an `Endpoint`
@@ -364,7 +311,8 @@ class Endpoint():
         """
         if gateway == "auto":
             try:
-                gateway = self.getGatewayConnection()
+                from baboossh import Connection
+                gateway = Connection.find_one(gateway_to=self)
             except NoPathException as exc:
                 raise exc
         if gateway is not None:

@@ -1,5 +1,6 @@
 import sqlite3
 from baboossh import dbConn,Extensions, Endpoint, User, Creds, Path, Host
+from baboossh.exceptions import *
 import asyncio, asyncssh, sys
 
 class Connection():
@@ -81,31 +82,51 @@ class Connection():
 
 
     @classmethod
-    def find_one(cls,connection_id=None, endpoint=None):
+    def find_one(cls,connection_id=None, endpoint=None, scope=None, gateway_to=None):
         """Find a `Connection` by its id or endpoint
 
         Args:
             connection_id (int): the `Connection` id to search
-            connection_endpoint (:class:`Endpoint`): the `Connection` endpoint to search
+            endpoint (:class:`Endpoint`): the `Connection` endpoint to search
+            gateway_to (:class:`Endpoint`): the `Connection` to use as a gateway to the endpoint
 
         Returns:
             A single `Connection` or `None`.
         """
 
+        if gateway_to is not None:
+            if gateway_to.distance is not None and gateway_to.distance == 0:
+                return None
+            try:
+                closest_host = Path.getPrevHop(gateway_to)
+            except NoPathException as exc:
+                raise exc
+            if closest_host is None:
+                return None
+            return cls.find_one(endpoint=closest_host.closest_endpoint,scope=True)
+
         c = dbConn.get().cursor()
         if connection_id is not None:
-            c.execute('SELECT endpoint,user,cred FROM connections WHERE id=?',(connection_id,))
+            req = c.execute('SELECT endpoint,user,cred FROM connections WHERE id=?',(connection_id,))
         elif endpoint is not None:
-            c.execute('SELECT endpoint,user,cred FROM connections WHERE endpoint=? ORDER BY root ASC',(endpoint.id,))
+            req = c.execute('SELECT endpoint,user,cred FROM connections WHERE endpoint=? ORDER BY root ASC',(endpoint.id,))
         else:
             c.close()
             return None
-
-        row = c.fetchone()
+        if scope is None:
+            row = c.fetchone()
+            c.close()
+            if row is None:
+                return None
+            return Connection(Endpoint.find_one(endpoint_id=row[0]),User.find_one(user_id=row[1]),Creds.find_one(creds_id=row[2]))
+        for row in req:
+            conn = Connection(Endpoint.find_one(endpoint_id=row[0]),User.find_one(user_id=row[1]),Creds.find_one(creds_id=row[2]))
+            if scope == conn.scope:
+               c.close()
+               return conn
         c.close()
-        if row is None:
-            return None
-        return Connection(Endpoint.find_one(endpoint_id=row[0]),User.find_one(user_id=row[1]),Creds.find_one(creds_id=row[2]))
+        return None
+
 
     @classmethod
     def find_all(cls,endpoint=None,user=None,creds=None):
@@ -150,7 +171,7 @@ class Connection():
             endpoint = Endpoint.find_one(ip_port=arg)
             if endpoint is None:
                 raise ValueError("Supplied endpoint isn't in workspace")
-            connection = endpoint.getConnection()
+            connection = cls.find_one(endpoint=endpoint)
             if connection == None:
                 raise ValueError("No working connection for supplied endpoint")
             return connection
@@ -210,7 +231,7 @@ class Connection():
             if isinstance(gateway,asyncssh.SSHClientConnection):
                 gw=gateway
             elif gateway == "auto":
-                gateway = self.endpoint.getGatewayConnection()
+                gateway = Connection.find_one(gateway_to=self.endpoint)
                 if gateway is not None:
                     gw = gateway.initConnect(verbose=verbose)
                 else:

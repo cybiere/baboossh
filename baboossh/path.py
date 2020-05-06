@@ -204,12 +204,12 @@ class Path():
         """
         
         try:
-            prevHop = cls.getPrevHop(dst)
+            previous_hop = cls.getPrevHop(dst)
         except NoPathException as exc:
             raise exc
         if prevHop == None:
             return [None]
-        chain = cls.getPath(prevHop.getClosestEndpoint(),first=False)
+        chain = cls.getPath(previous_hop.closest_endpoint,first=False)
         if first:
             chain.append(dst)
             return chain

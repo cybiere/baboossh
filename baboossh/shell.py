@@ -70,7 +70,7 @@ class Shell(cmd2.Cmd):
         ret = ["local"]
         endpoints = self.workspace.getEndpoints(scope=True)
         for endpoint in endpoints:
-            if endpoint.getConnection() is not None:
+            if endpoint.connection is not None:
                 ret.append(endpoint)
         return ret
 
@@ -283,7 +283,7 @@ class Shell(cmd2.Cmd):
         data = []
         for endpoint in endpoints:
             scope = "o" if endpoint.scope else ""
-            conn = endpoint.getConnection()
+            conn = endpoint.connection
             if conn is None:
                 conn = ""
             host = endpoint.host
@@ -331,7 +331,7 @@ class Shell(cmd2.Cmd):
                         continue
                 if conn is not None:
                     flag_conn = conn == "true"
-                    if (endpoint.getConnection() is None) == flag_conn:
+                    if (endpoint.connection is None) == flag_conn:
                         continue
             endpoint_list.append(endpoint)
         self.__endpoint_print(endpoint_list)
