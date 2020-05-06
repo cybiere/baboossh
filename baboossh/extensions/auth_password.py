@@ -28,7 +28,8 @@ class BaboosshExt():
     def getKwargs(self):
         return {"password":self.creds,"client_keys":None}
 
-    def getIdentifier(self):
+    @property
+    def identifier(self):
         return self.creds
 
     def toList(self):

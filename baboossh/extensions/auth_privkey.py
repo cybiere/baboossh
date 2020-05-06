@@ -94,8 +94,9 @@ class BaboosshExt():
         if self.haspass:
             return {"client_keys":[self.keypath],"passphrase":self.passphrase}
         return {"client_keys":[self.keypath]}
-
-    def getIdentifier(self):
+    
+    @property
+    def identifier(self):
         return self.keypath
 
     def toList(self):

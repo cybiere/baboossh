@@ -29,7 +29,7 @@ class Creds():
         self.scope = True
         self.found = None
         c = dbConn.get().cursor()
-        c.execute('SELECT id,scope,found FROM creds WHERE type=? AND identifier=?',(self.credsType, self.obj.getIdentifier()))
+        c.execute('SELECT id,scope,found FROM creds WHERE type=? AND identifier=?',(self.credsType, self.obj.identifier))
         savedCreds = c.fetchone()
         c.close()
         if savedCreds is not None:
@@ -52,15 +52,15 @@ class Creds():
                     scope = ?,
                     found = ?
                 WHERE id = ?''',
-                (self.credsType, self.credsContent, self.obj.getIdentifier(), self.scope, self.found.id if self.found is not None else None, self.id))
+                (self.credsType, self.credsContent, self.obj.identifier, self.scope, self.found.id if self.found is not None else None, self.id))
         else:
             #The creds doesn't exists in database : INSERT
             c.execute('''INSERT INTO creds(type,content,identifier,scope,found)
                 VALUES (?,?,?,?,?) ''',
-                (self.credsType, self.credsContent, self.obj.getIdentifier(),self.scope, self.found.id if self.found is not None else None))
+                (self.credsType, self.credsContent, self.obj.identifier,self.scope, self.found.id if self.found is not None else None))
             c.close()
             c = dbConn.get().cursor()
-            c.execute('SELECT id FROM creds WHERE type=? and identifier=?',(self.credsType,self.obj.getIdentifier()))
+            c.execute('SELECT id FROM creds WHERE type=? and identifier=?',(self.credsType,self.obj.identifier))
             self.id = c.fetchone()[0]
         c.close()
         dbConn.get().commit()
@@ -145,8 +145,4 @@ class Creds():
 
     def __str__(self):
         return "#"+str(self.id)
-
-    def getIdentifier(self):
-        """Returns an identifier to distinguish the `Creds`"""
-        return self.obj.getIdentifier()
 
