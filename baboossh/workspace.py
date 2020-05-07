@@ -1,8 +1,6 @@
 import os
 import re
-import threading
-import asyncio
-from baboossh import *
+from baboossh import User, Creds, Host, Endpoint, Tunnel, Path, Connection, dbConn, Extensions, workspacesDir
 
 class Workspace():
     """A container to hold all related objects
@@ -75,11 +73,23 @@ class Workspace():
 #################################################################
 
     #Manually add a endpoint
-    def addEndpoint(self, ipaddr, port):
-        newEndpoint = Endpoint(ipaddr, port)
-        newEndpoint.save()
+    def endpoint_add(self, ipaddr, port):
+        """Add an :class:`Endpoint` to the workspace
 
-    def delEndpoint(self, endpoint):
+        Args:
+            ipaddr (str): the `Endpoint` 's IP address
+            ipaddr (str): the `Endpoint` 's port
+        """
+
+        Endpoint(ipaddr, port).save()
+
+    def endpoint_del(self, endpoint):
+        """Remove an :class:`Endpoint` from the workspace
+
+        Args:
+            endpoint (str): the `Endpoint` 's string (ip:port)
+        """
+
         try:
             endpoint = Endpoint.find_one(ip_port=endpoint)
         except ValueError:
@@ -94,11 +104,22 @@ class Workspace():
 ###################           USERS           ###################
 #################################################################
 
-    def addUser(self, name):
-        newUser = User(name)
-        newUser.save()
+    def user_add(self, name):
+        """Add a :class:`User` to the workspace
 
-    def delUser(self, name):
+        Args:
+            name (str): The `User` 's username
+        """
+
+        User(name).save()
+
+    def user_del(self, name):
+        """Remove a :class:`User` from the workspace
+
+        Args:
+            name (str): The `User` 's username
+        """
+
         user = User.find_one(name=name)
         if user is None:
             print("Could not find user.")
@@ -109,7 +130,13 @@ class Workspace():
 ###################           HOSTS           ###################
 #################################################################
 
-    def delHost(self, host):
+    def host_del(self, host):
+        """Remove a :class:`Host` from the workspace
+
+        Args:
+            name (str): The `Host` 's username
+        """
+
         if host not in [host.name for host in Host.find_all()]:
             print("Not a known Host name.")
             return False
@@ -124,35 +151,60 @@ class Workspace():
 ###################           CREDS           ###################
 #################################################################
 
-    def addCreds(self, credsType, stmt):
-        credsContent = Extensions.getAuthMethod(credsType).fromStatement(stmt)
-        newCreds = Creds(credsType, credsContent)
-        newCreds.save()
-        return newCreds.id
+    def creds_add(self, creds_type, stmt):
+        """Add :class:`Creds` to the workspace
 
-    def showCreds(self, credsId):
-        if credsId[0] == '#':
-            credsId = credsId[1:]
-        creds = Creds.find_one(creds_id=credsId)
-        if creds == None:
+        Args:
+            creds_type (str): The `Creds` ' object type
+            stmt (`argparse.Namespace`): the rest of the command be parsed by the object
+        """
+
+        content = Extensions.getAuthMethod(creds_type).fromStatement(stmt)
+        new_creds = Creds(creds_type, content)
+        new_creds.save()
+        return new_creds.id
+
+    def creds_show(self, creds_id):
+        """Show a :class:`Creds` ' properties
+
+        Args:
+            creds_id (str): The `Creds` ' id
+        """
+
+        if creds_id[0] == '#':
+            creds_id = creds_id[1:]
+        creds = Creds.find_one(creds_id=creds_id)
+        if creds is None:
             print("Specified creds not found")
             return
         creds.show()
 
-    def editCreds(self, credsId):
-        if credsId[0] == '#':
-            credsId = credsId[1:]
-        creds = Creds.find_one(creds_id=credsId)
-        if creds == None:
+    def creds_edit(self, creds_id):
+        """Edit a :class:`Creds` ' properties
+
+        Args:
+            creds_id (str): The `Creds` ' id
+        """
+
+        if creds_id[0] == '#':
+            creds_id = creds_id[1:]
+        creds = Creds.find_one(creds_id=creds_id)
+        if creds is None:
             print("Specified creds not found")
             return
         creds.edit()
 
-    def delCreds(self, credsId):
-        if credsId[0] == '#':
-            credsId = credsId[1:]
-        creds = Creds.find_one(creds_id=credsId)
-        if creds == None:
+    def creds_del(self, creds_id):
+        """Delete a :class:`Creds` ' from the workspace
+
+        Args:
+            creds_id (str): The `Creds` ' id
+        """
+
+        if creds_id[0] == '#':
+            creds_id = creds_id[1:]
+        creds = Creds.find_one(creds_id=creds_id)
+        if creds is None:
             print("Specified creds not found")
             return False
         return creds.delete()
@@ -161,29 +213,41 @@ class Workspace():
 ###################          OPTIONS          ###################
 #################################################################
 
-    def setOption(self, option, value):
+    def set_option(self, option, value):
+        """Set an option for the `Workspace`
+
+        Args:
+            option (str): the option to set
+            value (str): the new value
+        """
+
         if option == 'connection':
             if value is None:
                 self.options['endpoint'] = None
                 self.options['user'] = None
                 self.options['creds'] = None
-                for option in ['endpoint', 'user', 'creds']:
-                    print(option+" => "+str(self.options[option]))
-                return
-            if '@' not in value or ':' not in value:
+
+                print("endpoint => "+str(self.options['endpoint']))
+                print("user => "+str(self.options['user']))
+                print("creds => "+str(self.options['creds']))
+
+            elif '@' not in value or ':' not in value:
                 return
             connection = Connection.fromTarget(value)
-            if connection == None:
+            if connection is None:
                 return
             self.options['endpoint'] = connection.endpoint
             self.options['user'] = connection.user
             self.options['creds'] = connection.creds
-            for option in ['endpoint', 'user', 'creds']:
-                print(option+" => "+str(self.options[option]))
-            return
+
+            print("endpoint => "+str(self.options['endpoint']))
+            print("user => "+str(self.options['user']))
+            print("creds => "+str(self.options['creds']))
+
         if not option in list(self.options.keys()):
             raise ValueError(option+" isn't a valid option.")
-        if value != None:
+
+        if value is not None:
             value = value.strip()
             if option == "endpoint":
                 endpoint = Endpoint.find_one(ip_port=value)
@@ -197,10 +261,10 @@ class Workspace():
                 value = user
             elif option == "creds":
                 if value[0] == '#':
-                    credId = value[1:]
+                    creds_id = value[1:]
                 else:
-                    credId = value
-                creds = Creds.find_one(creds_id=credId)
+                    creds_id = value
+                creds = Creds.find_one(creds_id=creds_id)
                 if creds is None:
                     raise ValueError
                 value = creds
@@ -215,16 +279,22 @@ class Workspace():
 ###################        CONNECTIONS        ###################
 #################################################################
 
-    def delConnection(self, target):
+    def connection_del(self, target):
+        """Remove a :class:`Connection` from the workspace
+
+        Args:
+            target (str): the `Connection` string
+        """
+
         connection = Connection.fromTarget(target)
         if connection is None:
             print("Connection not found.")
-            return false
+            return False
         return connection.delete()
 
-    def enumEndpointTargets(self,endpoint=None,scanned=None):
+    def enum_scan(self, endpoint=None, scanned=None):
         """Returns a list of all the :class:`Endpoints` to target for a scan
-    
+
         Args:
             endpoint: The target string passed to the command (if any)
         """
@@ -242,7 +312,7 @@ class Workspace():
             if endpoint == "*":
                 endpoints = Endpoint.find_all(scope=True)
             else:
-                endpoint  = Endpoint.find_one(ip_port=endpoint)
+                endpoint = Endpoint.find_one(ip_port=endpoint)
                 if endpoint is None:
                     raise ValueError("Supplied endpoint isn't in workspace")
                 endpoints = [endpoint]
@@ -252,12 +322,12 @@ class Workspace():
                 ret.append(endpoint)
             else:
                 if endpoint.scanned == scanned:
-                   ret.append(endpoint)
+                    ret.append(endpoint)
         return ret
 
-    def enumTargets(self,connection=None,working=None):
+    def enum_connect(self, connection=None, working=None):
         """Returns a list of all the :class:`Connections` to target
-    
+
         Args:
             connection: The target string passed to the command (if any)
         """
@@ -291,41 +361,40 @@ class Workspace():
                 for host in hosts:
                     ret.append(Connection.find_one(endpoint=host.closest_endpoint))
                 return ret
+            auth, sep, endpoint = connection.partition('@')
+            if endpoint == "*":
+                endpoints = Endpoint.find_all(scope=True)
             else:
-                auth,sep,endpoint = connection.partition('@')
-                if endpoint == "*":
-                    endpoints = Endpoint.find_all(scope=True)
-                else:
-                    endpoint  = Endpoint.find_one(ip_port=endpoint)
-                    if endpoint is None:
-                        raise ValueError("Supplied endpoint isn't in workspace")
-                    endpoints = [endpoint]
+                endpoint = Endpoint.find_one(ip_port=endpoint)
+                if endpoint is None:
+                    raise ValueError("Supplied endpoint isn't in workspace")
+                endpoints = [endpoint]
 
-                user,sep,cred = auth.partition(":")
-                if sep == "":
-                    raise ValueError("No credentials supplied")
+            user, sep, cred = auth.partition(":")
+            if sep == "":
+                raise ValueError("No credentials supplied")
 
-                if user == "*":
-                    users = User.find_all(scope=True)
-                else:
-                    user = User.find_one(name=user)
-                    if user is None:
-                        raise ValueError("Supplied user isn't in workspace")
-                    users = [user]
-                if cred == "*":
-                    creds = Creds.find_all(scope=True)
-                else:
-                    if cred[0] == "#":
-                        cred = cred[1:]
-                    cred = Creds.find_one(creds_id=cred)
-                    if cred is None:
-                        raise ValueError("Supplied credentials aren't in workspace")
-                    creds = [cred]
+            if user == "*":
+                users = User.find_all(scope=True)
+            else:
+                user = User.find_one(name=user)
+                if user is None:
+                    raise ValueError("Supplied user isn't in workspace")
+                users = [user]
+            if cred == "*":
+                creds = Creds.find_all(scope=True)
+            else:
+                if cred[0] == "#":
+                    cred = cred[1:]
+                cred = Creds.find_one(creds_id=cred)
+                if cred is None:
+                    raise ValueError("Supplied credentials aren't in workspace")
+                creds = [cred]
         ret = []
         for endpoint in endpoints:
             for user in users:
                 for cred in creds:
-                    c = Connection(endpoint,user,cred)
+                    c = Connection(endpoint, user, cred)
                     if working is None:
                         ret.append(c)
                     else:
@@ -334,15 +403,30 @@ class Workspace():
         return ret
 
     def run(self, targets, payload, stmt):
+        """Run a payload on a list of :class:`Connection`
+
+        Args:
+            targets ([:class:`Connection`]): the target list
+            payload (:class:`Payload`): the payload to run
+            stmt (`argparse.Namespace`): the command parameters to pass to the payload
+        """
+
         for connection in targets:
             connection.run(payload, self.workspace_folder, stmt)
 
     def scan(self, targets, gateway=None):
+        """Scan a list of :class:`Endpoint`
+
+        Args:
+            targets ([:class:`Endpoint`]): the target list
+            gateway (str): the Connection to use as a gateway
+        """
+
         if gateway == "local":
             gateway = None
         elif gateway != "auto":
             gateway = Connection.fromTarget(gateway)
-        
+
         for endpoint in targets:
             endpoint.scan(gateway=gateway)
 
@@ -361,24 +445,24 @@ class Workspace():
             if working:
                 if gateway != "auto":
                     if gateway is None:
-                        pathSrc = None
+                        path_src = None
                     elif gateway.endpoint.host is None:
                         continue
                     else:
-                        pathSrc = gateway.endpoint.host
-                    p = Path(pathSrc, connection.endpoint)
+                        path_src = gateway.endpoint.host
+                    p = Path(path_src, connection.endpoint)
                     p.save()
 
 #################################################################
 ###################           PATHS           ###################
 #################################################################
 
-    def getPathToDst(self, dst, asIp=False):
+    def path_find_existing(self, dst, as_ip=False):
         if dst in [host.name for host in Host.find_all()]:
             hosts = Host.find_all(name=dst)
             if len(hosts) > 1:
                 print("Several hosts corresponding. Please target endpoint.")
-                return False
+                return
             dst = str(hosts[0].closest_endpoint)
         try:
             dst = Endpoint.find_one(ip_port=dst)
@@ -398,12 +482,12 @@ class Workspace():
             return
         if chain[0] is None:
             chain[0] = "local"
-        if asIp:
-            print(" > ".join(str(link.closest_endpoint) if isinstance(link,Host) else str(link) for link in chain))
+        if as_ip:
+            print(" > ".join(str(link.closest_endpoint) if isinstance(link, Host) else str(link) for link in chain))
         else:
             print(" > ".join(str(link) for link in chain))
 
-    def delPath(self, src, dst):
+    def path_del(self, src, dst):
         if src.lower() != "local":
             if src not in [host.name for host in Host.find_all()]:
                 print("Not a known Host name.")
@@ -431,7 +515,7 @@ class Workspace():
             return False
         return p.delete()
 
-    def addPath(self, src, dst):
+    def path_add(self, src, dst):
         if src.lower() != "local":
             if src not in [host.name for host in Host.find_all()]:
                 print("Not a known Host name.")
@@ -457,7 +541,7 @@ class Workspace():
         p.save()
         print("Path saved")
 
-    def findPath(self, dst):
+    def path_find_new(self, dst):
         try:
             dst = Endpoint.find_one(ip_port=dst)
         except:
@@ -470,13 +554,12 @@ class Workspace():
             print("The destination should be reachable directly from the host.")
             return
 
-        workingDirect = dst.scan(gateway=None, silent=True)
-        if workingDirect:
+        if dst.scan(gateway=None, silent=True):
             p = Path(None, dst)
             p.save()
             print("Could reach target directly, path added.")
             return
-        
+
         hosts = Host.find_all(scope=True)
         hosts.sort(key=lambda h: h.distance)
         for host in hosts:
@@ -494,12 +577,12 @@ class Workspace():
 ###################           SCOPE           ###################
 #################################################################
 
-    def identifyObject(self, target):
+    def identify_object(self, target):
         if target[0] == "#":
-            credsId = target[1:]
+            creds_id = target[1:]
         else:
-            credsId = target
-        creds = Creds.find_one(creds_id=credsId)
+            creds_id = target
+        creds = Creds.find_one(creds_id=creds_id)
         if creds is not None:
             return creds
         user = User.find_one(name=target)
@@ -521,9 +604,9 @@ class Workspace():
         return None
 
     def scope(self, target):
-        obj = self.identifyObject(target)
+        obj = self.identify_object(target)
         if obj is None:
-            return False
+            return
         obj.scope = not obj.scope
         obj.save()
 
@@ -531,10 +614,7 @@ class Workspace():
 ###################          TUNNELS          ###################
 #################################################################
 
-    def getTunnels(self):
-        return list(self.tunnels.values())
-
-    def openTunnel(self, target, port=None):
+    def tunnel_open(self, target, port=None):
         if port is not None and port in self.tunnels.keys():
             print("A tunnel is already opened at port "+str(port))
             return False
@@ -547,7 +627,7 @@ class Workspace():
         self.tunnels[t.port] = t
         return True
 
-    def closeTunnel(self, port):
+    def tunnel_close(self, port):
         if port not in self.tunnels.keys():
             print("No tunnel on port "+str(port))
         t = self.tunnels.pop(port)
@@ -580,13 +660,13 @@ class Workspace():
             ret = ret + Path.find_all()
         return ret
 
-    def searchEndpoints(self, field, val, showAll=False):
-        return Endpoint.search(field, val, showAll)
+    def endpoint_search(self, field, val, show_all=False):
+        return Endpoint.search(field, val, show_all)
 
-    def searchHosts(self, field, val, showAll=False):
-        return Host.search(field, val, showAll)
+    def host_search(self, field, val, show_all=False):
+        return Host.search(field, val, show_all)
 
-    def getSearchFields(self, obj):
+    def search_fields(self, obj):
         if obj == "Endpoint":
             return Endpoint.search_fields
         if obj == "Host":

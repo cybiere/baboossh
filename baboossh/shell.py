@@ -23,15 +23,25 @@ from baboossh.exceptions import *
 from baboossh.params import Extensions, workspacesDir
 from baboossh.workspace import Workspace
 
-def yesNo(prompt,default=None):
+def yes_no(prompt, default=None):
+    """Simple Yes/No prompt to ask questions
+
+    Args:
+        prompt (str): The question to ask
+        default (bool): The default answer
+
+    Returns:
+        A `bool` with `True` for yes else `False`
+    """
+
     if default is None:
-        choices = "[y,n]"
+        choices = "[y, n]"
     elif default:
-        choices = "[Y,n]"
+        choices = "[Y, n]"
     else:
-        choices = "[y,N]"
+        choices = "[y, N]"
     a = ""
-    while a not in ["y","n"]:
+    while a not in ["y", "n"]:
         a = input(prompt+" "+choices+" ").lower()
         if a == "" and default is not None:
             a = "y" if default else "n"
@@ -58,51 +68,51 @@ class Shell(cmd2.Cmd):
 #################################################################
 
     def __get_option_creds(self):
-        return self.workspace.get_objects(creds=True,scope=True)
+        return self.workspace.get_objects(creds=True, scope=True)
 
     def __get_option_hosts(self):
-        return self.workspace.get_objects(hosts=True,scope=True)
+        return self.workspace.get_objects(hosts=True, scope=True)
 
     def __get_arg_workspaces(self):
         return [name for name in os.listdir(workspacesDir) if os.path.isdir(os.path.join(workspacesDir, name))]
 
     def __get_option_gateway(self):
         ret = ["local"]
-        endpoints = self.workspace.get_objects(endpoints=True,scope=True)
+        endpoints = self.workspace.get_objects(endpoints=True, scope=True)
         for endpoint in endpoints:
             if endpoint.connection is not None:
                 ret.append(endpoint)
         return ret
 
     def __get_option_user(self):
-        return self.workspace.get_objects(users=True,scope=True)
+        return self.workspace.get_objects(users=True, scope=True)
 
     def __get_option_endpoint(self):
-        return self.workspace.get_objects(endpoints=True,scope=True)
+        return self.workspace.get_objects(endpoints=True, scope=True)
 
     def __get_option_payload(self):
         return Extensions.payloadsAvail()
 
     def __get_option_connection(self):
-        return self.workspace.get_objects(connections=True,scope=True)
+        return self.workspace.get_objects(connections=True, scope=True)
 
     def __get_search_fields_endpoint(self):
-        return self.workspace.getSearchFields("Endpoint")
+        return self.workspace.search_fields("Endpoint")
 
     def __get_search_fields_host(self):
-        return self.workspace.getSearchFields("Host")
+        return self.workspace.search_fields("Host")
 
     def __get_open_tunnels(self):
         return self.workspace.get_objects(tunnels=True)
 
     def __get_run_targets(self):
-        return self.workspace.get_objects(connections=True,hosts=True,endpoints=True,scope=True)
+        return self.workspace.get_objects(connections=True, hosts=True, endpoints=True, scope=True)
 
     def __get_host_or_local(self):
-        return self.workspace.get_objects(local=True,hosts=True,scope=True)
+        return self.workspace.get_objects(local=True, hosts=True, scope=True)
 
     def __get_endpoint_or_host(self):
-        return self.workspace.get_objects(hosts=True,endpoints=True,scope=True)
+        return self.workspace.get_objects(hosts=True, endpoints=True, scope=True)
 
 #################################################################
 ###################         WORKSPACE         ###################
@@ -129,8 +139,8 @@ class Shell(cmd2.Cmd):
             return
         try:
             new_workspace = Workspace.create(name)
-        except Exception as exc:
-            print("Workspace creation failed: "+str(exce))
+        except (OSError, ValueError) as exc:
+            print("Workspace creation failed: "+str(exc))
         else:
             self.workspace = new_workspace
 
@@ -142,8 +152,8 @@ class Shell(cmd2.Cmd):
             return
         try:
             new_workspace = Workspace(name)
-        except:
-            print("Workspace change failed")
+        except ValueError as exc:
+            print("Workspace change failed: "+str(exc))
         else:
             self.workspace = new_workspace
 
@@ -156,7 +166,7 @@ class Shell(cmd2.Cmd):
         if self.workspace.name == name:
             print("Cannot delete current workspace, please change workspace first.")
             return
-        if not yesNo("Are you sure you want to delete workspace "+name+"?", default=False):
+        if not yes_no("Are you sure you want to delete workspace "+name+"?", default=False):
             return
         shutil.rmtree(os.path.join(workspacesDir, name))
         print("Workspace deleted !")
@@ -179,9 +189,9 @@ class Shell(cmd2.Cmd):
     @cmd2.with_argparser(__parser_wspace)
     def do_workspace(self, stmt: argparse.Namespace):
         '''Manage workspaces
-        
+
         List, add, delete and switch workspaces.
-    
+
         '''
         func = getattr(stmt, 'func', None)
         if func is not None:
@@ -210,7 +220,7 @@ class Shell(cmd2.Cmd):
     def __host_list(self, stmt):
         print("Current hosts in workspace:")
         show_all = getattr(stmt, 'all', False)
-        hosts = self.workspace.get_objects(hosts=true,scope=None if show_all else True)
+        hosts = self.workspace.get_objects(hosts=True, scope=None if show_all else True)
         if not hosts:
             print("No hosts in current workspace")
             return
@@ -233,7 +243,7 @@ class Shell(cmd2.Cmd):
 
     def __host_del(self, stmt):
         host = getattr(stmt, 'host', None)
-        return self.workspace.delHost(host)
+        return self.workspace.host_del(host)
 
     __parser_host = argparse.ArgumentParser(prog="host")
     __subparser_host = __parser_host.add_subparsers(title='Actions', help='Available actions')
@@ -296,7 +306,7 @@ class Shell(cmd2.Cmd):
         reachable = getattr(stmt, 'reachable', None)
         scanned = getattr(stmt, 'scanned', None)
         conn = getattr(stmt, 'conn', None)
-        endpoints = self.workspace.get_objects(endpoints=True,scope=None if show_all else True)
+        endpoints = self.workspace.get_objects(endpoints=True, scope=None if show_all else True)
         if not endpoints:
             print("No endpoints in current workspace")
             return
@@ -322,7 +332,7 @@ class Shell(cmd2.Cmd):
         ip_add = vars(stmt)['ip']
         port = str(vars(stmt)['port'])
         try:
-            self.workspace.addEndpoint(ip_add, port)
+            self.workspace.endpoint_add(ip_add, port)
         except Exception as e:
             print("Endpoint addition failed: "+str(e))
         else:
@@ -330,7 +340,7 @@ class Shell(cmd2.Cmd):
 
     def __endpoint_del(self, stmt):
         endpoint = vars(stmt)['endpoint']
-        return self.workspace.delEndpoint(endpoint)
+        return self.workspace.endpoint_del(endpoint)
 
     def __endpoint_search(self, stmt):
         show_all = getattr(stmt, 'all', False)
@@ -340,7 +350,7 @@ class Shell(cmd2.Cmd):
             print("Invalid field specified, use one of "+str(allowed_fields)+".")
             return
         val = vars(stmt)['val']
-        endpoints = self.workspace.searchEndpoints(field, val, show_all)
+        endpoints = self.workspace.endpoint_search(field, val, show_all)
         print("Search result for endpoints:")
         if not endpoints:
             print("No results")
@@ -387,7 +397,7 @@ class Shell(cmd2.Cmd):
     def __user_list(self, stmt):
         print("Current users in workspace:")
         show_all = getattr(stmt, 'all', False)
-        users = self.workspace.get_objects(users=True,scope=None if show_all else True)
+        users = self.workspace.get_objects(users=True, scope=None if show_all else True)
         if not users:
             print("No users in current workspace")
             return
@@ -400,7 +410,7 @@ class Shell(cmd2.Cmd):
     def __user_add(self, stmt):
         name = vars(stmt)['name']
         try:
-            self.workspace.addUser(name)
+            self.workspace.user_add(name)
         except Exception as e:
             print("User addition failed: "+str(e))
         else:
@@ -408,7 +418,7 @@ class Shell(cmd2.Cmd):
 
     def __user_del(self, stmt):
         name = vars(stmt)['name']
-        return self.workspace.delUser(name)
+        return self.workspace.user_del(name)
 
     __parser_user = argparse.ArgumentParser(prog="user")
     __subparser_user = __parser_user.add_subparsers(title='Actions', help='Available actions')
@@ -446,7 +456,7 @@ class Shell(cmd2.Cmd):
 
     def __creds_list(self, stmt):
         show_all = getattr(stmt, 'all', False)
-        creds = self.workspace.get_objects(creds=True,scope=None if show_all else True)
+        creds = self.workspace.get_objects(creds=True, scope=None if show_all else True)
         if not creds:
             print("No creds in current workspace")
             return
@@ -458,20 +468,20 @@ class Shell(cmd2.Cmd):
 
     def __creds_show(self, stmt):
         creds_id = vars(stmt)['id']
-        self.workspace.showCreds(creds_id)
+        self.workspace.creds_show(creds_id)
 
     def __creds_edit(self, stmt):
         creds_id = vars(stmt)['id']
-        self.workspace.editCreds(creds_id)
+        self.workspace.creds_edit(creds_id)
 
     def __creds_del(self, stmt):
         creds_id = vars(stmt)['id']
-        self.workspace.delCreds(creds_id)
+        self.workspace.creds_del(creds_id)
 
     def __creds_add(self, stmt):
         creds_type = vars(stmt)['type']
         try:
-            creds_id = self.workspace.addCreds(creds_type, stmt)
+            creds_id = self.workspace.creds_add(creds_type, stmt)
         except Exception as e:
             print("Credentials addition failed: "+str(e))
         else:
@@ -547,7 +557,7 @@ class Shell(cmd2.Cmd):
     def __connection_list(self, stmt):
         print("Available connections:")
         show_all = getattr(stmt, 'all', False)
-        connections = self.workspace.get_objects(connections=True,scope=None if show_all else True)
+        connections = self.workspace.get_objects(connections=True, scope=None if show_all else True)
         if not connections:
             print("No connections in current workspace")
             return
@@ -561,7 +571,7 @@ class Shell(cmd2.Cmd):
 
     def __connection_del(self, stmt):
         connection = getattr(stmt, "connection", None)
-        return self.workspace.delConnection(connection)
+        return self.workspace.connection_del(connection)
 
     __parser_connection = argparse.ArgumentParser(prog="connection")
     __subparser_connection = __parser_connection.add_subparsers(title='Actions', help='Available actions')
@@ -641,7 +651,7 @@ class Shell(cmd2.Cmd):
             elif option == "params":
                 value = " ".join(vars(stmt)['params'])
             try:
-                self.workspace.setOption(option, value)
+                self.workspace.set_option(option, value)
             except:
                 print("Invalid value for "+option)
 
@@ -671,22 +681,22 @@ class Shell(cmd2.Cmd):
 
     def __path_get(self, stmt):
         endpoint = vars(stmt)['endpoint']
-        asIp = getattr(stmt,"numeric",False)
-        self.workspace.getPathToDst(endpoint,asIp)
+        as_ip = getattr(stmt, "numeric", False)
+        self.workspace.path_find_existing(endpoint, as_ip)
 
     def __path_add(self, stmt):
         src = vars(stmt)['src']
         dst = vars(stmt)['dst']
-        self.workspace.addPath(src, dst)
+        self.workspace.path_add(src, dst)
 
     def __path_del(self, stmt):
         src = vars(stmt)['src']
         dst = vars(stmt)['dst']
-        self.workspace.delPath(src, dst)
+        self.workspace.path_del(src, dst)
 
     def __path_find(self, stmt):
         dst = vars(stmt)['dst']
-        self.workspace.findPath(dst)
+        self.workspace.path_find_new(dst)
 
     __parser_path = argparse.ArgumentParser(prog="path")
     __subparser_path = __parser_path.add_subparsers(title='Actions', help='Available actions')
@@ -738,11 +748,11 @@ class Shell(cmd2.Cmd):
         if gateway is None:
             gateway = "auto"
 
-        targets = self.workspace.enumEndpointTargets(endpoint,scanned=None if force else False)
+        targets = self.workspace.enum_scan(endpoint, scanned=None if force else False)
 
         nb_targets = len(targets)
         if nb_targets > 1:
-            if not yesNo("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):
+            if not yes_no("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):
                 return
 
         self.workspace.scan(targets, gateway=gateway)
@@ -758,11 +768,11 @@ class Shell(cmd2.Cmd):
     @cmd2.with_argparser(__parser_enum)
     def do_enum(self, stmt):
         '''List all targets with current parameters'''
-        connection = getattr(stmt,'connection',None)
+        connection = getattr(stmt, 'connection', None)
         working = getattr(stmt, 'working', None)
         if working is not None:
             working = working == "true"
-        targets = self.workspace.enumTargets(connection,working=working)
+        targets = self.workspace.enum_connect(connection, working=working)
         for t in targets:
             print(t)
 
@@ -775,20 +785,20 @@ class Shell(cmd2.Cmd):
     @cmd2.with_argparser(__parser_connect)
     def do_connect(self, stmt):
         '''Try connection to endpoint and identify host'''
-        connection = getattr(stmt,'connection',None)
+        connection = getattr(stmt, 'connection', None)
         verbose = vars(stmt)['verbose']
         force = vars(stmt)['force']
         gateway = getattr(stmt, 'gateway', "auto")
         if gateway is None:
             gateway = "auto"
 
-        targets = self.workspace.enumTargets(connection,working=None if force else False)
+        targets = self.workspace.enum_connect(connection, working=None if force else False)
         nb_targets = len(targets)
         if nb_targets > 1:
-            if not yesNo("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):
+            if not yes_no("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):
                 return
 
-        self.workspace.connect(targets,gateway,verbose)
+        self.workspace.connect(targets, gateway, verbose)
 
 
     __parser_run = argparse.ArgumentParser(prog="run")
@@ -803,7 +813,7 @@ class Shell(cmd2.Cmd):
     @cmd2.with_argparser(__parser_run)
     def do_run(self, stmt):
         '''Run a payload on a connection'''
-        connection = getattr(stmt,'connection',None)
+        connection = getattr(stmt, 'connection', None)
         payload = getattr(stmt, 'type', None)
         self._reset_completion_defaults()
 
@@ -823,10 +833,10 @@ class Shell(cmd2.Cmd):
             print("Error : No payload specified")
             return
 
-        targets = self.workspace.enumTargets(connection,working=True)
+        targets = self.workspace.enum_connect(connection, working=True)
         nb_targets = len(targets)
         if nb_targets > 1:
-            if not yesNo("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):
+            if not yes_no("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):
                 return
 
         self.workspace.run(targets, payload, stmt)
@@ -837,7 +847,7 @@ class Shell(cmd2.Cmd):
 
     def __tunnel_list(self, stmt):
         print("Current tunnels in workspace:")
-        tunnels = self.workspace.getTunnels()
+        tunnels = self.workspace.tunnels.values()
         if not tunnels:
             print("No tunnels in current workspace")
             return
@@ -849,11 +859,11 @@ class Shell(cmd2.Cmd):
     def __tunnel_open(self, stmt):
         connection_str = getattr(stmt, 'connection', None)
         port = getattr(stmt, 'port', None)
-        self.workspace.openTunnel(connection_str, port)
+        self.workspace.tunnel_open(connection_str, port)
 
     def __tunnel_close(self, stmt):
         port = getattr(stmt, 'port', None)
-        self.workspace.closeTunnel(port)
+        self.workspace.tunnel_close(port)
 
     __parser_tunnel = argparse.ArgumentParser(prog="tunnel")
     __subparser_tunnel = __parser_tunnel.add_subparsers(title='Actions', help='Available actions')
@@ -946,7 +956,7 @@ class Shell(cmd2.Cmd):
 #################################################################
 
     def __get_all_objects(self):
-        return self.workspace.get_objects(endpoints=True,creds=True,users=True,hosts=True)
+        return self.workspace.get_objects(endpoints=True, creds=True, users=True, hosts=True)
 
     __parser_scope = argparse.ArgumentParser(prog="scope")
     __parser_scope.add_argument('target', help='Object to scope', choices_method=__get_all_objects)
@@ -1018,7 +1028,7 @@ class Shell(cmd2.Cmd):
         if not os.path.exists(os.path.join(workspacesDir, 'default')):
             Workspace.create('default')
 
-        self.intro = '''  %%%%%/      %%%     %%%%%.      .%%/     %%     %/   /%%%/   ,%%%/  *%%    %% 
+        self.intro = '''  %%%%%/      %%%     %%%%%.      .%%/     %%     %/   /%%%/   ,%%%/  *%%    %%
   %%   %%*   %% %%    %%   %%  %*       % %    /@*  % %%      %%      *%%    %% 
   %%%%%%    %%, %%%   %%%%%%  %    @@@@  %    /@@@  /  %%%%    %%%%   *%%%%%%%% 
   %%   %%% %%%%%%%%,  %%   %%(%          %%         %     %%%     %%% *%%    %% 

@@ -214,13 +214,13 @@ class Host():
         return Host(row[0],row[1],row[2],row[3],json.loads(row[4]))
 
     @classmethod
-    def search(cls,field,val,showAll=False):
+    def search(cls,field,val,show_all=False):
         """Search in the workspace for a `Host`
 
         Args:
             field (str): the `Host` attribute to search in
             val (str): the value to search for
-            showAll (bool): whether to include out-of scope `Host`\ s in search results
+            show_all (bool): whether to include out-of scope `Host`\ s in search results
 
         Returns:
             A `List` of `Host`\ s corresponding to the search.
