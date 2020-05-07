@@ -129,7 +129,7 @@ class Connection():
 
 
     @classmethod
-    def find_all(cls,endpoint=None,user=None,creds=None):
+    def find_all(cls,endpoint=None,user=None,creds=None,scope=None):
         ret = []
         c = dbConn.get().cursor()
         if endpoint is not None:
@@ -140,9 +140,11 @@ class Connection():
             req = c.execute('SELECT endpoint,user,cred FROM connections WHERE cred=?',(creds.id,))
         else:
             req = c.execute('SELECT endpoint,user,cred FROM connections')
-
+        
         for row in req:
-            ret.append(Connection(Endpoint.find_one(endpoint_id=row[0]),User.find_one(user_id=row[1]),Creds.find_one(creds_id=row[2])))
+            conn = Connection(Endpoint.find_one(endpoint_id=row[0]),User.find_one(user_id=row[1]),Creds.find_one(creds_id=row[2]))
+            if scope is None or conn.scope == scope:
+                ret.append(conn)
         c.close()
         return ret
 

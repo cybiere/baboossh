@@ -57,37 +57,34 @@ class Shell(cmd2.Cmd):
 ###################          GETTERS          ###################
 #################################################################
 
-    def __get_options_creds(self):
-        return self.workspace.getCreds(scope=True)
+    def __get_option_creds(self):
+        return self.workspace.get_objects(creds=True,scope=True)
 
-    def __get_hosts(self):
-        return self.workspace.getHostsNames(scope=True)
+    def __get_option_hosts(self):
+        return self.workspace.get_objects(hosts=True,scope=True)
 
     def __get_arg_workspaces(self):
         return [name for name in os.listdir(workspacesDir) if os.path.isdir(os.path.join(workspacesDir, name))]
 
     def __get_option_gateway(self):
         ret = ["local"]
-        endpoints = self.workspace.getEndpoints(scope=True)
+        endpoints = self.workspace.get_objects(endpoints=True,scope=True)
         for endpoint in endpoints:
             if endpoint.connection is not None:
                 ret.append(endpoint)
         return ret
 
     def __get_option_user(self):
-        return self.workspace.getUsers(scope=True)
+        return self.workspace.get_objects(users=True,scope=True)
 
     def __get_option_endpoint(self):
-        return self.workspace.getEndpoints(scope=True)
+        return self.workspace.get_objects(endpoints=True,scope=True)
 
     def __get_option_payload(self):
         return Extensions.payloadsAvail()
 
-    def __get_option_valid_connection(self):
-        return self.workspace.getTargetsValidList(scope=True)
-
     def __get_option_connection(self):
-        return self.workspace.getTargetsList(scope=True)
+        return self.workspace.get_objects(connections=True,scope=True)
 
     def __get_search_fields_endpoint(self):
         return self.workspace.getSearchFields("Endpoint")
@@ -96,23 +93,16 @@ class Shell(cmd2.Cmd):
         return self.workspace.getSearchFields("Host")
 
     def __get_open_tunnels(self):
-        return self.workspace.getTunnelsPort()
+        return self.workspace.get_objects(tunnels=True)
 
     def __get_run_targets(self):
-        connections = self.__get_option_valid_connection()
-        endpoints = self.__get_option_endpoint()
-        hosts = self.workspace.getHostsNames(scope=True)
-        return connections + endpoints + hosts
+        return self.workspace.get_objects(connections=True,hosts=True,endpoints=True,scope=True)
 
     def __get_host_or_local(self):
-        hosts = self.workspace.getHostsNames(scope=True)
-        hosts.append("local")
-        return hosts
+        return self.workspace.get_objects(local=True,hosts=True,scope=True)
 
     def __get_endpoint_or_host(self):
-        endpoints = self.workspace.getEndpoints(scope=True)
-        hosts = self.workspace.getHostsNames(scope=True)
-        return endpoints + hosts
+        return self.workspace.get_objects(hosts=True,endpoints=True,scope=True)
 
 #################################################################
 ###################         WORKSPACE         ###################
@@ -220,16 +210,11 @@ class Shell(cmd2.Cmd):
     def __host_list(self, stmt):
         print("Current hosts in workspace:")
         show_all = getattr(stmt, 'all', False)
-        hosts = self.workspace.getHosts()
+        hosts = self.workspace.get_objects(hosts=true,scope=None if show_all else True)
         if not hosts:
             print("No hosts in current workspace")
             return
-        data = []
-        for host in hosts:
-            if not host.scope and not show_all:
-                continue
-            data.append(host)
-        self.__host_print(data)
+        self.__host_print(hosts)
 
     def __host_search(self, stmt):
         show_all = getattr(stmt, 'all', False)
@@ -259,7 +244,7 @@ class Shell(cmd2.Cmd):
     __parser_host_search.add_argument('val', help='Value to search')
 
     __parser_host_del = __subparser_host.add_parser("delete", help='Delete host')
-    __parser_host_del.add_argument('host', help='Host name', choices_method=__get_hosts)
+    __parser_host_del.add_argument('host', help='Host name', choices_method=__get_option_hosts)
 
     __parser_host_list.set_defaults(func=__host_list)
     __parser_host_search.set_defaults(func=__host_search)
@@ -311,28 +296,25 @@ class Shell(cmd2.Cmd):
         reachable = getattr(stmt, 'reachable', None)
         scanned = getattr(stmt, 'scanned', None)
         conn = getattr(stmt, 'conn', None)
-        endpoints = self.workspace.getEndpoints()
+        endpoints = self.workspace.get_objects(endpoints=True,scope=None if show_all else True)
         if not endpoints:
             print("No endpoints in current workspace")
             return
 
         endpoint_list = []
         for endpoint in endpoints:
-            if not show_all:
-                if not endpoint.scope:
+            if scanned is not None:
+                flag_scanned = scanned == "true"
+                if endpoint.scanned != flag_scanned:
                     continue
-                if scanned is not None:
-                    flag_scanned = scanned == "true"
-                    if endpoint.scanned != flag_scanned:
-                        continue
-                if reachable is not None:
-                    flag_reachable = reachable == "true"
-                    if endpoint.reachable != flag_reachable:
-                        continue
-                if conn is not None:
-                    flag_conn = conn == "true"
-                    if (endpoint.connection is None) == flag_conn:
-                        continue
+            if reachable is not None:
+                flag_reachable = reachable == "true"
+                if endpoint.reachable != flag_reachable:
+                    continue
+            if conn is not None:
+                flag_conn = conn == "true"
+                if (endpoint.connection is None) == flag_conn:
+                    continue
             endpoint_list.append(endpoint)
         self.__endpoint_print(endpoint_list)
 
@@ -405,14 +387,12 @@ class Shell(cmd2.Cmd):
     def __user_list(self, stmt):
         print("Current users in workspace:")
         show_all = getattr(stmt, 'all', False)
-        users = self.workspace.getUsers()
+        users = self.workspace.get_objects(users=True,scope=None if show_all else True)
         if not users:
             print("No users in current workspace")
             return
         data = []
         for user in users:
-            if not user.scope and not show_all:
-                continue
             scope = "o" if user.scope else ""
             data.append([scope, user])
         print(tabulate.tabulate(data, headers=["", "Username"]))
@@ -466,14 +446,12 @@ class Shell(cmd2.Cmd):
 
     def __creds_list(self, stmt):
         show_all = getattr(stmt, 'all', False)
-        creds = self.workspace.getCreds()
+        creds = self.workspace.get_objects(creds=True,scope=None if show_all else True)
         if not creds:
             print("No creds in current workspace")
             return
         data = []
         for cred in creds:
-            if not cred.scope and not show_all:
-                continue
             scope = "o" if cred.scope else ""
             data.append([scope, "#"+str(cred.id), cred.obj.getKey(), cred.obj.toList()])
         print(tabulate.tabulate(data, headers=["", "ID", "Type", "Value"]))
@@ -505,9 +483,9 @@ class Shell(cmd2.Cmd):
     __parser_creds_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
     __parser_creds_types = __subparser_creds.add_parser("types", help='List available credentials types')
     __parser_creds_show = __subparser_creds.add_parser("show", help='Show credentials details')
-    __parser_creds_show.add_argument('id', help='Creds identifier', choices_method=__get_options_creds)
+    __parser_creds_show.add_argument('id', help='Creds identifier', choices_method=__get_option_creds)
     __parser_creds_edit = __subparser_creds.add_parser("edit", help='Edit credentials details')
-    __parser_creds_edit.add_argument('id', help='Creds identifier', choices_method=__get_options_creds)
+    __parser_creds_edit.add_argument('id', help='Creds identifier', choices_method=__get_option_creds)
     __parser_creds_add = __subparser_creds.add_parser("add", help='Add a new credentials')
     __subparser_creds_add = __parser_creds_add.add_subparsers(title='Add creds', help='Available creds types')
     for __methodName in Extensions.authMethodsAvail():
@@ -516,7 +494,7 @@ class Shell(cmd2.Cmd):
         __parser_method.set_defaults(type=__methodName)
         __method.buildParser(__parser_method)
     __parser_creds_del = __subparser_creds.add_parser("delete", help='Delete credentials from workspace')
-    __parser_creds_del.add_argument('id', help='Creds identifier', choices_method=__get_options_creds)
+    __parser_creds_del.add_argument('id', help='Creds identifier', choices_method=__get_option_creds)
 
     __parser_creds_list.set_defaults(func=__creds_list)
     __parser_creds_types.set_defaults(func=__creds_types)
@@ -569,7 +547,7 @@ class Shell(cmd2.Cmd):
     def __connection_list(self, stmt):
         print("Available connections:")
         show_all = getattr(stmt, 'all', False)
-        connections = self.workspace.getConnections()
+        connections = self.workspace.get_objects(connections=True,scope=None if show_all else True)
         if not connections:
             print("No connections in current workspace")
             return
@@ -612,7 +590,7 @@ class Shell(cmd2.Cmd):
 
     def __options_list(self):
         print("Current options:")
-        for key, val in self.workspace.getOptionsValues():
+        for key, val in self.workspace.options.items():
             print("    - "+key+": "+str(val))
 
     __parser_option = argparse.ArgumentParser(prog="option")
@@ -621,7 +599,7 @@ class Shell(cmd2.Cmd):
     __parser_option_user = __subparser_option.add_parser("user", help='Set target user')
     __parser_option_user.add_argument('username', help='User name', nargs="?", choices_method=__get_option_user)
     __parser_option_creds = __subparser_option.add_parser("creds", help='Set target creds')
-    __parser_option_creds.add_argument('id', help='Creds ID', nargs="?", choices_method=__get_options_creds)
+    __parser_option_creds.add_argument('id', help='Creds ID', nargs="?", choices_method=__get_option_creds)
     __parser_option_endpoint = __subparser_option.add_parser("endpoint", help='Set target endpoint')
     __parser_option_endpoint.add_argument('endpoint', nargs="?", help='Endpoint', choices_method=__get_option_endpoint)
     __parser_option_payload = __subparser_option.add_parser("payload", help='Set target payload')
@@ -677,7 +655,7 @@ class Shell(cmd2.Cmd):
     def __path_list(self, stmt):
         print("Current paths in workspace:")
         show_all = getattr(stmt, 'all', False)
-        paths = self.workspace.getPaths()
+        paths = self.workspace.get_objects(paths=True)
         if not paths:
             print("No paths in current workspace")
             return
@@ -832,9 +810,9 @@ class Shell(cmd2.Cmd):
         if payload is not None:
             payload = Extensions.getPayload(payload)
         else:
-            payload = self.workspace.getOption("payload")
+            payload = self.workspace.options["payload"]
 
-            params = self.workspace.getOption("params")
+            params = self.workspace.options["params"]
             __parser = argparse.ArgumentParser(description='Params __parser')
             payload.buildParser(__parser)
             if params is None:
@@ -881,7 +859,7 @@ class Shell(cmd2.Cmd):
     __subparser_tunnel = __parser_tunnel.add_subparsers(title='Actions', help='Available actions')
     __parser_tunnel_list = __subparser_tunnel.add_parser("list", help='List tunnels')
     __parser_tunnel_open = __subparser_tunnel.add_parser("open", help='Open tunnel')
-    __parser_tunnel_open.add_argument('connection', help='Connection string', choices_method=__get_option_valid_connection)
+    __parser_tunnel_open.add_argument('connection', help='Connection string', choices_method=__get_option_connection)
     __parser_tunnel_open.add_argument('port', help='Tunnel entry port', type=int, nargs='?')
     __parser_tunnel_close = __subparser_tunnel.add_parser("close", help='Close tunnel')
     __parser_tunnel_close.add_argument('port', help='Tunnel entry port', type=int, choices_method=__get_open_tunnels)
@@ -968,7 +946,7 @@ class Shell(cmd2.Cmd):
 #################################################################
 
     def __get_all_objects(self):
-        return self.workspace.getBaseObjects()
+        return self.workspace.get_objects(endpoints=True,creds=True,users=True,hosts=True)
 
     __parser_scope = argparse.ArgumentParser(prog="scope")
     __parser_scope.add_argument('target', help='Object to scope', choices_method=__get_all_objects)
@@ -994,20 +972,27 @@ class Shell(cmd2.Cmd):
 
         new_prompt = "\033[1;33m"
         new_prompt = new_prompt+"["+self.workspace.name+"]\033[1;34m"
-        if self.workspace.getOption("endpoint"):
-            if self.workspace.getOption("user"):
-                new_prompt = new_prompt+str(self.workspace.getOption("user"))
-                if self.workspace.getOption("creds"):
-                    new_prompt = new_prompt+":"+str(self.workspace.getOption("creds"))
-                new_prompt = new_prompt+"@"
-            new_prompt = new_prompt+str(self.workspace.getOption("endpoint"))
-        elif self.workspace.getOption("user"):
-            new_prompt = new_prompt+str(self.workspace.getOption("user"))
-            if self.workspace.getOption("creds"):
-                new_prompt = new_prompt+":"+str(self.workspace.getOption("creds"))
-            new_prompt = new_prompt+"@..."
-        if self.workspace.getOption("payload"):
-            new_prompt = new_prompt+"\033[1;31m("+str(self.workspace.getOption("payload"))+")\033[0m"
+        user = self.workspace.options["user"]
+        creds = self.workspace.options["creds"]
+        endpoint = self.workspace.options["endpoint"]
+        payload = self.workspace.options["payload"]
+        if user or endpoint or creds:
+            if user:
+                new_prompt = new_prompt+str(user)
+            else:
+                new_prompt = new_prompt+"*"
+            new_prompt = new_prompt+":"
+            if creds:
+                new_prompt = new_prompt+str(creds)
+            else:
+                new_prompt = new_prompt+"*"
+            new_prompt = new_prompt+"@"
+            if endpoint:
+                new_prompt = new_prompt+str(endpoint)
+            else:
+                new_prompt = new_prompt+"*"
+        if payload:
+            new_prompt = new_prompt+"\033[1;31m("+str(payload)+")\033[0m"
         self.prompt = new_prompt+"\033[1;33m>\033[0m "
 
     def emptyline(self):

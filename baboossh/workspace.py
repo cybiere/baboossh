@@ -1,6 +1,5 @@
 import os
 import re
-import ipaddress
 import threading
 import asyncio
 from baboossh import *
@@ -75,23 +74,8 @@ class Workspace():
 ###################         ENDPOINTS         ###################
 #################################################################
 
-    #Checks if param is a valid IP (v4 or v6)
-    def __check_is_ip(self, ipaddr):
-        try:
-            ipaddress.ip_address(ipaddr)
-        except ValueError:
-            return False
-        return True
-
     #Manually add a endpoint
     def addEndpoint(self, ipaddr, port):
-        if not self.__check_is_ip(ipaddr):
-            print("The address given isn't a valid IP")
-            raise ValueError
-        if not port.isdigit():
-            print("The port given isn't a positive integer")
-            raise ValueError
-
         newEndpoint = Endpoint(ipaddr, port)
         newEndpoint.save()
 
@@ -126,7 +110,7 @@ class Workspace():
 #################################################################
 
     def delHost(self, host):
-        if host not in self.getHostsNames():
+        if host not in [host.name for host in Host.find_all()]:
             print("Not a known Host name.")
             return False
         hosts = Host.find_all(name=host)
@@ -184,7 +168,7 @@ class Workspace():
                 self.options['user'] = None
                 self.options['creds'] = None
                 for option in ['endpoint', 'user', 'creds']:
-                    print(option+" => "+str(self.getOption(option)))
+                    print(option+" => "+str(self.options[option]))
                 return
             if '@' not in value or ':' not in value:
                 return
@@ -195,7 +179,7 @@ class Workspace():
             self.options['user'] = connection.user
             self.options['creds'] = connection.creds
             for option in ['endpoint', 'user', 'creds']:
-                print(option+" => "+str(self.getOption(option)))
+                print(option+" => "+str(self.options[option]))
             return
         if not option in list(self.options.keys()):
             raise ValueError(option+" isn't a valid option.")
@@ -225,7 +209,7 @@ class Workspace():
             self.options[option] = value
         else:
             self.options[option] = None
-        print(option+" => "+str(self.getOption(option)))
+        print(option+" => "+str(self.options[option]))
 
 #################################################################
 ###################        CONNECTIONS        ###################
@@ -246,7 +230,7 @@ class Workspace():
         """
 
         if endpoint is None:
-            endpoint = self.getOption("endpoint")
+            endpoint = self.options["endpoint"]
             if endpoint is None:
                 endpoints = Endpoint.find_all(scope=True)
             else:
@@ -279,7 +263,7 @@ class Workspace():
         """
 
         if connection is None:
-            user = self.getOption("user")
+            user = self.options["user"]
             if user is None:
                 users = User.find_all(scope=True)
             else:
@@ -287,12 +271,12 @@ class Workspace():
                 #it refreshes its params from the database. Without this it
                 #would be stuck in the state it was when "set"
                 users = [User.find_one(user_id=user.id)]
-            endpoint = self.getOption("endpoint")
+            endpoint = self.options["endpoint"]
             if endpoint is None:
                 endpoints = Endpoint.find_all(scope=True)
             else:
                 endpoints = [Endpoint.find_one(endpoint_id=endpoint.id)]
-            cred = self.getOption("creds")
+            cred = self.options["creds"]
             if cred is None:
                 creds = Creds.find_all(scope=True)
             else:
@@ -390,7 +374,7 @@ class Workspace():
 #################################################################
 
     def getPathToDst(self, dst, asIp=False):
-        if dst in self.getHostsNames():
+        if dst in [host.name for host in Host.find_all()]:
             hosts = Host.find_all(name=dst)
             if len(hosts) > 1:
                 print("Several hosts corresponding. Please target endpoint.")
@@ -413,7 +397,7 @@ class Workspace():
             print("No path could be found to the destination")
             return
         if chain[0] is None:
-            chain[0] = "Local"
+            chain[0] = "local"
         if asIp:
             print(" > ".join(str(link.closest_endpoint) if isinstance(link,Host) else str(link) for link in chain))
         else:
@@ -421,7 +405,7 @@ class Workspace():
 
     def delPath(self, src, dst):
         if src.lower() != "local":
-            if src not in self.getHostsNames():
+            if src not in [host.name for host in Host.find_all()]:
                 print("Not a known Host name.")
                 return False
             hosts = Host.find_all(name=src)
@@ -449,7 +433,7 @@ class Workspace():
 
     def addPath(self, src, dst):
         if src.lower() != "local":
-            if src not in self.getHostsNames():
+            if src not in [host.name for host in Host.find_all()]:
                 print("Not a known Host name.")
                 return
             hosts = Host.find_all(name=src)
@@ -550,9 +534,6 @@ class Workspace():
     def getTunnels(self):
         return list(self.tunnels.values())
 
-    def getTunnelsPort(self):
-        return list(self.tunnels.keys())
-
     def openTunnel(self, target, port=None):
         if port is not None and port in self.tunnels.keys():
             print("A tunnel is already opened at port "+str(port))
@@ -579,78 +560,31 @@ class Workspace():
 ###################          GETTERS          ###################
 #################################################################
 
-    def getHosts(self, scope=None):
-        return Host.find_all(scope=scope)
-
-    def getHostsNames(self, scope=None):
+    def get_objects(self, local=False, hosts=False, connections=False, endpoints=False, users=False, creds=False, tunnels=False, paths=False, scope=None):
         ret = []
-        for host in Host.find_all(scope=scope):
-            ret.append(host.name)
+        if local:
+            ret.append("local")
+        if hosts:
+            ret = ret + Host.find_all(scope=scope)
+        if connections:
+            ret = ret + Connection.find_all(scope=scope)
+        if endpoints:
+            ret = ret + Endpoint.find_all(scope=scope)
+        if users:
+            ret = ret + User.find_all(scope=scope)
+        if creds:
+            ret = ret + Creds.find_all(scope=scope)
+        if tunnels:
+            ret = ret + list(self.tunnels.keys())
+        if paths:
+            ret = ret + Path.find_all()
         return ret
-
-    def getEndpoints(self, scope=None):
-        endpoints = []
-        for endpoint in Endpoint.find_all(scope=scope):
-            endpoints.append(endpoint)
-        return endpoints
 
     def searchEndpoints(self, field, val, showAll=False):
         return Endpoint.search(field, val, showAll)
 
     def searchHosts(self, field, val, showAll=False):
         return Host.search(field, val, showAll)
-
-    def getTargetsValidList(self, scope=None):
-        connections = []
-        for connection in Connection.find_all():
-            if scope is None:
-                connections.append(str(connection))
-            elif connection.scope == scope:
-                connections.append(str(connection))
-        return connections
-
-    def getTargetsList(self, scope=None):
-        connections = []
-        for connection in Connection.find_all():
-            if scope is None:
-                connections.append(str(connection))
-            elif connection.scope == scope:
-                connections.append(str(connection))
-        return connections
-
-    def getPaths(self):
-        return Path.find_all()
-
-    def getUsers(self, scope=None):
-        return User.find_all(scope=scope)
-
-    def getCreds(self, scope=None):
-        return Creds.find_all(scope=scope)
-
-    def getConnections(self):
-        return Connection.find_all()
-
-    def getOptionsValues(self):
-        return self.options.items()
-
-    def getOption(self, key):
-        if key not in self.options.keys():
-            raise ValueError()
-        if self.options[key] == None:
-            return None
-        return self.options[key]
-
-    def getBaseObjects(self, scope=None):
-        return Endpoint.find_all(scope=scope) + Creds.find_all(scope=scope) + User.find_all(scope=scope) + Host.find_all(scope=scope)
-
-    def getFoundEndpoints(self, endpoint):
-        return Endpoint.find_all(found=endpoint)
-
-    def getFoundUsers(self, endpoint):
-        return User.find_all(found=endpoint)
-
-    def getFoundCreds(self, endpoint):
-        return Creds.find_all(found=endpoint)
 
     def getSearchFields(self, obj):
         if obj == "Endpoint":

@@ -1,4 +1,5 @@
 import cmd2
+from baboossh import Endpoint, Creds, User
 
 class ExtStr(type):
     def __str__(self):
@@ -27,14 +28,14 @@ class BaboosshExt(object,metaclass=ExtStr):
         outfile = getattr(stmt,'output')
         findings = getattr(stmt,'findings',False)
         dotcode = 'digraph compromission_graph {\nnode [shape=plain,fontname="monospace"];\nrankdir="LR";\n'
-        for endpoint in workspace.getEndpoints():
+        for endpoint in workspace.get_objects(endpoints=True,scope=True):
             label = "<table cellborder='1' cellspacing='0'><tr><td>"+str(endpoint)+"</td></tr>"
             if endpoint.host is not None:
                 label = label + '<tr><td>'+str(endpoint.host)+'</td></tr>'
             if findings:
-                foundEndpoints = workspace.getFoundEndpoints(endpoint)
-                foundUsers = workspace.getFoundUsers(endpoint)
-                foundCreds = workspace.getFoundCreds(endpoint)
+                foundEndpoints = Endpoint.find_all(found=endpoint,scope=True)
+                foundUsers = User.find_all(found=endpoint,scope=True)
+                foundCreds = Creds.find_all(found=endpoint,scope=True)
 
                 if foundEndpoints or foundUsers or foundCreds:
                     label = label + "<tr><td><table cellborder='1' cellspacing='0'><tr><td colspan='2'>Findings</td></tr>"

@@ -1,8 +1,9 @@
+import ipaddress
+import asyncio, asyncssh, sys, errno
+import json
 from baboossh import dbConn
 from baboossh import Host
 from baboossh.exceptions import *
-import asyncio, asyncssh, sys, errno
-import json
 
 class Endpoint():
     """A SSH endpoint
@@ -26,6 +27,11 @@ class Endpoint():
     search_fields = ['ip','port','auth']
 
     def __init__(self,ip,port):
+        #check if ip is actually an IP
+        ipaddress.ip_address(ip)
+        if not port.isdigit():
+            raise ValueError("The port is not a positive integer")
+
         self.ip = ip
         self.__port = port
         self.host = None
