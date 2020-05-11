@@ -748,7 +748,7 @@ class Shell(cmd2.Cmd):
         if gateway is None:
             gateway = "auto"
 
-        targets = self.workspace.enum_scan(endpoint, scanned=None if force else False)
+        targets = list(self.workspace.enum_targets(endpoint, scanned=False if force else None).keys())
 
         nb_targets = len(targets)
         if nb_targets > 1:
@@ -772,9 +772,9 @@ class Shell(cmd2.Cmd):
         working = getattr(stmt, 'working', None)
         if working is not None:
             working = working == "true"
-        targets = self.workspace.enum_connect(connection, working=working)
-        for t in targets:
-            print(t)
+        targets = [target for endpoint in self.workspace.enum_targets(connection, working=working).values() for target in endpoint]
+        for conn in targets:
+            print(conn)
 
     __parser_connect = argparse.ArgumentParser(prog="connect")
     __parser_connect.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
@@ -792,7 +792,7 @@ class Shell(cmd2.Cmd):
         if gateway is None:
             gateway = "auto"
 
-        targets = self.workspace.enum_connect(connection, working=None if force else False)
+        targets = [target for endpoint in self.workspace.enum_targets(connection, working=None if force else False).values() for target in endpoint]
         nb_targets = len(targets)
         if nb_targets > 1:
             if not yes_no("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):
@@ -833,7 +833,7 @@ class Shell(cmd2.Cmd):
             print("Error : No payload specified")
             return
 
-        targets = self.workspace.enum_connect(connection, working=True)
+        targets = [target for endpoint in self.workspace.enum_targets(connection, working=True).values() for target in endpoint]
         nb_targets = len(targets)
         if nb_targets > 1:
             if not yes_no("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):

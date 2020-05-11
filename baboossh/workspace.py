@@ -292,47 +292,14 @@ class Workspace():
             return False
         return connection.delete()
 
-    def enum_scan(self, endpoint=None, scanned=None):
-        """Returns a list of all the :class:`Endpoints` to target for a scan
-
-        Args:
-            endpoint: The target string passed to the command (if any)
-        """
-
-        if endpoint is None:
-            endpoint = self.options["endpoint"]
-            if endpoint is None:
-                endpoints = Endpoint.find_all(scope=True)
-            else:
-                #WARNING the "find the object I already have" seems stupid but
-                #it refreshes its params from the database. Without this it
-                #would be stuck in the state it was when "set"
-                endpoints = [Endpoint.find_one(endpoint_id=endpoint.id)]
-        else:
-            if endpoint == "*":
-                endpoints = Endpoint.find_all(scope=True)
-            else:
-                endpoint = Endpoint.find_one(ip_port=endpoint)
-                if endpoint is None:
-                    raise ValueError("Supplied endpoint isn't in workspace")
-                endpoints = [endpoint]
-        ret = []
-        for endpoint in endpoints:
-            if scanned is None:
-                ret.append(endpoint)
-            else:
-                if endpoint.scanned == scanned:
-                    ret.append(endpoint)
-        return ret
-
-    def enum_connect(self, connection=None, working=None):
+    def enum_targets(self, target=None, working=None, scanned=None):
         """Returns a list of all the :class:`Connections` to target
 
         Args:
-            connection: The target string passed to the command (if any)
+            target: The target string passed to the command (if any)
         """
 
-        if connection is None:
+        if target is None:
             user = self.options["user"]
             if user is None:
                 users = User.find_all(scope=True)
@@ -352,16 +319,16 @@ class Workspace():
             else:
                 creds = [Creds.find_one(creds_id=cred.id)]
         else:
-            if '@' not in connection:
+            if '@' not in target:
                 #TODO
-                hosts = Host.find_all(name=connection)
+                hosts = Host.find_all(name=target)
                 if len(hosts) == 0:
                     raise ValueError("No matching Host name in workspace")
                 ret = []
                 for host in hosts:
                     ret.append(Connection.find_one(endpoint=host.closest_endpoint))
                 return ret
-            auth, sep, endpoint = connection.partition('@')
+            auth, sep, endpoint = target.partition('@')
             if endpoint == "*":
                 endpoints = Endpoint.find_all(scope=True)
             else:
@@ -390,16 +357,19 @@ class Workspace():
                 if cred is None:
                     raise ValueError("Supplied credentials aren't in workspace")
                 creds = [cred]
-        ret = []
+        ret = {}
         for endpoint in endpoints:
+            if scanned is not None and endpoint.scanned == scanned:
+                continue
+            ret[endpoint] = []
             for user in users:
                 for cred in creds:
                     c = Connection(endpoint, user, cred)
                     if working is None:
-                        ret.append(c)
+                        ret[endpoint].append(c)
                     else:
                         if (c.id is not None) == working:
-                            ret.append(c)
+                            ret[endpoint].append(c)
         return ret
 
     def run(self, targets, payload, stmt):
