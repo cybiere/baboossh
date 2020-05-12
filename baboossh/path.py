@@ -167,12 +167,12 @@ class Path():
             A `List` of :class:`Hosts` forming a chain from `"Local"` to dst
 
         Raises:
-            NoPathException: if no path could be found to `dst`
+            NoPathError: if no path could be found to `dst`
         """
         
         try:
             previous_hop = Host.find_one(prev_hop_to=dst)
-        except NoPathException as exc:
+        except NoPathError as exc:
             raise exc
         if previous_hop is None:
             return [None]

@@ -1,7 +1,6 @@
 from os.path import join,exists
 from os import mkdir
 import sys
-import asyncio, asyncssh
 
 class ExtStr(type):
     def __str__(self):
@@ -25,26 +24,11 @@ class BaboosshExt(object,metaclass=ExtStr):
         parser.add_argument('file',help='Path of file to retreive from target')
 
     @classmethod
-    async def run(cls,socket, connection, wspaceFolder, stmt):
-        try:
-            e = cls(socket,connection, wspaceFolder,stmt)
-            await e.start()
-        except Exception as e:
-            print("Error : "+str(e))
-            return False
-        return True
-
-    def __init__(self,socket,connection,wspaceFolder,stmt):
-        self.socket = socket
-        self.connection = connection
-        self.wspaceFolder = wspaceFolder
-        self.stmt = stmt
-    
-    async def start(self):
-        lootFolder = join(self.wspaceFolder,"loot",str(self.connection.endpoint).replace(':','-'),"")
+    def run(cls,socket, connection, wspaceFolder, stmt):
+        lootFolder = join(wspaceFolder,"loot",str(connection.endpoint).replace(':','-'),"")
         if not exists(lootFolder):
             mkdir(lootFolder)
-        filepath = getattr(self.stmt,'file',None)
+        filepath = getattr(stmt,'file',None)
         if filepath is None:
             print("You must specify a path")
             return False
@@ -53,12 +37,10 @@ class BaboosshExt(object,metaclass=ExtStr):
         sys.stdout.flush()
         filedest=join(lootFolder,filepath.replace('/','_'))
         try:
-            await asyncssh.scp((self.socket,filepath),filedest,recurse=True)
+            socket.get(filepath,filedest)
         except Exception as e:
             print("Error "+str(type(e))+": "+str(e))
             return False
         print("Done")
         print("File saved as "+filedest)
-
-
 

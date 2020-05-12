@@ -1,6 +1,5 @@
 from os.path import basename
 import sys,cmd2
-import asyncio, asyncssh
 
 class ExtStr(type):
     def __str__(self):
@@ -24,23 +23,8 @@ class BaboosshExt(object,metaclass=ExtStr):
         parser.add_argument('file',help='Path of file to send to target',completer_method=cmd2.Cmd.path_complete)
 
     @classmethod
-    async def run(cls,socket, connection, wspaceFolder, stmt):
-        try:
-            e = cls(socket,connection, wspaceFolder, stmt)
-            await e.start()
-        except Exception as e:
-            print("Error : "+str(e))
-            return False
-        return True
-
-    def __init__(self,socket,connection,wspaceFolder,stmt):
-        self.socket = socket
-        self.connection = connection
-        self.wspaceFolder = wspaceFolder
-        self.stmt = stmt
-    
-    async def start(self):
-        filepath = getattr(self.stmt,'file',None)
+    def run(cls,socket, connection, wspaceFolder, stmt):
+        filepath = getattr(stmt,'file',None)
         if filepath is None:
             print("You must specify a path")
             return False
@@ -48,7 +32,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         sys.stdout.flush()
         filename = basename(filepath)
         try:
-            await asyncssh.scp(filepath,(self.socket,filename),recurse=True)
+            socket.put(filepath,filename)
         except Exception as e:
             print("Error "+str(type(e))+": "+str(e))
             return False

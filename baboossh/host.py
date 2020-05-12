@@ -195,7 +195,7 @@ class Host():
                     smallest_distance = path.src.distance
                     continue
             if closest is None:
-                raise NoPathException
+                raise NoPathError
             return closest
         
         c = dbConn.get().cursor()

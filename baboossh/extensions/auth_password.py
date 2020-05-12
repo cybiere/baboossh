@@ -26,7 +26,7 @@ class BaboosshExt():
         return self.creds
 
     def getKwargs(self):
-        return {"password":self.creds,"client_keys":None}
+        return {"password":self.creds}
 
     @property
     def identifier(self):

@@ -1,11 +1,7 @@
 import json
-import readline
-from os.path import join,exists,basename
 from os import remove
-import sys
-import subprocess
 import cmd2
-import asyncssh
+import paramiko
 
 class BaboosshExt():
     @classmethod
@@ -23,32 +19,61 @@ class BaboosshExt():
     @classmethod
     def checkKeyfile(cls,filepath):
         haspass = False
-        valid = False
+
+        #Check haspass
         try:
-            with open(filepath,"r") as f:
-                data = f.read()
-            key = asyncssh.import_private_key(data)
-        except asyncssh.public_key.KeyImportError as e:
-            if "Passphrase must be specified to import" in str(e):
-                valid = True
-                haspass = True
+           k = paramiko.RSAKey.from_private_key_file(filepath)
+        except  paramiko.ssh_exception.PasswordRequiredException:
+            haspass = True
         except:
             pass
         else:
-            valid = True
-        return valid,haspass
+            #RSA, no pass
+            return True,False
+
+        #random string to check the exception raised
+        randpass = "cy2fFwHriD" if haspass else None
+        try:
+           k = paramiko.RSAKey.from_private_key_file(filepath,password=randpass)
+        except paramiko.ssh_exception.SSHException as e:
+            if "checkints do not match" in str(e):
+                return True, True
+            try:
+                k = paramiko.DSSKey.from_private_key_file(filepath,password=randpass)
+            except paramiko.ssh_exception.SSHException as e:
+                if "checkints do not match" in str(e):
+                    return True, True
+                try:
+                    k = paramiko.ECDSAKey.from_private_key_file(filepath,password=randpass)
+                except paramiko.ssh_exception.SSHException as e:
+                    if "checkints do not match" in str(e):
+                        return True, True
+                    return False, False
+                return True, haspass
+            return True, haspass
+        return True,haspass
 
     @classmethod
     def checkPassphrase(cls,filepath,passphrase):
         try:
-            with open(filepath,"r") as f:
-                data = f.read()
-            key = asyncssh.import_private_key(data,passphrase)
-        except:
-            pass
-        else:
+           k = paramiko.RSAKey.from_private_key_file(filepath,password=passphrase)
+        except paramiko.ssh_exception.SSHException as e: 
+            if "checkints do not match" in str(e):
+                return False
+            try:
+                k = paramiko.DSSKey.from_private_key_file(filepath,password=passphrase)
+            except paramiko.ssh_exception.SSHException as e:
+                if "checkints do not match" in str(e):
+                    return False
+                try:
+                    k = paramiko.ECDSAKey.from_private_key_file(filepath,password=passphrase)
+                except paramiko.ssh_exception.SSHException as e:
+                    if "checkints do not match" in str(e):
+                        return False
+                    raise ValueError("Not a valid SSH key")
+                return True
             return True
-        return False
+        return True
 
     @classmethod
     def buildParser(cls,parser):
@@ -59,7 +84,7 @@ class BaboosshExt():
     def fromStatement(cls,stmt):
         passphrase = vars(stmt)['passphrase']
         if passphrase is None:
-            passphrase = ""
+            passphrase = "cy2fFwHriD"
         keypath = vars(stmt)['file']
         valid,haspass = cls.checkKeyfile(keypath)
         if not valid:
@@ -92,8 +117,8 @@ class BaboosshExt():
 
     def getKwargs(self):
         if self.haspass:
-            return {"client_keys":[self.keypath],"passphrase":self.passphrase}
-        return {"client_keys":[self.keypath]}
+            return {"key_filename":self.keypath,"passphrase":self.passphrase}
+        return {"key_filename":[self.keypath]}
     
     @property
     def identifier(self):
@@ -134,6 +159,7 @@ class BaboosshExt():
             print("Private key doesn't have a passphrase")
 
     def delete(self):
-        remove(self.keypath)
+        #TODO flag for key file removal ?
+        #remove(self.keypath)
         return
 

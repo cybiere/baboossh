@@ -1,6 +1,6 @@
 import sqlite3
 from baboossh import dbConn
-import asyncio, asyncssh, sys
+import sys
 import multiprocessing as mp
 
 class Tunnel():
@@ -46,6 +46,7 @@ class Tunnel():
         asyncio.get_event_loop().run_until_complete(Tunnel.listenAndLock(conn,port,q))
 
     def __init__(self,connection,port=None):
+        raise NotImplementedError
         self.connection = connection
         if port is None:
             from socket import socket, AF_INET, SOCK_STREAM
@@ -64,6 +65,7 @@ class Tunnel():
         print("Tunnel to "+str(self.connection)+" open on port "+str(self.port))
 
     def close(self):
+        raise NotImplementedError
         """Close a previously opened port"""
         self.subprocess.terminate()
         self.socket.close()

@@ -292,7 +292,7 @@ class Workspace():
             return False
         return connection.delete()
 
-    def enum_targets(self, target=None, working=None, scanned=None):
+    def enum_targets(self, target=None, working=None, reachable=None):
         """Returns a list of all the :class:`Connections` to target
 
         Args:
@@ -322,44 +322,50 @@ class Workspace():
             if '@' not in target:
                 #TODO
                 hosts = Host.find_all(name=target)
-                if len(hosts) == 0:
-                    raise ValueError("No matching Host name in workspace")
-                ret = []
-                for host in hosts:
-                    ret.append(Connection.find_one(endpoint=host.closest_endpoint))
-                return ret
-            auth, sep, endpoint = target.partition('@')
-            if endpoint == "*":
-                endpoints = Endpoint.find_all(scope=True)
+                if len(hosts) != 0:
+                    ret = []
+                    for host in hosts:
+                        ret.append(Connection.find_one(endpoint=host.closest_endpoint))
+                    return ret
+                else:
+                    endpoint = Endpoint.find_one(ip_port=target)
+                    if endpoint is not None:
+                        endpoints = [endpoint]
+                        creds = [None]
+                        users = [None]
             else:
-                endpoint = Endpoint.find_one(ip_port=endpoint)
-                if endpoint is None:
-                    raise ValueError("Supplied endpoint isn't in workspace")
-                endpoints = [endpoint]
-
-            user, sep, cred = auth.partition(":")
-            if sep == "":
-                raise ValueError("No credentials supplied")
-
-            if user == "*":
-                users = User.find_all(scope=True)
-            else:
-                user = User.find_one(name=user)
-                if user is None:
-                    raise ValueError("Supplied user isn't in workspace")
-                users = [user]
-            if cred == "*":
-                creds = Creds.find_all(scope=True)
-            else:
-                if cred[0] == "#":
-                    cred = cred[1:]
-                cred = Creds.find_one(creds_id=cred)
-                if cred is None:
-                    raise ValueError("Supplied credentials aren't in workspace")
-                creds = [cred]
+                auth, sep, endpoint = target.partition('@')
+                if endpoint == "*":
+                    endpoints = Endpoint.find_all(scope=True)
+                else:
+                    endpoint = Endpoint.find_one(ip_port=endpoint)
+                    if endpoint is None:
+                        raise ValueError("Supplied endpoint isn't in workspace")
+                    endpoints = [endpoint]
+    
+                user, sep, cred = auth.partition(":")
+                if sep == "":
+                    raise ValueError("No credentials supplied")
+    
+                if user == "*":
+                    users = User.find_all(scope=True)
+                else:
+                    user = User.find_one(name=user)
+                    if user is None:
+                        raise ValueError("Supplied user isn't in workspace")
+                    users = [user]
+                if cred == "*":
+                    creds = Creds.find_all(scope=True)
+                else:
+                    if cred[0] == "#":
+                        cred = cred[1:]
+                    cred = Creds.find_one(creds_id=cred)
+                    if cred is None:
+                        raise ValueError("Supplied credentials aren't in workspace")
+                    creds = [cred]
         ret = {}
         for endpoint in endpoints:
-            if scanned is not None and endpoint.scanned == scanned:
+            if reachable is not None and endpoint.reachable == reachable:
                 continue
             ret[endpoint] = []
             for user in users:
@@ -384,22 +390,6 @@ class Workspace():
         for connection in targets:
             connection.run(payload, self.workspace_folder, stmt)
 
-    def scan(self, targets, gateway=None):
-        """Scan a list of :class:`Endpoint`
-
-        Args:
-            targets ([:class:`Endpoint`]): the target list
-            gateway (str): the Connection to use as a gateway
-        """
-
-        if gateway == "local":
-            gateway = None
-        elif gateway != "auto":
-            gateway = Connection.fromTarget(gateway)
-
-        for endpoint in targets:
-            endpoint.scan(gateway=gateway)
-
     def connect(self, targets, gateway, verbose):
         if gateway == "local":
             gateway = None
@@ -407,12 +397,13 @@ class Workspace():
             gateway = Connection.fromTarget(gateway)
 
         for connection in targets:
-            if not connection.endpoint.scanned:
-                print(str(connection)+"> You must scan an endpoint before connecting to it")
+            if not connection.endpoint.reachable:
+                print(str(connection)+"> You must find a path to an endpoint before connecting to it")
                 continue
 
-            working = connection.testConnect(gateway=gateway, verbose=verbose)
-            if working:
+            conn = connection.open(gateway=gateway, verbose=verbose)
+            if conn is not None:
+                conn.close()
                 if gateway != "auto":
                     if gateway is None:
                         path_src = None
@@ -447,7 +438,7 @@ class Workspace():
             return
         try:
             chain = Path.getPath(dst)
-        except NoPathException:
+        except NoPathError:
             print("No path could be found to the destination")
             return
         if chain[0] is None:
@@ -524,7 +515,9 @@ class Workspace():
             print("The destination should be reachable directly from the host.")
             return
 
-        if dst.scan(gateway=None, silent=True):
+        conn = Connection(dst,None,None)
+
+        if conn.touch(gateway=None):
             p = Path(None, dst)
             p.save()
             print("Could reach target directly, path added.")
@@ -535,7 +528,7 @@ class Workspace():
         for host in hosts:
             endpoint = host.closest_endpoint
             gateway = Connection.find_one(endpoint=endpoint)
-            working = dst.scan(gateway=gateway, silent=True)
+            working = conn.touch(gateway=gateway)
             if working:
                 p = Path(host, dst)
                 p.save()

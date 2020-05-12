@@ -64,10 +64,8 @@ class dbConn():
             host INTEGER,
             ip TEXT NOT NULL,
             port TEXT NOT NULL,
-            scanned INTEGER NOT NULL,
             reachable INTEGER,
             distance INTEGER,
-            auth TEXT,
             found INTEGER,
             FOREIGN KEY(found) REFERENCES endpoints(id),
             FOREIGN KEY(host) REFERENCES hosts(id)

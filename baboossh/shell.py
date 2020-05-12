@@ -284,7 +284,6 @@ class Shell(cmd2.Cmd):
             host = endpoint.host
             if host is None:
                 host = ""
-            scanned = str(endpoint.scanned)
             if endpoint.reachable is None:
                 reachable = "?"
             else:
@@ -293,18 +292,13 @@ class Shell(cmd2.Cmd):
                 distance = ""
             else:
                 distance = str(endpoint.distance)
-            if not endpoint.auth:
-                auth = "?"
-            else:
-                auth = str(endpoint.auth)
-            data.append([scope, endpoint, host, scanned, reachable, distance, auth, conn])
-        print(tabulate.tabulate(data, headers=["", "Endpoint", "Host", "Scanned", "Reachable", "Dist", "Authentication", "Working connection"]))
+            data.append([scope, endpoint, host, reachable, distance, conn])
+        print(tabulate.tabulate(data, headers=["", "Endpoint", "Host", "Reachable", "Dist", "Working connection"]))
 
     def __endpoint_list(self, stmt):
         print("Current endpoints in workspace:")
         show_all = getattr(stmt, 'all', False)
         reachable = getattr(stmt, 'reachable', None)
-        scanned = getattr(stmt, 'scanned', None)
         conn = getattr(stmt, 'conn', None)
         endpoints = self.workspace.get_objects(endpoints=True, scope=None if show_all else True)
         if not endpoints:
@@ -313,10 +307,6 @@ class Shell(cmd2.Cmd):
 
         endpoint_list = []
         for endpoint in endpoints:
-            if scanned is not None:
-                flag_scanned = scanned == "true"
-                if endpoint.scanned != flag_scanned:
-                    continue
             if reachable is not None:
                 flag_reachable = reachable == "true"
                 if endpoint.reachable != flag_reachable:
@@ -362,7 +352,6 @@ class Shell(cmd2.Cmd):
     __subparser_endpoint = __parser_endpoint.add_subparsers(title='Actions', help='Available actions')
     __parser_endpoint_list = __subparser_endpoint.add_parser("list", help='List endpoints')
     __parser_endpoint_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
-    __parser_endpoint_list.add_argument("-s", "--scanned", help="Show only scanned endpoints", nargs='?', choices=["true", "false"], const="true")
     __parser_endpoint_list.add_argument("-r", "--reachable", help="Show only reachable endpoints", nargs='?', choices=["true", "false"], const="true")
     __parser_endpoint_list.add_argument("-c", "--conn", help="Show only endpoints with connection", nargs='?', choices=["true", "false"], const="true")
     __parser_endpoint_add = __subparser_endpoint.add_parser("add", help='Add a new endpoint')
@@ -729,33 +718,6 @@ class Shell(cmd2.Cmd):
             func(self, stmt)
         else:
             self.__path_list(stmt)
-
-#################################################################
-###################           SCAN            ###################
-#################################################################
-
-    __parser_scan = argparse.ArgumentParser(prog="scan")
-    __parser_scan.add_argument("-f", "--force", help="force scanning even if already done", action="store_true")
-    __parser_scan.add_argument("-g", "--gateway", help="force specific gateway", choices_method=__get_option_gateway)
-    __parser_scan.add_argument('endpoint', help='Endpoint', nargs="?", choices_method=__get_option_endpoint)
-
-    @cmd2.with_argparser(__parser_scan)
-    def do_scan(self, stmt):
-        '''Scan endpoint to check connectivity and supported authentication methods'''
-        endpoint = vars(stmt)['endpoint']
-        gateway = vars(stmt)['gateway']
-        force = vars(stmt)['force']
-        if gateway is None:
-            gateway = "auto"
-
-        targets = list(self.workspace.enum_targets(endpoint, scanned=False if force else None).keys())
-
-        nb_targets = len(targets)
-        if nb_targets > 1:
-            if not yes_no("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):
-                return
-
-        self.workspace.scan(targets, gateway=gateway)
 
 #################################################################
 ###################          CONNECT          ###################

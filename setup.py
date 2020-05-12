@@ -9,7 +9,7 @@ setup(
     packages=find_namespace_packages(include=['baboossh*']),
     scripts=['bin/baboossh'],
 
-    install_requires=['cmd2','tabulate','asyncssh','python-libnmap'],
+    install_requires=['cmd2','tabulate','fabric','paramiko','python-libnmap'],
 
     package_data={
         # If any package contains *.txt or *.rst files, include them:
@@ -17,7 +17,7 @@ setup(
     },
 
     # metadata to display on PyPI
-    author="Akerva - Cybiere",
+    author="Cybiere - Akerva",
     author_email="nicolas@cosnard.io",
     description="SSH spreader made easy for red teams in a hurry",
     long_description=long_description,

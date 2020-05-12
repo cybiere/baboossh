@@ -1,5 +1,4 @@
 import ipaddress
-import asyncio, asyncssh, sys, errno
 import json
 from baboossh import dbConn
 from baboossh import Host
@@ -17,19 +16,17 @@ class Endpoint():
         id (int): The endpoint id
         host (:class:`.Host`): The Endpoint's :class:`.Host`
         scope (bool): Whether the Endpoint is in scope or not
-        scanned (bool): Whether :func:`scan` has been run on the Endpoint
-        reachable (bool): Whether the Endpoint was reached using :func:`scan`
-        distance (int): The number of hops to reach the Endpoint, determined by :func:`scan`
+        reachable (bool): Whether the Endpoint was reached with `path find`
+        distance (int): The number of hops to reach the Endpoint
         found (:class:`.Endpoint`): The Endpoint on which the current Endpoint was discovered
-        auth ([str...]): A list of allowed authentication methods, populated by a :func:`scan`
     """
 
-    search_fields = ['ip','port','auth']
+    search_fields = ['ip','port']
 
     def __init__(self,ip,port):
         #check if ip is actually an IP
         ipaddress.ip_address(ip)
-        if not port.isdigit():
+        if not isinstance(port,int) and not port.isdigit():
             raise ValueError("The port is not a positive integer")
 
         self.ip = ip
@@ -37,30 +34,25 @@ class Endpoint():
         self.host = None
         self.id = None
         self.scope = True
-        self.scanned = False
         self.reachable = None
         self.distance = None
         self.found = None
-        self.auth = set()
         c = dbConn.get().cursor()
-        c.execute('SELECT id,host,scanned,reachable,distance,auth,scope,found FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
+        c.execute('SELECT id, host, reachable, distance, scope, found FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
         savedEndpoint = c.fetchone()
         c.close()
         if savedEndpoint is not None:
             self.id = savedEndpoint[0]
             self.host = Host.find_one(host_id=savedEndpoint[1])
-            self.scanned = savedEndpoint[2] != 0
-            if savedEndpoint[3] is None:
+            if savedEndpoint[2] is None:
                 self.reachable = None
             else:
-                self.reachable = savedEndpoint[3] != 0
-            if savedEndpoint[4] is not None:
-                self.distance = savedEndpoint[4]
+                self.reachable = savedEndpoint[2] != 0
+            if savedEndpoint[3] is not None:
+                self.distance = savedEndpoint[3]
+            self.scope = savedEndpoint[4] != 0
             if savedEndpoint[5] is not None :
-                self.auth = set(json.loads(savedEndpoint[5]))
-            self.scope = savedEndpoint[6] != 0
-            if savedEndpoint[7] is not None :
-                self.found = Endpoint.find_one(endpoint_id=savedEndpoint[7])
+                self.found = Endpoint.find_one(endpoint_id=savedEndpoint[5])
 
     @property
     def port(self):
@@ -84,10 +76,6 @@ class Endpoint():
         """
 
         c = dbConn.get().cursor()
-        if not self.auth:
-            jauth = None
-        else:
-            jauth = json.dumps(list(self.auth))
         if self.id is not None:
             #If we have an ID, the endpoint is already saved in the database : UPDATE
             c.execute('''UPDATE endpoints 
@@ -95,19 +83,17 @@ class Endpoint():
                     ip = ?,
                     port = ?,
                     host = ?,
-                    scanned = ?,
                     reachable = ?,
                     distance = ?,
-                    auth = ?,
                     scope = ?,
                     found = ?
                 WHERE id = ?''',
-                (self.ip, self.port, self.host.id if self.host is not None else None, self.scanned, self.reachable, self.distance, jauth, self.scope, self.found.id if self.found is not None else None, self.id))
+                (self.ip, self.port, self.host.id if self.host is not None else None, self.reachable, self.distance, self.scope, self.found.id if self.found is not None else None, self.id))
         else:
             #The endpoint doesn't exists in database : INSERT
-            c.execute('''INSERT INTO endpoints(ip,port,host,scanned,reachable,distance,auth,scope,found)
-                VALUES (?,?,?,?,?,?,?,?,?) ''',
-                (self.ip,self.port,self.host.id if self.host is not None else None, self.scanned, self.reachable, self.distance, jauth, self.scope, self.found.id if self.found is not None else None))
+            c.execute('''INSERT INTO endpoints(ip, port, host, reachable, distance, scope, found)
+                VALUES (?, ?, ?, ?, ?, ?, ?) ''',
+                (self.ip, self.port, self.host.id if self.host is not None else None, self.reachable, self.distance, self.scope, self.found.id if self.found is not None else None))
             c.close()
             c = dbConn.get().cursor()
             c.execute('SELECT id FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
@@ -230,118 +216,3 @@ class Endpoint():
         for row in c:
             ret.append(Endpoint(row[0],row[1]))
         return ret
-
-    async def __asyncScan(self,gateway,gw,silent):
-        #This inner class access the endpoint through the "endpoint" var as "self" keywork is changed
-        endpoint = self
-        class ScanSSHClient(asyncssh.SSHClient):
-            def connection_made(self, conn):
-                endpoint.reachable = True
-        
-            def auth_banner_received(self, msg, lang):
-                #TODO
-                pass
-        
-            def public_key_auth_requested(self):
-                endpoint.auth.add("privkey")
-                return None
-        
-            def password_auth_requested(self):
-                endpoint.auth.add("password")
-                return None
-        
-            def kbdint_auth_requested(self):
-                endpoint.auth.add("kbdint")
-                return None
-        
-            def auth_completed(self):
-                pass
-
-        self.scanned = True
-        try:
-            conn, client = await asyncio.wait_for(asyncssh.create_connection(ScanSSHClient, self.ip, port=self.port,tunnel=gw,known_hosts=None,username="user"), timeout=3.0)
-        except asyncssh.Error as e:
-            #Permission denied => expected behaviour
-            if e.code == 14:
-                pass
-            else:
-                print("asyncssh Error: "+str(e))
-                return False
-        except OSError as e:
-            #No route to Host
-            if e.errno == errno.EHOSTUNREACH:
-                if not silent:
-                    print("No route to host")
-            return False
-        except asyncio.TimeoutError:
-            self.reachable = False
-            self.save()
-            if not silent:
-                print("Timeout")
-            return False
-        try:
-            conn.close()
-        except:
-            pass
-        if not silent:
-            print("Done")
-        if gateway is None:
-            self.distance = 0
-        else:
-            self.distance = gateway.distance+1
-        self.save()
-        return True
-
-    def scan(self,gateway="auto",silent=False):
-        """Scan the endpoint to gather information
-
-        Scanning the endpoint allows to check if it can be reached with existing
-        pathes or with a manually specified gateway. Once an Endpoint is reached,
-        supported authentication are listed and stored. This function populates
-        `scanned`, `reachable` and `auth`, as well as creates relevant
-        :class:`.Path` object if needed.
-
-        Args:
-            gateway (`None` or `"auto"` or a :class:`.Connection`): Defines the
-                gateway to use to reach the Endpoint: 
-
-                * `None` disable the use of any gateway to try to reach directly the endpoint, 
-                * `"auto"` finds an existing gateway using :func:`~endpoint.Endpoint.getGatewayConnection`
-                * :class:`.Connection` uses the provided connection as a gateway
-
-                Defaults to `"auto"`
-            silent (bool): Whether the connection output is printed. Defaults to `False`
-            
-        Returns:
-            `True` if the endpoint was reached and the scan successful, `False` otherwise.
-        """
-        if gateway == "auto":
-            try:
-                from baboossh import Connection
-                gateway = Connection.find_one(gateway_to=self)
-            except NoPathException as exc:
-                raise exc
-        if gateway is not None:
-            gw = gateway.initConnect()
-        else:
-            gw = None
-        done = asyncio.get_event_loop().run_until_complete(self.__asyncScan(gateway,gw,silent))
-        try:
-            gw.close()
-        except:
-            pass
-
-        if gateway is None:
-            gwHost = None
-        else:
-            gwHost = gateway.endpoint.host
-            if gwHost is None:
-                return done
-        from baboossh import Path
-        p = Path(gwHost,self)
-        if done:
-            p.save()
-        else:
-            if p.id is not None:
-                p.delete()
-        return done 

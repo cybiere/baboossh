@@ -1,16 +1,6 @@
-import asyncio, asyncssh, sys
-from os import dup
-
 class ExtStr(type):
     def __str__(self):
         return self.getKey()
-
-class MySSHClientSession(asyncssh.SSHClientSession):
-    def data_received(self, data, datatype):
-        print(data, end='')
-    def connection_lost(self, exc):
-        if exc:
-            print('SSH session error: ' + str(exc), file=sys.stderr)
 
 class BaboosshExt(object,metaclass=ExtStr):
     @classmethod
@@ -30,11 +20,9 @@ class BaboosshExt(object,metaclass=ExtStr):
         pass
 
     @classmethod
-    async def run(cls,socket, connection,wspaceFolder, stmt):
+    def run(cls,socket, connection,wspaceFolder, stmt):
         try:
-            sout = dup(sys.stdout.fileno())
-            sin = dup(sys.stdin.fileno())
-            result = await socket.run(term_type="xterm", stdin=sin, stdout=sout, stderr=sout)
+            socket.run("sh",pty="vt100")
         except OSError as e:
             print(e.errno)
         except Exception as e:

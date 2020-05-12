@@ -81,7 +81,7 @@ class Creds():
 
     @property
     def kwargs(self):
-        """Return the `Creds` as a dict compatible with `asyncssh.connect`"""
+        """Return the `Creds` as a dict compatible with `fabric.Connection`"""
         return self.obj.getKwargs()
 
     @classmethod
