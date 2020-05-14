@@ -723,21 +723,6 @@ class Shell(cmd2.Cmd):
 ###################          CONNECT          ###################
 #################################################################
 
-    __parser_enum = argparse.ArgumentParser(prog="enum")
-    __parser_enum.add_argument("-w", "--working", help="Show only working endpoints", nargs='?', choices=["true", "false"], const="true")
-    __parser_enum.add_argument('connection', help='Connection string', nargs="?", choices_method=__get_option_connection)
-
-    @cmd2.with_argparser(__parser_enum)
-    def do_enum(self, stmt):
-        '''List all targets with current parameters'''
-        connection = getattr(stmt, 'connection', None)
-        working = getattr(stmt, 'working', None)
-        if working is not None:
-            working = working == "true"
-        targets = [target for endpoint in self.workspace.enum_targets(connection, working=working).values() for target in endpoint]
-        for conn in targets:
-            print(conn)
-
     __parser_connect = argparse.ArgumentParser(prog="connect")
     __parser_connect.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     __parser_connect.add_argument("-f", "--force", help="force connection even if already existing", action="store_true")
@@ -749,12 +734,12 @@ class Shell(cmd2.Cmd):
         '''Try connection to endpoint and identify host'''
         connection = getattr(stmt, 'connection', None)
         verbose = vars(stmt)['verbose']
-        force = vars(stmt)['force']
+        force = getattr(stmt,'force',False)
         gateway = getattr(stmt, 'gateway', "auto")
         if gateway is None:
             gateway = "auto"
 
-        targets = [target for endpoint in self.workspace.enum_targets(connection, working=None if force else False).values() for target in endpoint]
+        targets = [target for endpoint in self.workspace.enum_targets(connection, force=force).values() for target in endpoint]
         nb_targets = len(targets)
         if nb_targets > 1:
             if not yes_no("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):

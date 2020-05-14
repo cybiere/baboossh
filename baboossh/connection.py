@@ -161,14 +161,36 @@ class Connection():
     def find_all(cls, endpoint=None, user=None, creds=None, scope=None):
         ret = []
         c = dbConn.get().cursor()
+
+        query = 'SELECT endpoint, user, cred FROM connections'
+        params = []
+        first = True
         if endpoint is not None:
-            req = c.execute('SELECT endpoint, user, cred FROM connections WHERE endpoint=?', (endpoint.id, ))
-        elif user is not None:
-            req = c.execute('SELECT endpoint, user, cred FROM connections WHERE user=?', (user.id, ))
-        elif creds is not None:
-            req = c.execute('SELECT endpoint, user, cred FROM connections WHERE cred=?', (creds.id, ))
-        else:
-            req = c.execute('SELECT endpoint, user, cred FROM connections')
+            if first:
+                query = query + ' WHERE '
+                first = False
+            else:
+                query = query + ' AND '
+            query = query + 'endpoint=?'
+            params.append(endpoint.id)
+        if user is not None:
+            if first:
+                query = query + ' WHERE '
+                first = False
+            else:
+                query = query + ' AND '
+            query = query + 'user=?'
+            params.append(user.id)
+        if creds is not None:
+            if first:
+                query = query + ' WHERE '
+                first = False
+            else:
+                query = query + ' AND '
+            query = query + 'cred=?'
+            params.append(creds.id)
+
+        req = c.execute(query,tuple(params))
         
         for row in req:
             conn = Connection(Endpoint.find_one(endpoint_id=row[0]), User.find_one(user_id=row[1]), Creds.find_one(creds_id=row[2]))
