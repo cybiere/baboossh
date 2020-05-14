@@ -21,14 +21,14 @@ class Path():
         id (int): The path id
     """
 
-    def __init__(self,src,dst):
+    def __init__(self, src, dst):
         if str(src) == str(dst):
             raise ValueError("Can't create path to self")
         self.src = src
         self.dst = dst
         self.id = None
         c = dbConn.get().cursor()
-        c.execute('SELECT id FROM paths WHERE src=? AND dst=?',(self.src.id if self.src is not None else 0,self.dst.id))
+        c.execute('SELECT id FROM paths WHERE src=? AND dst=?', (self.src.id if self.src is not None else 0, self.dst.id))
         savedPath = c.fetchone()
         c.close()
         if savedPath is not None:
@@ -57,14 +57,14 @@ class Path():
                     src = ?,
                     dst = ?
                 WHERE id = ?''',
-                (self.src.id if self.src is not None else 0,self.dst.id, self.id))
+                (self.src.id if self.src is not None else 0, self.dst.id, self.id))
         else:
-            c.execute('''INSERT INTO paths(src,dst)
-                VALUES (?,?) ''',
-                (self.src.id if self.src is not None else 0,self.dst.id))
+            c.execute('''INSERT INTO paths(src, dst)
+                VALUES (?, ?) ''',
+                (self.src.id if self.src is not None else 0, self.dst.id))
             c.close()
             c = dbConn.get().cursor()
-            c.execute('SELECT id FROM paths WHERE src=? AND dst=?',(self.src.id if self.src is not None else 0,self.dst.id))
+            c.execute('SELECT id FROM paths WHERE src=? AND dst=?', (self.src.id if self.src is not None else 0, self.dst.id))
             self.id = c.fetchone()[0]
         c.close()
         dbConn.get().commit()
@@ -75,13 +75,13 @@ class Path():
         if self.id is None:
             return
         c = dbConn.get().cursor()
-        c.execute('DELETE FROM paths WHERE id = ?',(self.id,))
+        c.execute('DELETE FROM paths WHERE id = ?', (self.id, ))
         c.close()
         dbConn.get().commit()
         return
 
     @classmethod
-    def find_all(cls,src=None,dst=None):
+    def find_all(cls, src=None, dst=None):
         """Find all Paths
 
         if src==None:
@@ -105,21 +105,21 @@ class Path():
         c = dbConn.get().cursor()
         if src is None:
             if dst is None:
-                req = c.execute('SELECT src,dst FROM paths')
+                req = c.execute('SELECT src, dst FROM paths')
             else:
-                req = c.execute('SELECT src,dst FROM paths WHERE dst=?',(dst.id, ))
+                req = c.execute('SELECT src, dst FROM paths WHERE dst=?', (dst.id, ))
         else:
             if dst is None:
-                req = c.execute('SELECT src,dst FROM paths WHERE src=?',(src_id, ))
+                req = c.execute('SELECT src, dst FROM paths WHERE src=?', (src_id, ))
             else:
-                req = c.execute('SELECT src,dst FROM paths WHERE src=? AND dst=?',(src_id, dst.id ))
+                req = c.execute('SELECT src, dst FROM paths WHERE src=? AND dst=?', (src_id, dst.id ))
         for row in req:
-            ret.append(Path(Host.find_one(host_id=row[0]),Endpoint.find_one(endpoint_id=row[1])))
+            ret.append(Path(Host.find_one(host_id=row[0]), Endpoint.find_one(endpoint_id=row[1])))
         c.close()
         return ret
 
     @classmethod
-    def find_one(cls,path_id=None):
+    def find_one(cls, path_id=None):
         """Find an path by its id
 
         Args:
@@ -132,15 +132,15 @@ class Path():
         if path_id is None:
             return None
         c = dbConn.get().cursor()
-        c.execute('''SELECT src,dst FROM paths WHERE id=?''',(path_id,))
+        c.execute('''SELECT src, dst FROM paths WHERE id=?''', (path_id, ))
         row = c.fetchone()
         c.close()
         if row is None:
             return None
-        return Path(Host.find_one(host_id=row[0]),Endpoint.find_one(endpoint_id=row[1]))
+        return Path(Host.find_one(host_id=row[0]), Endpoint.find_one(endpoint_id=row[1]))
     
     @classmethod
-    def hasDirectPath(cls,dst):
+    def hasDirectPath(cls, dst):
         """Check if there is a Path from `"Local"` to an Endpoint
 
         Args:
@@ -151,13 +151,13 @@ class Path():
         """
 
         c = dbConn.get().cursor()
-        c.execute('''SELECT id FROM paths WHERE src=0 and dst=?''',(dst.id,))
+        c.execute('''SELECT id FROM paths WHERE src=0 and dst=?''', (dst.id, ))
         row = c.fetchone()
         c.close()
         return row is not None
 
     @classmethod
-    def getPath(cls,dst,first=True):
+    def getPath(cls, dst, first=True):
         """Get the chain of paths from `"Local"` to an `Endpoint`
 
         Args:
@@ -176,7 +176,7 @@ class Path():
             raise exc
         if previous_hop is None:
             return [None]
-        chain = cls.getPath(previous_hop.closest_endpoint,first=False)
+        chain = cls.getPath(previous_hop.closest_endpoint, first=False)
         if first:
             chain.append(dst)
             return chain

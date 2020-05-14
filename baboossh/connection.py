@@ -29,13 +29,13 @@ class Connection():
     
     A connection represents the working association of those 3 objects to connect
     a target. It can be used to run payloads on a :class:`Host`, open a
-    :class:`Tunnel` to it or use it as a pivot to reach new :class:`Endpoint`\ s
+    :class:`Tunnel` to it or use it as a pivot to reach new :class:`Endpoint` s
 
     Attributes:
-        endpoint (:class:`Endpoint`): the `Connection`\ 's endpoint
-        user (:class:`User`): the `Connection`\ 's user
-        creds (:class:`Creds`): the `Connection`\ 's credentials
-        id (int): the `Connection`\ 's id
+        endpoint (:class:`Endpoint`): the `Connection` 's endpoint
+        user (:class:`User`): the `Connection` 's user
+        creds (:class:`Creds`): the `Connection` 's credentials
+        id (int): the `Connection` 's id
     """
 
 
@@ -75,7 +75,7 @@ class Connection():
     def save(self):
         if self.user is None or self.creds is None:
             return
-        """Save the `Connection` to the :class:`Workspace`\ 's database"""
+        """Save the `Connection` to the :class:`Workspace` 's database"""
         c = dbConn.get().cursor()
         if self.id is not None:
             #If we have an ID, the endpoint is already saved in the database : UPDATE
@@ -100,7 +100,7 @@ class Connection():
         dbConn.get().commit()
 
     def delete(self):
-        """Delete the `Connection` from the :class:`Workspace`\ 's database"""
+        """Delete the `Connection` from the :class:`Workspace` 's database"""
         if self.id is None:
             return
         c = dbConn.get().cursor()
@@ -190,7 +190,7 @@ class Connection():
             query = query + 'cred=?'
             params.append(creds.id)
 
-        req = c.execute(query,tuple(params))
+        req = c.execute(query, tuple(params))
         
         for row in req:
             conn = Connection(Endpoint.find_one(endpoint_id=row[0]), User.find_one(user_id=row[1]), Creds.find_one(creds_id=row[2]))

@@ -336,7 +336,7 @@ class Workspace():
                 if cred is None:
                     raise ValueError("Supplied credentials aren't in workspace")
                 creds = [cred]
-        return (endpoints,users,creds)
+        return (endpoints, users, creds)
 
 
     def enum_targets(self, target=None, force=False, working=False):
@@ -380,7 +380,7 @@ class Workspace():
                 continue
             ret[endpoint] = []
             for user in users:
-                working_connections = Connection.find_all(endpoint=endpoint,user=user)
+                working_connections = Connection.find_all(endpoint=endpoint, user=user)
                 if not working and not force and working_connections:
                     #We already have something working with this user & endpoint, ignore
                     continue
@@ -532,7 +532,7 @@ class Workspace():
             print("The destination should be reachable directly from the host.")
             return
 
-        conn = Connection(dst,None,None)
+        conn = Connection(dst, None, None)
 
         if conn.touch(gateway=None):
             p = Path(None, dst)

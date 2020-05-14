@@ -18,7 +18,7 @@ class Tunnel():
     """
 
     @classmethod
-    async def listenAndLock(cls,conn,port,q):
+    async def listenAndLock(cls, conn, port, q):
         """Open the proxy on the connection and wait.
 
         Once the connection is opened, this function opens the proxy and waits.
@@ -32,20 +32,20 @@ class Tunnel():
         """
 
         try:
-            listener = await conn.forward_socks('localhost',port)
+            listener = await conn.forward_socks('localhost', port)
         except Exception as e:
-            q.put((False,str(e)))
+            q.put((False, str(e)))
             return
-        q.put((True,"ok"))
+        q.put((True, "ok"))
         await listener.wait_closed()
 
     @classmethod
-    def proxLock(cls,conn,port,q):
+    def proxLock(cls, conn, port, q):
         """Run :func:`listenAndLock` with same parameters"""
 
-        asyncio.get_event_loop().run_until_complete(Tunnel.listenAndLock(conn,port,q))
+        asyncio.get_event_loop().run_until_complete(Tunnel.listenAndLock(conn, port, q))
 
-    def __init__(self,connection,port=None):
+    def __init__(self, connection, port=None):
         raise NotImplementedError
         self.connection = connection
         if port is None:
@@ -57,9 +57,9 @@ class Tunnel():
         self.port = port
         self.socket = self.connection.connect()
         q = mp.Queue()
-        self.subprocess = mp.Process(target=Tunnel.proxLock,args=(self.socket,self.port,q))
+        self.subprocess = mp.Process(target=Tunnel.proxLock, args=(self.socket, self.port, q))
         self.subprocess.start()
-        worked,msg = q.get()
+        worked, msg = q.get()
         if not worked:
             raise ValueError(msg)
         print("Tunnel to "+str(self.connection)+" open on port "+str(self.port))

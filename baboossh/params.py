@@ -5,7 +5,7 @@ import threading
 import os
 
 home = os.path.expanduser("~")
-workspacesDir = os.path.join(home,".baboossh")
+workspacesDir = os.path.join(home, ".baboossh")
 
 class dbConn():
     """A singleton handling the database connection
@@ -41,14 +41,14 @@ class dbConn():
         return cls.__conn
 
     @classmethod
-    def build(cls,workspace):
+    def build(cls, workspace):
         """Create the databases and the tables for a new :class:`Workspace`
 
         Args:
             workspace (str): the workspace's name
         """
 
-        dbPath = os.path.join(workspacesDir,workspace,"workspace.db")
+        dbPath = os.path.join(workspacesDir, workspace, "workspace.db")
         c = sqlite3.connect(dbPath)
         c.execute('''CREATE TABLE hosts (
             id INTEGER PRIMARY KEY ASC,
@@ -107,7 +107,7 @@ class dbConn():
         c.close()
 
     @classmethod
-    def connect(cls,workspace):
+    def connect(cls, workspace):
         """Open the connection to the database for a :class:`Workspace`
         
         If this function is called from the main thread, it closes existing
@@ -121,7 +121,7 @@ class dbConn():
             ValueError: raised if the database file doesn't exist
         """
 
-        dbPath = os.path.join(workspacesDir,workspace,"workspace.db")
+        dbPath = os.path.join(workspacesDir, workspace, "workspace.db")
         mainThreadName = threading.main_thread().getName()
         currentName = threading.currentThread().getName()
         if currentName != mainThreadName:
@@ -171,8 +171,8 @@ class Extensions():
         """
 
         nbExt = 0
-        extensionsFolder = os.path.join(os.path.dirname(__file__),'extensions')
-        files = [f.split('.')[0] for f in os.listdir(extensionsFolder) if os.path.isfile(os.path.join(extensionsFolder,f)) and f[0] != '.']
+        extensionsFolder = os.path.join(os.path.dirname(__file__), 'extensions')
+        files = [f.split('.')[0] for f in os.listdir(extensionsFolder) if os.path.isfile(os.path.join(extensionsFolder, f)) and f[0] != '.']
         for mod in files:
             moduleName = "baboossh.extensions."+mod
             try:
@@ -207,7 +207,7 @@ class Extensions():
         print(str(nbExt)+" extensions loaded.")
 
     @classmethod
-    def getAuthMethod(cls,key):
+    def getAuthMethod(cls, key):
         """Get an authentication method by its key
 
         Args:
@@ -232,7 +232,7 @@ class Extensions():
         return cls.__auths.keys()
 
     @classmethod
-    def getPayload(cls,key):
+    def getPayload(cls, key):
         """Get a payload by its key
 
         Args:
@@ -257,7 +257,7 @@ class Extensions():
         return cls.__payloads.keys()
 
     @classmethod
-    def getExport(cls,key):
+    def getExport(cls, key):
         """Get an exporter by its key
 
         Args:
@@ -282,7 +282,7 @@ class Extensions():
         return cls.__exports.keys()
 
     @classmethod
-    def getImport(cls,key):
+    def getImport(cls, key):
         """Get an importer by its key
 
         Args:

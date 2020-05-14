@@ -21,12 +21,12 @@ class Endpoint():
         found (:class:`.Endpoint`): The Endpoint on which the current Endpoint was discovered
     """
 
-    search_fields = ['ip','port']
+    search_fields = ['ip', 'port']
 
-    def __init__(self,ip,port):
+    def __init__(self, ip, port):
         #check if ip is actually an IP
         ipaddress.ip_address(ip)
-        if not isinstance(port,int) and not port.isdigit():
+        if not isinstance(port, int) and not port.isdigit():
             raise ValueError("The port is not a positive integer")
 
         self.ip = ip
@@ -38,7 +38,7 @@ class Endpoint():
         self.distance = None
         self.found = None
         c = dbConn.get().cursor()
-        c.execute('SELECT id, host, reachable, distance, scope, found FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
+        c.execute('SELECT id, host, reachable, distance, scope, found FROM endpoints WHERE ip=? AND port=?', (self.ip, self.port))
         savedEndpoint = c.fetchone()
         c.close()
         if savedEndpoint is not None:
@@ -96,7 +96,7 @@ class Endpoint():
                 (self.ip, self.port, self.host.id if self.host is not None else None, self.reachable, self.distance, self.scope, self.found.id if self.found is not None else None))
             c.close()
             c = dbConn.get().cursor()
-            c.execute('SELECT id FROM endpoints WHERE ip=? AND port=?',(self.ip,self.port))
+            c.execute('SELECT id FROM endpoints WHERE ip=? AND port=?', (self.ip, self.port))
             self.id  = c.fetchone()[0]
         c.close()
         dbConn.get().commit()
@@ -117,7 +117,7 @@ class Endpoint():
         for path in Path.find_all(dst=self):
             path.delete()
         c = dbConn.get().cursor()
-        c.execute('DELETE FROM endpoints WHERE id = ?',(self.id,))
+        c.execute('DELETE FROM endpoints WHERE id = ?', (self.id, ))
         c.close()
         dbConn.get().commit()
         return
@@ -140,20 +140,20 @@ class Endpoint():
         c = dbConn.get().cursor()
         if found is None:
             if scope is None:
-                req = c.execute('SELECT ip,port FROM endpoints')
+                req = c.execute('SELECT ip, port FROM endpoints')
             else:
-                req = c.execute('SELECT ip,port FROM endpoints WHERE scope=?',(scope,))
+                req = c.execute('SELECT ip, port FROM endpoints WHERE scope=?', (scope, ))
         else:
             if scope is None:
-                req = c.execute('SELECT ip,port FROM endpoints WHERE found=?',(endpoint.id if endpoint is not None else None,))
+                req = c.execute('SELECT ip, port FROM endpoints WHERE found=?', (endpoint.id if endpoint is not None else None, ))
             else:
-                req = c.execute('SELECT ip,port FROM endpoints WHERE scope=? and found=?',(scope,endpoint.id if endpoint is not None else None))
+                req = c.execute('SELECT ip, port FROM endpoints WHERE scope=? and found=?', (scope, endpoint.id if endpoint is not None else None))
         for row in req:
-            ret.append(Endpoint(row[0],row[1]))
+            ret.append(Endpoint(row[0], row[1]))
         return ret
 
     @classmethod
-    def find_one(cls,endpoint_id=None,ip_port=None):
+    def find_one(cls, endpoint_id=None, ip_port=None):
         """Find an `Endpoint` by its id or it's IP address:Port
 
         Args:
@@ -170,12 +170,12 @@ class Endpoint():
             if endpoint_id == 0:
                 c.close()
                 return None
-            c.execute('''SELECT ip,port FROM endpoints WHERE id=?''',(endpoint_id,))
+            c.execute('''SELECT ip, port FROM endpoints WHERE id=?''', (endpoint_id, ))
         elif ip_port is not None:
-            ip,sep,port = ip_port.partition(":")
+            ip, sep, port = ip_port.partition(":")
             if port == "":
                 raise ValueError
-            c.execute('''SELECT ip,port FROM endpoints WHERE ip=? and port=?''',(ip,port))
+            c.execute('''SELECT ip, port FROM endpoints WHERE ip=? and port=?''', (ip, port))
         else:
             c.close()
             return None
@@ -184,13 +184,13 @@ class Endpoint():
         c.close()
         if row is None:
             return None
-        return Endpoint(row[0],row[1])
+        return Endpoint(row[0], row[1])
 
     def __str__(self):
         return self.ip+":"+str(self.port)
 
     @classmethod
-    def search(cls,field,val,show_all=False):
+    def search(cls, field, val, show_all=False):
         """Search in the workspace for an `Endpoint`
 
         Args:
@@ -210,9 +210,9 @@ class Endpoint():
         val = "%"+val+"%"
         if show_all:
             #Ok this sounds fugly, but there seems to be no way to set a column name in a parameter. The SQL injection risk is mitigated as field must be in allowed fields, but if you find something better I take it
-            c.execute('SELECT ip,port FROM endpoints WHERE {} LIKE ?'.format(field),(val,))
+            c.execute('SELECT ip, port FROM endpoints WHERE {} LIKE ?'.format(field), (val, ))
         else:
-            c.execute('SELECT ip,port FROM endpoints WHERE scope=? and {} LIKE ?'.format(field),(True,val))
+            c.execute('SELECT ip, port FROM endpoints WHERE scope=? and {} LIKE ?'.format(field), (True, val))
         for row in c:
-            ret.append(Endpoint(row[0],row[1]))
+            ret.append(Endpoint(row[0], row[1]))
         return ret
