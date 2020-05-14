@@ -1,6 +1,7 @@
 from os.path import join,exists
 from os import mkdir
 import sys
+from baboossh.exceptions import ConnectionClosedError
 
 class ExtStr(type):
     def __str__(self):
@@ -25,6 +26,9 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     @classmethod
     def run(cls,socket, connection, wspaceFolder, stmt):
+        if connection.conn is None:
+            raise ConnectionClosedError
+
         lootFolder = join(wspaceFolder,"loot",str(connection.endpoint).replace(':','-'),"")
         if not exists(lootFolder):
             mkdir(lootFolder)

@@ -1,5 +1,5 @@
 import sqlite3
-from baboossh import dbConn,Extensions, Endpoint, User, Creds, Path, Host
+from baboossh import dbConn, Extensions, Endpoint, User, Creds, Path, Host
 from baboossh.exceptions import *
 import fabric, paramiko, sys
 
@@ -39,16 +39,18 @@ class Connection():
     """
 
 
-    def __init__(self,endpoint,user,cred):
+    def __init__(self, endpoint, user, cred):
         self.endpoint = endpoint
         self.user = user
         self.creds = cred
         self.id = None
         self.root = False
+        self.conn = None
+        self.gateway = None
         if user is None or cred is None:
             return
         c = dbConn.get().cursor()
-        c.execute('SELECT id,root FROM connections WHERE endpoint=? AND user=? AND cred=?',(self.endpoint.id,self.user.id,self.creds.id))
+        c.execute('SELECT id, root FROM connections WHERE endpoint=? AND user=? AND cred=?', (self.endpoint.id, self.user.id, self.creds.id))
         savedConnection = c.fetchone()
         c.close()
         if savedConnection is not None:
@@ -87,12 +89,12 @@ class Connection():
                 (self.endpoint.id, self.user.id, self.creds.id, self.root, self.id))
         else:
             #The endpoint doesn't exists in database : INSERT
-            c.execute('''INSERT INTO connections(endpoint,user,cred,root)
-                VALUES (?,?,?,?) ''',
+            c.execute('''INSERT INTO connections(endpoint, user, cred, root)
+                VALUES (?, ?, ?, ?) ''',
                 (self.endpoint.id, self.user.id, self.creds.id, self.root ))
             c.close()
             c = dbConn.get().cursor()
-            c.execute('SELECT id FROM connections WHERE endpoint=? AND user=? AND cred=?',(self.endpoint.id,self.user.id,self.creds.id))
+            c.execute('SELECT id FROM connections WHERE endpoint=? AND user=? AND cred=?', (self.endpoint.id, self.user.id, self.creds.id))
             self.id  = c.fetchone()[0]
         c.close()
         dbConn.get().commit()
@@ -102,14 +104,14 @@ class Connection():
         if self.id is None:
             return
         c = dbConn.get().cursor()
-        c.execute('DELETE FROM connections WHERE id = ?',(self.id,))
+        c.execute('DELETE FROM connections WHERE id = ?', (self.id, ))
         c.close()
         dbConn.get().commit()
         return
 
 
     @classmethod
-    def find_one(cls,connection_id=None, endpoint=None, scope=None, gateway_to=None):
+    def find_one(cls, connection_id=None, endpoint=None, scope=None, gateway_to=None):
         """Find a `Connection` by its id or endpoint
 
         Args:
@@ -130,13 +132,13 @@ class Connection():
                 raise exc
             if closest_host is None:
                 return None
-            return cls.find_one(endpoint=closest_host.closest_endpoint,scope=True)
+            return cls.find_one(endpoint=closest_host.closest_endpoint, scope=True)
 
         c = dbConn.get().cursor()
         if connection_id is not None:
-            req = c.execute('SELECT endpoint,user,cred FROM connections WHERE id=?',(connection_id,))
+            req = c.execute('SELECT endpoint, user, cred FROM connections WHERE id=?', (connection_id, ))
         elif endpoint is not None:
-            req = c.execute('SELECT endpoint,user,cred FROM connections WHERE endpoint=? ORDER BY root ASC',(endpoint.id,))
+            req = c.execute('SELECT endpoint, user, cred FROM connections WHERE endpoint=? ORDER BY root ASC', (endpoint.id, ))
         else:
             c.close()
             return None
@@ -145,9 +147,9 @@ class Connection():
             c.close()
             if row is None:
                 return None
-            return Connection(Endpoint.find_one(endpoint_id=row[0]),User.find_one(user_id=row[1]),Creds.find_one(creds_id=row[2]))
+            return Connection(Endpoint.find_one(endpoint_id=row[0]), User.find_one(user_id=row[1]), Creds.find_one(creds_id=row[2]))
         for row in req:
-            conn = Connection(Endpoint.find_one(endpoint_id=row[0]),User.find_one(user_id=row[1]),Creds.find_one(creds_id=row[2]))
+            conn = Connection(Endpoint.find_one(endpoint_id=row[0]), User.find_one(user_id=row[1]), Creds.find_one(creds_id=row[2]))
             if scope == conn.scope:
                c.close()
                return conn
@@ -156,33 +158,33 @@ class Connection():
 
 
     @classmethod
-    def find_all(cls,endpoint=None,user=None,creds=None,scope=None):
+    def find_all(cls, endpoint=None, user=None, creds=None, scope=None):
         ret = []
         c = dbConn.get().cursor()
         if endpoint is not None:
-            req = c.execute('SELECT endpoint,user,cred FROM connections WHERE endpoint=?',(endpoint.id,))
+            req = c.execute('SELECT endpoint, user, cred FROM connections WHERE endpoint=?', (endpoint.id, ))
         elif user is not None:
-            req = c.execute('SELECT endpoint,user,cred FROM connections WHERE user=?',(user.id,))
+            req = c.execute('SELECT endpoint, user, cred FROM connections WHERE user=?', (user.id, ))
         elif creds is not None:
-            req = c.execute('SELECT endpoint,user,cred FROM connections WHERE cred=?',(creds.id,))
+            req = c.execute('SELECT endpoint, user, cred FROM connections WHERE cred=?', (creds.id, ))
         else:
-            req = c.execute('SELECT endpoint,user,cred FROM connections')
+            req = c.execute('SELECT endpoint, user, cred FROM connections')
         
         for row in req:
-            conn = Connection(Endpoint.find_one(endpoint_id=row[0]),User.find_one(user_id=row[1]),Creds.find_one(creds_id=row[2]))
+            conn = Connection(Endpoint.find_one(endpoint_id=row[0]), User.find_one(user_id=row[1]), Creds.find_one(creds_id=row[2]))
             if scope is None or conn.scope == scope:
                 ret.append(conn)
         c.close()
         return ret
 
     @classmethod
-    def fromTarget(cls,arg):
+    def fromTarget(cls, arg):
         if '@' in arg and ':' in arg:
-            auth,sep,endpoint = arg.partition('@')
+            auth, sep, endpoint = arg.partition('@')
             endpoint  = Endpoint.find_one(ip_port=endpoint)
             if endpoint is None:
                 raise ValueError("Supplied endpoint isn't in workspace")
-            user,sep,cred = auth.partition(":")
+            user, sep, cred = auth.partition(":")
             if sep == "":
                 raise ValueError("No credentials supplied")
             user = User.find_one(name=user)
@@ -193,7 +195,7 @@ class Connection():
             cred = Creds.find_one(creds_id=cred)
             if cred is None:
                 raise ValueError("Supplied credentials aren't in workspace")
-            return Connection(endpoint,user,cred)
+            return Connection(endpoint, user, cred)
         else:    
             if ':' not in arg:
                 arg = arg+':22'
@@ -206,7 +208,7 @@ class Connection():
             return connection
         return None
 
-    def identify(self,socket):
+    def identify(self, socket):
         try:
             result = socket.run("hostname", hide='both')
             hostname = result.stdout.rstrip()
@@ -219,7 +221,7 @@ class Connection():
             socket.run("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done", hide='both')
             macStr = result.stdout.rstrip()
             macs = macStr.split()
-            newHost = Host(hostname,uname,issue,machineId,macs)
+            newHost = Host(hostname, uname, issue, machineId, macs)
             e = self.endpoint
             if newHost.id is None:
                 print("\t"+str(self)+" is a new host: "+hostname)
@@ -235,20 +237,24 @@ class Connection():
             return False
         return True
 
-    def touch(self,gateway="auto"):
+    def touch(self, gateway="auto"):
         if gateway is not None:
             if gateway == "auto":
                 gateway = Connection.find_one(gateway_to=self.endpoint)
                 if gateway is not None:
-                    gw = gateway.open(verbose=False)
+                    if not gateway.open(verbose=False):
+                        raise ConnectionClosedError("Could not open gateway "+str(gateway))
+                    gw = gateway.conn
                 else:
                     gw = None
             else:
-                gw = gateway.open(verbose=False)
+                if not gateway.open(verbose=False):
+                    raise ConnectionClosedError("Could not open gateway "+str(gateway))
+                gw = gateway.conn
         else:
             gw = None
 
-        paramiko_args = {'look_for_keys':False,'allow_agent':False}
+        paramiko_args = {'look_for_keys':False, 'allow_agent':False}
 
         print("Reaching \033[1;34m"+str(self.endpoint)+"\033[0m > ", end="")
         conn = fabric.Connection(host=self.endpoint.ip, port=self.endpoint.port, user="user", connect_kwargs=paramiko_args, gateway=gw, connect_timeout=3)
@@ -280,20 +286,24 @@ class Connection():
         self.endpoint.save()
         return True
 
-    def open(self,gateway="auto",verbose=False,target=False):
+    def open(self, gateway="auto", verbose=False, target=False):
         if gateway is not None:
             if gateway == "auto":
                 gateway = Connection.find_one(gateway_to=self.endpoint)
                 if gateway is not None:
-                    gw = gateway.open(verbose=verbose)
+                    if not gateway.open(verbose=verbose):
+                        raise ConnectionClosedError("Could not open gateway "+str(gateway))
+                    gw = gateway.conn
                 else:
                     gw = None
             else:
-                gw = gateway.open(verbose=verbose)
+                if not gateway.open(verbose=verbose):
+                    raise ConnectionClosedError("Could not open gateway "+str(gateway))
+                gw = gateway.conn
         else:
             gw = None
 
-        paramiko_args = {**self.creds.kwargs,'look_for_keys':False,'allow_agent':False}
+        paramiko_args = {**self.creds.kwargs, 'look_for_keys':False, 'allow_agent':False}
         hostname = ""
         if self.endpoint.host is not None:
             hostname = " ("+str(self.endpoint.host)+")"
@@ -305,12 +315,13 @@ class Connection():
         except paramiko.ssh_exception.NoValidConnectionsError:
             print("\033[1;31mKO\033[0m. Could not reach destination.")
             if gw is not None:
+                gateway.close()
                 #TODO remove path
                 pass
-            return None
+            return False
         except paramiko.ssh_exception.AuthenticationException:
             print("\033[1;31mKO\033[0m. Authentication failed.")
-            return None
+            return False
 
         print("\033[1;32mOK\033[0m")
 
@@ -321,22 +332,34 @@ class Connection():
                 pathSrc = gateway.endpoint.host
             else:
                 raise NoHostError
-        p = Path(pathSrc,self.endpoint)
+        p = Path(pathSrc, self.endpoint)
         p.save()
         self.save()
 
         if self.endpoint.host is None:
             self.identify(conn)
 
-        return conn
+        self.gateway = gateway
+        self.conn = conn
 
-    def run(self,payload,wspaceFolder,stmt):
-        c = self.open(target=True)
-        if c is None:
-            return False
-        payload.run(c,self,wspaceFolder,stmt)
-        c.close()
         return True
+
+    def run(self, payload, wspaceFolder, stmt):
+        opens = False
+        if self.conn is None:
+            if not self.open(target=True):
+                return False
+            opens = True
+        payload.run(self, wspaceFolder, stmt)
+        if opens:
+            self.close()
+        return True
+
+    def close(self):
+        if self.gateway is not None:
+            self.gateway.close()
+        if self.conn is not None:
+            self.conn.close()
 
     def __str__(self):
         return str(self.user)+":"+str(self.creds)+"@"+str(self.endpoint)

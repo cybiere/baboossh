@@ -3,6 +3,9 @@ class NoPathError(Exception):
     pass
 
 class NoHostError(Exception):
-    """Raised when not Host exists"""
+    """Raised when not :class:`Host` exists"""
     pass
 
+class ConnectionClosedError(Exception):
+    """Raised when trying to use a closed :class:`Connection`"""
+    pass

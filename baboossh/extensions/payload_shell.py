@@ -1,3 +1,5 @@
+from baboossh.exceptions import ConnectionClosedError
+
 class ExtStr(type):
     def __str__(self):
         return self.getKey()
@@ -21,6 +23,9 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     @classmethod
     def run(cls,socket, connection,wspaceFolder, stmt):
+        if connection.conn is None:
+            raise ConnectionClosedError
+
         try:
             socket.run("sh",pty="vt100")
         except OSError as e:

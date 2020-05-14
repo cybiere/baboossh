@@ -1,3 +1,5 @@
+from baboossh.exceptions import ConnectionClosedError
+
 class ExtStr(type):
     def __str__(self):
         return self.getKey()
@@ -20,10 +22,12 @@ class BaboosshExt(object,metaclass=ExtStr):
         parser.add_argument('cmd',nargs="+",help='Command to execute on target')
 
     @classmethod
-    def run(cls,conn, connection, wspaceFolder, stmt):
+    def run(cls, connection, wspaceFolder, stmt):
+        if connection.conn is None:
+            raise ConnectionClosedError
         command = " ".join(getattr(stmt,"cmd",["hostname"]))
         try:
-            conn.run(command,pty="vt100")
+            connection.conn.run(command,pty="vt100")
             #print(result.stdout,end='')
         except Exception as e:
             print("Error : "+str(e))

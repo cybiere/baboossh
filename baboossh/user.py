@@ -93,9 +93,9 @@ class User():
                 req = c.execute('SELECT username FROM users WHERE scope=?', (scope, ))
         else:
             if scope is None:
-                req = c.execute('SELECT username FROM users WHERE found=?', (endpoint.id if endpoint is not None else None, ))
+                req = c.execute('SELECT username FROM users WHERE found=?', (found.id if found is not None else None, ))
             else:
-                req = c.execute('SELECT username FROM users WHERE found=? AND scope=?', (endpoint.id if endpoint is not None else None, scope))
+                req = c.execute('SELECT username FROM users WHERE found=? AND scope=?', (found.id if found is not None else None, scope))
         for row in req:
             ret.append(User(row[0]))
         return ret

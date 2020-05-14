@@ -401,9 +401,8 @@ class Workspace():
                 print(str(connection)+"> You must find a path to an endpoint before connecting to it")
                 continue
 
-            conn = connection.open(gateway=gateway, verbose=verbose)
-            if conn is not None:
-                conn.close()
+            if connection.open(gateway=gateway, verbose=verbose):
+                connection.close()
                 if gateway != "auto":
                     if gateway is None:
                         path_src = None

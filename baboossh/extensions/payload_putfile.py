@@ -1,5 +1,6 @@
 from os.path import basename
 import sys,cmd2
+from baboossh.exceptions import ConnectionClosedError
 
 class ExtStr(type):
     def __str__(self):
@@ -24,6 +25,9 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     @classmethod
     def run(cls,socket, connection, wspaceFolder, stmt):
+        if connection.conn is None:
+            raise ConnectionClosedError
+
         filepath = getattr(stmt,'file',None)
         if filepath is None:
             print("You must specify a path")
