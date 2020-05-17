@@ -683,10 +683,6 @@ class Shell(cmd2.Cmd):
         dst = vars(stmt)['dst']
         self.workspace.path_del(src, dst)
 
-    def __path_find(self, stmt):
-        dst = vars(stmt)['dst']
-        self.workspace.path_find_new(dst)
-
     __parser_path = argparse.ArgumentParser(prog="path")
     __subparser_path = __parser_path.add_subparsers(title='Actions', help='Available actions')
     __parser_path_list = __subparser_path.add_parser("list", help='List paths')
@@ -700,14 +696,11 @@ class Shell(cmd2.Cmd):
     __parser_path_del = __subparser_path.add_parser("delete", help='Delete path to endpoint')
     __parser_path_del.add_argument('src', help='Source host', choices_method=__get_host_or_local)
     __parser_path_del.add_argument('dst', help='Destination endpoint', choices_method=__get_option_endpoint)
-    __parser_path_find = __subparser_path.add_parser("find", help='Find shortest path to endpoint or host')
-    __parser_path_find.add_argument('dst', help='Destination', choices_method=__get_option_endpoint)
 
     __parser_path_list.set_defaults(func=__path_list)
     __parser_path_get.set_defaults(func=__path_get)
     __parser_path_add.set_defaults(func=__path_add)
     __parser_path_del.set_defaults(func=__path_del)
-    __parser_path_find.set_defaults(func=__path_find)
 
     @cmd2.with_argparser(__parser_path)
     def do_path(self, stmt):
@@ -718,6 +711,40 @@ class Shell(cmd2.Cmd):
             func(self, stmt)
         else:
             self.__path_list(stmt)
+
+#################################################################
+###################           PROBE           ###################
+#################################################################
+
+    __parser_probe = argparse.ArgumentParser(prog="probe")
+    __parser_probe.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
+    __parser_probe.add_argument("-f", "--force", help="probe only unprobed endpoints", action="store_true")
+    __parser_probe.add_argument("-n", "--new", help="try finding new shorter path", action="store_true")
+    __parser_probe.add_argument("-g", "--gateway", help="force specific gateway", choices_method=__get_option_gateway)
+    __parser_probe.add_argument('target', help='Endpoint to probe', nargs="?", choices_method=__get_option_endpoint)
+
+    @cmd2.with_argparser(__parser_probe)
+    def do_probe(self, stmt):
+        '''Try to reach an endpoint through pivoting, using an existing path or finding a new one'''
+        target = getattr(stmt, 'target', None)
+        verbose = getattr(stmt,'verbose',False)
+        force = getattr(stmt,'force',False)
+        new = getattr(stmt,'new',False)
+        gateway = getattr(stmt, 'gateway', "auto")
+        if gateway is None:
+            gateway = "auto"
+
+        endpoints = self.workspace.enum_targets(target, force=True).keys()
+        if force:
+            targets = endpoints
+        else:
+            targets = [endpoint for endpoint in endpoints if not endpoint.reachable]
+        nb_targets = len(targets)
+        if nb_targets > 1:
+            if not yes_no("This will probe "+str(nb_targets)+" endpoints. Proceed ?", False):
+                return
+
+        self.workspace.probe(targets, gateway, verbose, new)
 
 #################################################################
 ###################          CONNECT          ###################

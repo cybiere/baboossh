@@ -307,6 +307,10 @@ class Workspace():
                     users.append(conn.user)
                     creds.append(conn.creds)
                 return (endpoints, users, creds)
+            endpoint = Endpoint.find_one(ip_port=target)
+            if endpoint is None:
+                raise ValueError("Supplied endpoint doesn't match a valid endpoint")
+            return ([endpoint],[None],[None])
         else:
             auth, sep, endpoint = target.partition('@')
             if endpoint == "*":
@@ -520,38 +524,44 @@ class Workspace():
         p.save()
         print("Path saved")
 
-    def path_find_new(self, dst):
-        try:
-            dst = Endpoint.find_one(ip_port=dst)
-        except:
-            print("Please specify a valid endpoint in the IP:PORT form")
-            return
-        if dst is None:
-            print("The endpoint provided doesn't exist in this workspace")
-            return
-        if Path.hasDirectPath(dst):
-            print("The destination should be reachable directly from the host.")
-            return
+#################################################################
+###################           PROBE           ###################
+#################################################################
 
-        conn = Connection(dst, None, None)
-
-        if conn.probe(gateway=None):
-            p = Path(None, dst)
-            p.save()
-            print("Could reach target directly, path added.")
-            return
-
-        hosts = Host.find_all(scope=True)
-        hosts.sort(key=lambda h: h.distance)
-        for host in hosts:
-            endpoint = host.closest_endpoint
-            gateway = Connection.find_one(endpoint=endpoint)
-            working = conn.probe(gateway=gateway)
+    def probe(self, targets, gateway, verbose, force):
+        for endpoint in targets:
+            conn = Connection(endpoint, None, None)
+            if not force and endpoint.reachable and gateway == "auto":
+                working = conn.probe()
+                host = Host.find_one(prev_hop_to=endpoint)
+            elif gateway != "auto":
+                if gateway == "local":
+                    gateway = None
+                    host = None
+                else:
+                    gateway = Connection.find_one(endpoint=gateway)
+                    host = gateway.endpoint.host
+                working = conn.probe(gateway=gateway)
+            else:
+                host = None
+                working = conn.probe(gateway=None)
+                if not working:
+                    hosts = Host.find_all(scope=True)
+                    hosts.sort(key=lambda h: h.distance)
+                    working = False
+                    for host in hosts:
+                        gateway_endpoint = host.closest_endpoint
+                        gateway = Connection.find_one(endpoint=gateway_endpoint)
+                        working = conn.probe(gateway=gateway)
+                        if working:
+                            break
             if working:
-                p = Path(host, dst)
+                p = Path(host, endpoint)
                 p.save()
-                print("Working with gw "+str(endpoint)+" (host "+str(host)+")")
-                return
+                if host is None:
+                    print("Working directly from local")
+                else:
+                    print("Working using "+str(host)+" as gateway")
         return
 
 #################################################################
