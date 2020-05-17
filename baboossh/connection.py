@@ -259,7 +259,7 @@ class Connection():
             return False
         return True
 
-    def touch(self, gateway="auto"):
+    def probe(self, gateway="auto"):
         if gateway is not None:
             if gateway == "auto":
                 gateway = Connection.find_one(gateway_to=self.endpoint)
@@ -283,6 +283,11 @@ class Connection():
         try:
             conn.open()
         except paramiko.ssh_exception.NoValidConnectionsError:
+            print("\033[1;31mKO\033[0m.")
+            if gw is not None:
+                gw.close()
+            return False
+        except paramiko.ssh_exception.ChannelException:
             print("\033[1;31mKO\033[0m.")
             if gw is not None:
                 gw.close()
@@ -341,9 +346,12 @@ class Connection():
                 #TODO remove path
                 pass
             return False
-        except paramiko.ssh_exception.AuthenticationException:
-            print("\033[1;31mKO\033[0m. Authentication failed.")
-            return False
+        except (paramiko.ssh_exception.AuthenticationException,paramiko.ssh_exception.SSHException) as e:
+            if isinstance(e,paramiko.ssh_exception.AuthenticationException) or "encountered" in str(e):
+                print("\033[1;31mKO\033[0m. Authentication failed.")
+                return False
+            else:
+                raise e
 
         print("\033[1;32mOK\033[0m")
 
@@ -378,10 +386,11 @@ class Connection():
         return True
 
     def close(self):
-        if self.gateway is not None:
-            self.gateway.close()
         if self.conn is not None:
             self.conn.close()
+        print("Closed "+str(self))
+        if self.gateway is not None:
+            self.gateway.close()
 
     def __str__(self):
         return str(self.user)+":"+str(self.creds)+"@"+str(self.endpoint)

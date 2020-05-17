@@ -769,16 +769,16 @@ class Shell(cmd2.Cmd):
         else:
             payload = self.workspace.options["payload"]
 
-            params = self.workspace.options["params"]
-            __parser = argparse.ArgumentParser(description='Params __parser')
-            payload.buildParser(__parser)
-            if params is None:
-                params = ""
-            stmt, junk = __parser.parse_known_args(params.split())
-
         if payload is None:
             print("Error : No payload specified")
             return
+
+        params = self.workspace.options["params"]
+        __parser = argparse.ArgumentParser(description='Params __parser')
+        payload.buildParser(__parser)
+        if params is None:
+            params = ""
+        stmt, junk = __parser.parse_known_args(params.split())
 
         targets = [target for endpoint in self.workspace.enum_targets(connection, working=True).values() for target in endpoint]
         nb_targets = len(targets)

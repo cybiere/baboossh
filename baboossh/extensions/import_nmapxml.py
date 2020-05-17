@@ -37,15 +37,16 @@ class BaboosshExt(object,metaclass=ExtStr):
     @classmethod
     def run(cls,stmt,workspace):
         nmapfile = getattr(stmt,'nmapfile')
-        fromHost = getattr(stmt,'from',"Local")
+        from_host = getattr(stmt,'from',"Local")
 
-        if fromHost is None:
+        if from_host is None:
+            print("No source host specified, ignoring paths")
+            distance = None
+        elif from_host == "Local":
             src = None
-            print("No source host specified, using Local")
-        elif fromHost == "Local":
-            src = None
+            distance = 0
         else:
-            hosts = Host.find_all(name=fromHost)
+            hosts = Host.find_all(name=from_host)
             if len(hosts) > 1:
                 print("Several hosts corresponding.")
                 return False
@@ -53,23 +54,28 @@ class BaboosshExt(object,metaclass=ExtStr):
                 print("No host corresponding.")
                 return False
             src = hosts[0]
+            distance = src.distance + 1
         try:
             report = NmapParser.parse_fromfile(nmapfile)
         except Exception as e:
             print("Failed to read source file: "+str(e))
             return False
         count = 0
-        countNew = 0
+        count_new = 0
         for host in report.hosts:
             for s in host.services:
                 if s.service == "ssh" and s.open():
                     count = count + 1
-                    newEndpoint = Endpoint(host.address,s.port)
-                    if newEndpoint.id is None:
-                        countNew = countNew + 1
-                    newEndpoint.save()
-                    newPath = Path(src,newEndpoint)
-                    newPath.save()
-        print(str(count)+" endpoints found, "+str(countNew)+" new endpoints saved")
+                    new_endpoint = Endpoint(host.address,s.port)
+                    if new_endpoint.id is None:
+                        count_new = count_new + 1
+                    new_endpoint.save()
+                    if distance is not None:
+                        if new_endpoint.distance is None or new_endpoint.distance > distance:
+                            new_endpoint.distance = distance
+                            new_endpoint.save()
+                        new_path = Path(src,new_endpoint)
+                        new_path.save()
+        print(str(count)+" endpoints found, "+str(count_new)+" new endpoints saved")
         return True
  

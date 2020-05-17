@@ -243,6 +243,7 @@ class Workspace():
             print("endpoint => "+str(self.options['endpoint']))
             print("user => "+str(self.options['user']))
             print("creds => "+str(self.options['creds']))
+            return
 
         if not option in list(self.options.keys()):
             raise ValueError(option+" isn't a valid option.")
@@ -534,7 +535,7 @@ class Workspace():
 
         conn = Connection(dst, None, None)
 
-        if conn.touch(gateway=None):
+        if conn.probe(gateway=None):
             p = Path(None, dst)
             p.save()
             print("Could reach target directly, path added.")
@@ -545,7 +546,7 @@ class Workspace():
         for host in hosts:
             endpoint = host.closest_endpoint
             gateway = Connection.find_one(endpoint=endpoint)
-            working = conn.touch(gateway=gateway)
+            working = conn.probe(gateway=gateway)
             if working:
                 p = Path(host, dst)
                 p.save()

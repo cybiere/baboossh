@@ -96,7 +96,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         try:
             ipobj = ipaddress.ip_address(hostname)
         except ValueError:
-            res = self.connection.conn.run("getent hosts "+hostname+" | awk '{ print $1 }'")
+            res = self.connection.conn.run("getent hosts "+hostname+" | awk '{ print $1 }'", hide=True, warn=True)
             ips = res.stdout.splitlines()
             for ip in ips:
                 ipobj = ipaddress.ip_address(ip)
@@ -189,7 +189,6 @@ class BaboosshExt(object,metaclass=ExtStr):
                         val = val[2:]
                     curHost['identity'] = val
         if curHost != None and curHost["name"] != "*":
-            print("Not None")
             if "host" in curHost.keys():
                 host = curHost["host"]
             else:
@@ -211,7 +210,6 @@ class BaboosshExt(object,metaclass=ExtStr):
                     user.save()
             if "identity" in curHost.keys():
                 identity = self.getKeyToCreds(curHost["identity"],".")
-        print("End")
 
     def gatherFromKnown(self):
         lootFolder = os.path.join(self.wspaceFolder,"loot")
@@ -237,7 +235,7 @@ class BaboosshExt(object,metaclass=ExtStr):
     def gatherKeys(self):
         files = []
         ret = []
-        result = self.connection.conn.run("ls -A .ssh")
+        result = self.connection.conn.run("ls -A .ssh", hide=True, warn=True)
         for line in result.stdout.splitlines():
             if "rsa" in line or "key" in line or "p12" in line or "dsa" in line:
                 files.append(line)
@@ -282,7 +280,7 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     def listHistoryFiles(self):
         ret = []
-        result = self.connection.conn.run("ls -A")
+        result = self.connection.conn.run("ls -A", hide=True, warn=True)
         for line in result.stdout.splitlines():
             if "history" in line:
                 ret.append(line)

@@ -24,7 +24,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         parser.add_argument('file',help='Path of file to send to target',completer_method=cmd2.Cmd.path_complete)
 
     @classmethod
-    def run(cls,socket, connection, wspaceFolder, stmt):
+    def run(cls, connection, wspaceFolder, stmt):
         if connection.conn is None:
             raise ConnectionClosedError
 
@@ -36,7 +36,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         sys.stdout.flush()
         filename = basename(filepath)
         try:
-            socket.put(filepath,filename)
+            connection.conn.put(filepath,filename)
         except Exception as e:
             print("Error "+str(type(e))+": "+str(e))
             return False

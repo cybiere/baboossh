@@ -169,13 +169,13 @@ class Path():
         Raises:
             NoPathError: if no path could be found to `dst`
         """
-        
+        print(dst)
         try:
             previous_hop = Host.find_one(prev_hop_to=dst)
         except NoPathError as exc:
             raise exc
         if previous_hop is None:
-            return [None]
+            return [None,dst.host]
         chain = cls.getPath(previous_hop.closest_endpoint, first=False)
         if first:
             chain.append(dst)

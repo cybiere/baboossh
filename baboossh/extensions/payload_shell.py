@@ -22,12 +22,12 @@ class BaboosshExt(object,metaclass=ExtStr):
         pass
 
     @classmethod
-    def run(cls,socket, connection,wspaceFolder, stmt):
+    def run(cls, connection,wspaceFolder, stmt):
         if connection.conn is None:
             raise ConnectionClosedError
 
         try:
-            socket.run("sh",pty="vt100")
+            connection.conn.run("sh",pty="vt100")
         except OSError as e:
             print(e.errno)
         except Exception as e:

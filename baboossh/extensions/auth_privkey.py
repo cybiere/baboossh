@@ -36,17 +36,17 @@ class BaboosshExt():
         try:
            k = paramiko.RSAKey.from_private_key_file(filepath,password=randpass)
         except paramiko.ssh_exception.SSHException as e:
-            if "checkints do not match" in str(e):
+            if "encountered" not in str(e) and "not a valid" not in str(e):
                 return True, True
             try:
                 k = paramiko.DSSKey.from_private_key_file(filepath,password=randpass)
             except paramiko.ssh_exception.SSHException as e:
-                if "checkints do not match" in str(e):
+                if "encountered" not in str(e) and "not a valid" not in str(e):
                     return True, True
                 try:
                     k = paramiko.ECDSAKey.from_private_key_file(filepath,password=randpass)
                 except paramiko.ssh_exception.SSHException as e:
-                    if "checkints do not match" in str(e):
+                    if "encountered" not in str(e) and "not a valid" not in str(e):
                         return True, True
                     return False, False
                 return True, haspass
@@ -58,19 +58,13 @@ class BaboosshExt():
         try:
            k = paramiko.RSAKey.from_private_key_file(filepath,password=passphrase)
         except paramiko.ssh_exception.SSHException as e: 
-            if "checkints do not match" in str(e):
-                return False
             try:
                 k = paramiko.DSSKey.from_private_key_file(filepath,password=passphrase)
             except paramiko.ssh_exception.SSHException as e:
-                if "checkints do not match" in str(e):
-                    return False
                 try:
                     k = paramiko.ECDSAKey.from_private_key_file(filepath,password=passphrase)
                 except paramiko.ssh_exception.SSHException as e:
-                    if "checkints do not match" in str(e):
-                        return False
-                    raise ValueError("Not a valid SSH key")
+                    return False
                 return True
             return True
         return True
