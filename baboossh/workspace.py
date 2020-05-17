@@ -413,7 +413,7 @@ class Workspace():
         for connection in targets:
             connection.run(payload, self.workspace_folder, stmt)
 
-    def connect(self, targets, gateway, verbose):
+    def connect(self, targets, gateway="auto", verbose=False, probe_auto=False):
         if gateway == "local":
             gateway = None
         elif gateway != "auto":
@@ -421,8 +421,17 @@ class Workspace():
 
         for connection in targets:
             if not connection.endpoint.reachable:
-                print(str(connection)+"> You must find a path to an endpoint before connecting to it")
-                continue
+                if probe_auto:
+                    self.probe([connection.endpoint], gateway, verbose)
+                    #Reload the endpoint from DB to check if it is reachable
+                    #TODO this is why we need to save the objects in RAM to not have shitloads of objects for the same endpoint/connection/whatever
+                    new_endpoint = Endpoint.find_one(endpoint_id=connection.endpoint.id)
+                    if not new_endpoint.reachable:
+                        continue
+                    connection.endpoint = new_endpoint
+                else:
+                    print(str(connection)+"> You must manually probe the endpoint or add --probe to connect it")
+                    continue
 
             if connection.open(gateway=gateway, verbose=verbose):
                 connection.close()
@@ -528,7 +537,7 @@ class Workspace():
 ###################           PROBE           ###################
 #################################################################
 
-    def probe(self, targets, gateway, verbose, force):
+    def probe(self, targets, gateway="auto", verbose=False, force=False):
         for endpoint in targets:
             conn = Connection(endpoint, None, None)
             if not force and endpoint.reachable and gateway == "auto":
