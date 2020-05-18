@@ -27,7 +27,7 @@ class BaboosshExt(object,metaclass=ExtStr):
 
         self.keysHash = {}
         for c in Creds.find_all():
-            if c.credsType != "privkey":
+            if c.creds_type != "privkey":
                 continue
             path = c.obj.keypath
             p = subprocess.run(["sha1sum",path], stdout=subprocess.PIPE)
@@ -262,7 +262,7 @@ class BaboosshExt(object,metaclass=ExtStr):
             if filepath != self.keysHash[output]:
                 os.remove(filepath)
             return None
-        valid,haspass = Extensions.getAuthMethod("privkey").checkKeyfile(filepath)
+        valid,haspass = Extensions.auths["privkey"].checkKeyfile(filepath)
         if valid:
             self.keysHash[output] = filepath
             c= { "passphrase":"","keypath":filepath,"haspass":haspass}

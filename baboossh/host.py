@@ -1,8 +1,7 @@
-import sqlite3
 import json
 import hashlib
 from baboossh import Db
-from baboossh.exceptions import *
+from baboossh.exceptions import NoPathError
 from baboossh.utils import Unique
 
 
@@ -23,23 +22,23 @@ class Host(metaclass=Unique):
         id (int): the id of the Host
         uname (str): the output of the command `uname -a` on the Host
         issue (str): the content of the file `/etc/issue` on the Host
-        machineId (str): the content of the file `/etc/machine-id` on the Host
+        machine_id (str): the content of the file `/etc/machine-id` on the Host
         macs ([str, ...]): a list of the MAC addresses of the Host interfaces
     """
 
     search_fields = ['name', 'uname']
 
-    def __init__(self, hostname, uname, issue, machineId, macs):
+    def __init__(self, hostname, uname, issue, machine_id, macs):
         self.hostname = hostname
         self.id = None
         self.uname = uname
         self.issue = issue
-        self.machineId = machineId
+        self.machine_id = machine_id
         self.macs = macs
-        c = Db.get().cursor()
-        c.execute('SELECT id, name FROM hosts WHERE hostname=? AND uname=? AND issue=? AND machineid=? AND macs=?', (self.hostname, self.uname, self.issue, self.machineId, json.dumps(self.macs)))
-        saved_host = c.fetchone()
-        c.close()
+        cursor = Db.get().cursor()
+        cursor.execute('SELECT id, name FROM hosts WHERE hostname=? AND uname=? AND issue=? AND machine_id=? AND macs=?', (self.hostname, self.uname, self.issue, self.machine_id, json.dumps(self.macs)))
+        saved_host = cursor.fetchone()
+        cursor.close()
         if saved_host is not None:
             self.id = saved_host[0]
             self.name = saved_host[1]
@@ -56,18 +55,18 @@ class Host(metaclass=Unique):
             self.name = None
             while self.name is None:
                 fullname = name if incr == 0 else name+"_"+str(incr)
-                c = Db.get().cursor()
-                c.execute('SELECT id FROM hosts WHERE name=?', (fullname, ))
-                if c.fetchone() is not None:
+                cursor = Db.get().cursor()
+                cursor.execute('SELECT id FROM hosts WHERE name=?', (fullname, ))
+                if cursor.fetchone() is not None:
                     incr = incr + 1
                 else:
                     self.name = fullname
-                c.close
+                cursor.close()
 
 
     @classmethod
-    def get_id(cls, hostname, uname, issue, machineId, macs):
-        return hashlib.sha256((hostname+uname+issue+machineId+json.dumps(macs)).encode()).hexdigest()
+    def get_id(cls, hostname, uname, issue, machine_id, macs):
+        return hashlib.sha256((hostname+uname+issue+machine_id+json.dumps(macs)).encode()).hexdigest()
 
     @property
     def scope(self):
@@ -76,74 +75,74 @@ class Host(metaclass=Unique):
         A `Host` is in scope if all its :class:`Endpoint` s are in scope
         """
 
-        for e in self.endpoints:
-            if not e.scope:
+        for endpoint in self.endpoints:
+            if not endpoint.scope:
                 return False
         return True
 
     @scope.setter
     def scope(self, scope):
-        for e in self.endpoints:
-            e.scope = scope
-            e.save()
+        for endpoint in self.endpoints:
+            endpoint.scope = scope
+            endpoint.save()
 
     @property
     def distance(self):
         """Returns the `Host` 's number of hops from `"Local"`"""
 
-        c = Db.get().cursor()
-        c.execute('SELECT distance FROM endpoints WHERE host=? ORDER BY distance DESC', (self.id, ))
-        row = c.fetchone()
-        c.close()
-        return row[0];
+        cursor = Db.get().cursor()
+        cursor.execute('SELECT distance FROM endpoints WHERE host=? ORDER BY distance DESC', (self.id, ))
+        row = cursor.fetchone()
+        cursor.close()
+        return row[0]
 
     @property
     def closest_endpoint(self):
         """Returns the `Host` 's closest :class:`Endpoint`"""
-        
-        c = Db.get().cursor()
-        c.execute('SELECT ip, port FROM endpoints WHERE host=? ORDER BY distance DESC', (self.id, ))
-        row = c.fetchone()
-        c.close()
+
+        cursor = Db.get().cursor()
+        cursor.execute('SELECT ip, port FROM endpoints WHERE host=? ORDER BY distance DESC', (self.id, ))
+        row = cursor.fetchone()
+        cursor.close()
         from baboossh import Endpoint
-        return Endpoint(row[0], row[1]);
+        return Endpoint(row[0], row[1])
 
     @property
     def endpoints(self):
         """Returns a `List` of the `Host` 's :class:`Endpoint` s"""
         from baboossh import Endpoint
         endpoints = []
-        c = Db.get().cursor()
-        for row in c.execute('SELECT ip, port FROM endpoints WHERE host=?', (self.id, )):
+        cursor = Db.get().cursor()
+        for row in cursor.execute('SELECT ip, port FROM endpoints WHERE host=?', (self.id, )):
             endpoints.append(Endpoint(row[0], row[1]))
-        c.close()
+        cursor.close()
         return endpoints
 
     def save(self):
         """Saves the `Host` in the :class:`Workspace` 's database"""
-        c = Db.get().cursor()
+        cursor = Db.get().cursor()
         if self.id is not None:
             #If we have an ID, the host is already saved in the database : UPDATE
-            c.execute('''UPDATE hosts 
+            cursor.execute('''UPDATE hosts
                 SET
                     name = ?,
                     hostname = ?,
                     uname = ?,
                     issue = ?,
-                    machineid = ?,
+                    machine_id = ?,
                     macs = ?
                 WHERE id = ?''',
-                (self.name, self.hostname, self.uname, self.issue, self.machineId, json.dumps(self.macs), self.id))
+                           (self.name, self.hostname, self.uname, self.issue, self.machine_id, json.dumps(self.macs), self.id))
         else:
             #The host doesn't exists in database : INSERT
-            c.execute('''INSERT INTO hosts(name, hostname, uname, issue, machineid, macs)
+            cursor.execute('''INSERT INTO hosts(name, hostname, uname, issue, machine_id, macs)
                 VALUES (?, ?, ?, ?, ?, ?) ''',
-                (self.name, self.hostname, self.uname, self.issue, self.machineId, json.dumps(self.macs)))
-            c.close()
-            c = Db.get().cursor()
-            c.execute('SELECT id FROM hosts WHERE name=?', (self.name, ))
-            self.id = c.fetchone()[0]
-        c.close()
+                           (self.name, self.hostname, self.uname, self.issue, self.machine_id, json.dumps(self.macs)))
+            cursor.close()
+            cursor = Db.get().cursor()
+            cursor.execute('SELECT id FROM hosts WHERE name=?', (self.name, ))
+            self.id = cursor.fetchone()[0]
+        cursor.close()
         Db.get().commit()
 
     def delete(self):
@@ -158,15 +157,15 @@ class Host(metaclass=Unique):
         from baboossh.utils import unstore_targets_merge
         del_data = {}
         for path in Path.find_all(src=self):
-            unstore_targets_merge(del_data,path.delete())
+            unstore_targets_merge(del_data, path.delete())
         for endpoint in self.endpoints:
             endpoint.host = None
             endpoint.save()
-        c = Db.get().cursor()
-        c.execute('DELETE FROM hosts WHERE id = ?', (self.id, ))
-        c.close()
+        cursor = Db.get().cursor()
+        cursor.execute('DELETE FROM hosts WHERE id = ?', (self.id, ))
+        cursor.close()
         Db.get().commit()
-        unstore_targets_merge(del_data,{"Host":[type(self).get_id(self.hostname, self.uname, self.issue, self.machineId, self.macs)]})
+        unstore_targets_merge(del_data, {"Host":[type(self).get_id(self.hostname, self.uname, self.issue, self.machine_id, self.macs)]})
         return del_data
 
     @classmethod
@@ -183,17 +182,17 @@ class Host(metaclass=Unique):
         """
 
         ret = []
-        c = Db.get().cursor()
-        
-        req = c.execute('SELECT hostname, uname, issue, machineId, macs FROM hosts')
+        cursor = Db.get().cursor()
+
+        req = cursor.execute('SELECT hostname, uname, issue, machine_id, macs FROM hosts')
 
         for row in req:
-            h = Host(row[0], row[1], row[2], row[3], json.loads(row[4]))
+            host = Host(row[0], row[1], row[2], row[3], json.loads(row[4]))
             if scope is None:
-                ret.append(h)
-            elif h.scope == scope:
-                ret.append(h)
-        c.close()
+                ret.append(host)
+            elif host.scope == scope:
+                ret.append(host)
+        cursor.close()
         return ret
 
     @classmethod
@@ -228,19 +227,19 @@ class Host(metaclass=Unique):
             if closest is None:
                 raise NoPathError
             return closest
-        
-        c = Db.get().cursor()
+
+        cursor = Db.get().cursor()
         if host_id is not None:
-            c.execute('''SELECT hostname, uname, issue, machineId, macs FROM hosts WHERE id=?''', (host_id, ))
+            cursor.execute('''SELECT hostname, uname, issue, machine_id, macs FROM hosts WHERE id=?''', (host_id, ))
         elif name is not None:
-            c.execute('''SELECT hostname, uname, issue, machineId, macs FROM hosts WHERE name=?''', (name, ))
+            cursor.execute('''SELECT hostname, uname, issue, machine_id, macs FROM hosts WHERE name=?''', (name, ))
         else:
-            c.close()
+            cursor.close()
             return None
 
-        row = c.fetchone()
-        c.close()
-        if row == None:
+        row = cursor.fetchone()
+        cursor.close()
+        if row is None:
             return None
         return Host(row[0], row[1], row[2], row[3], json.loads(row[4]))
 
@@ -260,12 +259,10 @@ class Host(metaclass=Unique):
         if field not in cls.search_fields:
             raise ValueError
         ret = []
-        print(field);
-        c = Db.get().cursor()
+        cursor = Db.get().cursor()
         val = "%"+val+"%"
         #Ok this sounds fugly, but there seems to be no way to set a column name in a parameter. The SQL injection risk is mitigated as field must be in allowed fields, but if you find something better I take it
-        c.execute('SELECT hostname, uname, issue, machineId, macs FROM hosts WHERE {} LIKE ?'.format(field), (val, ))
-        for row in c:
+        for row in cursor.execute('SELECT hostname, uname, issue, machine_id, macs FROM hosts WHERE {} LIKE ?'.format(field), (val, )):
             ret.append(Host(row[0], row[1], row[2], row[3], json.loads(row[4])))
         return ret
 

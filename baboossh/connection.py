@@ -1,7 +1,7 @@
-import sqlite3
 import hashlib
-import fabric, paramiko, sys
-from baboossh import Db, Extensions, Endpoint, User, Creds, Path, Host
+import paramiko
+import fabric
+from baboossh import Db, Endpoint, User, Creds, Path, Host
 from baboossh.exceptions import *
 from baboossh.utils import Unique
 
@@ -28,7 +28,7 @@ fabric.Connection.open_gateway = monkey_open_gateway
 
 class Connection(metaclass=Unique):
     """A :class:`User` and :class:`Creds` to authenticate on an :class:`Endpoint`
-    
+
     A connection represents the working association of those 3 objects to connect
     a target. It can be used to run payloads on a :class:`Host`, open a
     :class:`Tunnel` to it or use it as a pivot to reach new :class:`Endpoint` s
@@ -51,13 +51,13 @@ class Connection(metaclass=Unique):
         self.gateway = None
         if user is None or cred is None:
             return
-        c = Db.get().cursor()
-        c.execute('SELECT id, root FROM connections WHERE endpoint=? AND user=? AND cred=?', (self.endpoint.id, self.user.id, self.creds.id))
-        savedConnection = c.fetchone()
-        c.close()
-        if savedConnection is not None:
-            self.id = savedConnection[0]
-            self.root = savedConnection[1] != 0
+        cursor = Db.get().cursor()
+        cursor.execute('SELECT id, root FROM connections WHERE endpoint=? AND user=? AND cred=?', (self.endpoint.id, self.user.id, self.creds.id))
+        saved_connection = cursor.fetchone()
+        cursor.close()
+        if saved_connection is not None:
+            self.id = saved_connection[0]
+            self.root = saved_connection[1] != 0
 
     @classmethod
     def get_id(cls, endpoint, user, cred):
@@ -66,7 +66,7 @@ class Connection(metaclass=Unique):
     @property
     def scope(self):
         """Returns whether the `Connection` is in scope
-        
+
         The `Connection` is in scope if its :class:`User`, its :class:`Creds`
         AND it :class:`Endpoint` are all in scope
         """
@@ -79,39 +79,40 @@ class Connection(metaclass=Unique):
         return self.endpoint.distance
 
     def save(self):
+        """Save the `Connection` to the :class:`Workspace` 's database"""
+
         if self.user is None or self.creds is None:
             return
-        """Save the `Connection` to the :class:`Workspace` 's database"""
-        c = Db.get().cursor()
+        cursor = Db.get().cursor()
         if self.id is not None:
             #If we have an ID, the endpoint is already saved in the database : UPDATE
-            c.execute('''UPDATE connections 
+            cursor.execute('''UPDATE connections
                 SET
                     endpoint= ?,
                     user = ?,
                     cred = ?,
                     root = ?
                 WHERE id = ?''',
-                (self.endpoint.id, self.user.id, self.creds.id, self.root, self.id))
+                           (self.endpoint.id, self.user.id, self.creds.id, self.root, self.id))
         else:
             #The endpoint doesn't exists in database : INSERT
-            c.execute('''INSERT INTO connections(endpoint, user, cred, root)
+            cursor.execute('''INSERT INTO connections(endpoint, user, cred, root)
                 VALUES (?, ?, ?, ?) ''',
-                (self.endpoint.id, self.user.id, self.creds.id, self.root ))
-            c.close()
-            c = Db.get().cursor()
-            c.execute('SELECT id FROM connections WHERE endpoint=? AND user=? AND cred=?', (self.endpoint.id, self.user.id, self.creds.id))
-            self.id  = c.fetchone()[0]
-        c.close()
+                           (self.endpoint.id, self.user.id, self.creds.id, self.root))
+            cursor.close()
+            cursor = Db.get().cursor()
+            cursor.execute('SELECT id FROM connections WHERE endpoint=? AND user=? AND cred=?', (self.endpoint.id, self.user.id, self.creds.id))
+            self.id = cursor.fetchone()[0]
+        cursor.close()
         Db.get().commit()
 
     def delete(self):
         """Delete the `Connection` from the :class:`Workspace` 's database"""
         if self.id is None:
-            return
-        c = Db.get().cursor()
-        c.execute('DELETE FROM connections WHERE id = ?', (self.id, ))
-        c.close()
+            return {}
+        cursor = Db.get().cursor()
+        cursor.execute('DELETE FROM connections WHERE id = ?', (self.id, ))
+        cursor.close()
         Db.get().commit()
         return {"Connection":[type(self).get_id(self.endpoint, self.user, self.creds)]}
 
@@ -140,33 +141,33 @@ class Connection(metaclass=Unique):
                 return None
             return cls.find_one(endpoint=closest_host.closest_endpoint, scope=True)
 
-        c = Db.get().cursor()
+        cursor = Db.get().cursor()
         if connection_id is not None:
-            req = c.execute('SELECT endpoint, user, cred FROM connections WHERE id=?', (connection_id, ))
+            req = cursor.execute('SELECT endpoint, user, cred FROM connections WHERE id=?', (connection_id, ))
         elif endpoint is not None:
-            req = c.execute('SELECT endpoint, user, cred FROM connections WHERE endpoint=? ORDER BY root ASC', (endpoint.id, ))
+            req = cursor.execute('SELECT endpoint, user, cred FROM connections WHERE endpoint=? ORDER BY root ASC', (endpoint.id, ))
         else:
-            c.close()
+            cursor.close()
             return None
         if scope is None:
-            row = c.fetchone()
-            c.close()
+            row = cursor.fetchone()
+            cursor.close()
             if row is None:
                 return None
             return Connection(Endpoint.find_one(endpoint_id=row[0]), User.find_one(user_id=row[1]), Creds.find_one(creds_id=row[2]))
         for row in req:
             conn = Connection(Endpoint.find_one(endpoint_id=row[0]), User.find_one(user_id=row[1]), Creds.find_one(creds_id=row[2]))
             if scope == conn.scope:
-               c.close()
-               return conn
-        c.close()
+                cursor.close()
+                return conn
+        cursor.close()
         return None
 
 
     @classmethod
     def find_all(cls, endpoint=None, user=None, creds=None, scope=None):
         ret = []
-        c = Db.get().cursor()
+        cursor = Db.get().cursor()
 
         query = 'SELECT endpoint, user, cred FROM connections'
         params = []
@@ -196,20 +197,20 @@ class Connection(metaclass=Unique):
             query = query + 'cred=?'
             params.append(creds.id)
 
-        req = c.execute(query, tuple(params))
-        
+        req = cursor.execute(query, tuple(params))
+
         for row in req:
             conn = Connection(Endpoint.find_one(endpoint_id=row[0]), User.find_one(user_id=row[1]), Creds.find_one(creds_id=row[2]))
             if scope is None or conn.scope == scope:
                 ret.append(conn)
-        c.close()
+        cursor.close()
         return ret
 
     @classmethod
-    def fromTarget(cls, arg):
+    def from_target(cls, arg):
         if '@' in arg and ':' in arg:
             auth, sep, endpoint = arg.partition('@')
-            endpoint  = Endpoint.find_one(ip_port=endpoint)
+            endpoint = Endpoint.find_one(ip_port=endpoint)
             if endpoint is None:
                 raise ValueError("Supplied endpoint isn't in workspace")
             user, sep, cred = auth.partition(":")
@@ -224,17 +225,16 @@ class Connection(metaclass=Unique):
             if cred is None:
                 raise ValueError("Supplied credentials aren't in workspace")
             return Connection(endpoint, user, cred)
-        else:    
-            if ':' not in arg:
-                arg = arg+':22'
-            endpoint = Endpoint.find_one(ip_port=arg)
-            if endpoint is None:
-                raise ValueError("Supplied endpoint isn't in workspace")
-            connection = cls.find_one(endpoint=endpoint)
-            if connection == None:
-                raise ValueError("No working connection for supplied endpoint")
-            return connection
-        return None
+
+        if ':' not in arg:
+            arg = arg+':22'
+        endpoint = Endpoint.find_one(ip_port=arg)
+        if endpoint is None:
+            raise ValueError("Supplied endpoint isn't in workspace")
+        connection = cls.find_one(endpoint=endpoint)
+        if connection is None:
+            raise ValueError("No working connection for supplied endpoint")
+        return connection
 
     def identify(self, socket):
         try:
@@ -245,11 +245,11 @@ class Connection(metaclass=Unique):
             result = socket.run("cat /etc/issue", hide='both')
             issue = result.stdout.rstrip()
             result = socket.run("cat /etc/machine-id", hide='both')
-            machineId = result.stdout.rstrip()
+            machine_id = result.stdout.rstrip()
             result = socket.run("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done", hide='both')
-            macStr = result.stdout.rstrip()
-            macs = macStr.split()
-            new_host = Host(hostname, uname, issue, machineId, macs)
+            mac_str = result.stdout.rstrip()
+            macs = mac_str.split()
+            new_host = Host(hostname, uname, issue, machine_id, macs)
             if new_host.id is None:
                 print("\t"+str(self)+" is a new host: " + new_host.name)
             else:
@@ -259,8 +259,8 @@ class Connection(metaclass=Unique):
             new_host.save()
             self.endpoint.host = new_host
             self.endpoint.save()
-        except Exception as e:
-            print("Error : "+str(e))
+        except Exception as exc:
+            print("Error : "+str(exc))
             return False
         return True
 
@@ -297,23 +297,23 @@ class Connection(metaclass=Unique):
             if gw is not None:
                 gw.close()
             return False
-        except paramiko.ssh_exception.SSHException as e:
-            if "Timeout" in str(e):
+        except paramiko.ssh_exception.SSHException as exc:
+            if "Timeout" in str(exc):
                 print("\033[1;31mKO\033[0m.")
                 if gw is not None:
                     gw.close()
                 return False
-            elif "No authentication methods available" in str(e):
+            if "No authentication methods available" in str(exc):
                 pass
             else:
-                raise e
+                raise exc
         if conn is not None:
             conn.close()
         if gw is not None:
             gw.close()
 
         print("\033[1;32mOK\033[0m")
-        self.endpoint.reachable=True
+        self.endpoint.reachable = True
         new_distance = 1 if gw is None else gateway.endpoint.distance + 1
         if self.endpoint.distance is None or self.endpoint.distance > new_distance:
             self.endpoint.distance = new_distance
@@ -350,26 +350,24 @@ class Connection(metaclass=Unique):
             if gw is not None:
                 gateway.close()
                 #TODO remove path
-                pass
             return False
-        except (paramiko.ssh_exception.AuthenticationException,paramiko.ssh_exception.SSHException) as e:
-            if isinstance(e,paramiko.ssh_exception.AuthenticationException) or "encountered" in str(e):
+        except (paramiko.ssh_exception.AuthenticationException, paramiko.ssh_exception.SSHException) as exc:
+            if isinstance(exc, paramiko.ssh_exception.AuthenticationException) or "encountered" in str(exc):
                 print("\033[1;31mKO\033[0m. Authentication failed.")
                 return False
-            else:
-                raise e
+            raise exc
 
         print("\033[1;32mOK\033[0m")
 
         if gateway is None:
-            pathSrc = None
+            path_src = None
         else:
             if gateway.endpoint.host is not None:
-                pathSrc = gateway.endpoint.host
+                path_src = gateway.endpoint.host
             else:
                 raise NoHostError
-        p = Path(pathSrc, self.endpoint)
-        p.save()
+        path = Path(path_src, self.endpoint)
+        path.save()
         self.save()
 
         if self.endpoint.host is None:
@@ -380,13 +378,13 @@ class Connection(metaclass=Unique):
 
         return True
 
-    def run(self, payload, wspaceFolder, stmt):
+    def run(self, payload, current_workspace_directory, stmt):
         opens = False
         if self.conn is None:
             if not self.open(target=True):
                 return False
             opens = True
-        payload.run(self, wspaceFolder, stmt)
+        payload.run(self, current_workspace_directory, stmt)
         if opens:
             self.close()
         return True
@@ -400,5 +398,3 @@ class Connection(metaclass=Unique):
 
     def __str__(self):
         return str(self.user)+":"+str(self.creds)+"@"+str(self.endpoint)
-
-

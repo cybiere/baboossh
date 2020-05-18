@@ -40,26 +40,26 @@ class User(metaclass=Unique):
         so it is updated. Else it is inserted and the id is set in the object.
 
         """
-        c = Db.get().cursor()
+        cursor = Db.get().cursor()
         if self.id is not None:
             #If we have an ID, the user is already saved in the database : UPDATE
-            c.execute('''UPDATE users 
+            cursor.execute('''UPDATE users
                 SET
                     username = ?,
                     scope = ?,
                     found = ?
                 WHERE id = ?''',
-                (self.name, self.scope, self.found.id if self.found is not None else None, self.id))
+                           (self.name, self.scope, self.found.id if self.found is not None else None, self.id))
         else:
             #The user doesn't exists in database : INSERT
-            c.execute('''INSERT INTO users(username, scope, found)
+            cursor.execute('''INSERT INTO users(username, scope, found)
                 VALUES (?, ?, ?) ''',
-                (self.name, self.scope, self.found.id if self.found is not None else None))
-            c.close()
-            c = Db.get().cursor()
-            c.execute('SELECT id FROM users WHERE username=?', (self.name, ))
-            self.id = c.fetchone()[0]
-        c.close()
+                           (self.name, self.scope, self.found.id if self.found is not None else None))
+            cursor.close()
+            cursor = Db.get().cursor()
+            cursor.execute('SELECT id FROM users WHERE username=?', (self.name, ))
+            self.id = cursor.fetchone()[0]
+        cursor.close()
         Db.get().commit()
 
     def delete(self):
@@ -71,12 +71,12 @@ class User(metaclass=Unique):
         from baboossh.utils import unstore_targets_merge
         del_data = {}
         for connection in Connection.find_all(user=self):
-            unstore_targets_merge(del_data,connection.delete())
-        c = Db.get().cursor()
-        c.execute('DELETE FROM users WHERE id = ?', (self.id, ))
-        c.close()
+            unstore_targets_merge(del_data, connection.delete())
+        cursor = Db.get().cursor()
+        cursor.execute('DELETE FROM users WHERE id = ?', (self.id, ))
+        cursor.close()
         Db.get().commit()
-        unstore_targets_merge(del_data,{"User":[type(self).get_id(self.name)]})
+        unstore_targets_merge(del_data, {"User":[type(self).get_id(self.name)]})
         return del_data
 
     @classmethod
@@ -90,21 +90,21 @@ class User(metaclass=Unique):
                 the `Endpoint` the users were discovered on
 
         Returns:
-            A list of all `User`\ s in the :class:`.Workspace` matching the criteria
+            A list of all `User` s in the :class:`.Workspace` matching the criteria
         """
 
         ret = []
-        c = Db.get().cursor()
+        cursor = Db.get().cursor()
         if found is None:
             if scope is None:
-                req = c.execute('SELECT username FROM users')
+                req = cursor.execute('SELECT username FROM users')
             else:
-                req = c.execute('SELECT username FROM users WHERE scope=?', (scope, ))
+                req = cursor.execute('SELECT username FROM users WHERE scope=?', (scope, ))
         else:
             if scope is None:
-                req = c.execute('SELECT username FROM users WHERE found=?', (found.id if found is not None else None, ))
+                req = cursor.execute('SELECT username FROM users WHERE found=?', (found.id if found is not None else None, ))
             else:
-                req = c.execute('SELECT username FROM users WHERE found=? AND scope=?', (found.id if found is not None else None, scope))
+                req = cursor.execute('SELECT username FROM users WHERE found=? AND scope=?', (found.id if found is not None else None, scope))
         for row in req:
             ret.append(User(row[0]))
         return ret
@@ -121,20 +121,19 @@ class User(metaclass=Unique):
             A single `User` or `None`.
         """
 
-        c = Db.get().cursor()
+        cursor = Db.get().cursor()
         if user_id is not None:
-            c.execute('''SELECT username FROM users WHERE id=?''', (user_id, ))
+            cursor.execute('''SELECT username FROM users WHERE id=?''', (user_id, ))
         elif name is not None:
-            c.execute('''SELECT username FROM users WHERE username=?''', (name, ))
+            cursor.execute('''SELECT username FROM users WHERE username=?''', (name, ))
         else:
-            c.close()
+            cursor.close()
             return None
-        row = c.fetchone()
-        c.close()
-        if row == None:
+        row = cursor.fetchone()
+        cursor.close()
+        if row is None:
             return None
         return User(row[0])
 
     def __str__(self):
         return self.name
-

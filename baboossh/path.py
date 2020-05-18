@@ -1,7 +1,5 @@
-import sqlite3
-import collections
 import hashlib
-from baboossh.exceptions import *
+from baboossh.exceptions import NoPathError
 from baboossh import Db, Endpoint, Host
 from baboossh.utils import Unique
 
@@ -29,12 +27,12 @@ class Path(metaclass=Unique):
         self.src = src
         self.dst = dst
         self.id = None
-        c = Db.get().cursor()
-        c.execute('SELECT id FROM paths WHERE src=? AND dst=?', (self.src.id if self.src is not None else 0, self.dst.id))
-        savedPath = c.fetchone()
-        c.close()
-        if savedPath is not None:
-            self.id = savedPath[0]
+        cursor = Db.get().cursor()
+        cursor.execute('SELECT id FROM paths WHERE src=? AND dst=?', (self.src.id if self.src is not None else 0, self.dst.id))
+        saved_path = cursor.fetchone()
+        cursor.close()
+        if saved_path is not None:
+            self.id = saved_path[0]
 
     @classmethod
     def get_id(cls, src, dst):
@@ -56,33 +54,33 @@ class Path(metaclass=Unique):
 
         """
 
-        c = Db.get().cursor()
+        cursor = Db.get().cursor()
         if self.id is not None:
-            c.execute('''UPDATE paths 
+            cursor.execute('''UPDATE paths
                 SET
                     src = ?,
                     dst = ?
                 WHERE id = ?''',
-                (self.src.id if self.src is not None else 0, self.dst.id, self.id))
+                           (self.src.id if self.src is not None else 0, self.dst.id, self.id))
         else:
-            c.execute('''INSERT INTO paths(src, dst)
+            cursor.execute('''INSERT INTO paths(src, dst)
                 VALUES (?, ?) ''',
-                (self.src.id if self.src is not None else 0, self.dst.id))
-            c.close()
-            c = Db.get().cursor()
-            c.execute('SELECT id FROM paths WHERE src=? AND dst=?', (self.src.id if self.src is not None else 0, self.dst.id))
-            self.id = c.fetchone()[0]
-        c.close()
+                           (self.src.id if self.src is not None else 0, self.dst.id))
+            cursor.close()
+            cursor = Db.get().cursor()
+            cursor.execute('SELECT id FROM paths WHERE src=? AND dst=?', (self.src.id if self.src is not None else 0, self.dst.id))
+            self.id = cursor.fetchone()[0]
+        cursor.close()
         Db.get().commit()
 
     def delete(self):
         """Delete an Path from the :class:`.Workspace`"""
 
         if self.id is None:
-            return
-        c = Db.get().cursor()
-        c.execute('DELETE FROM paths WHERE id = ?', (self.id, ))
-        c.close()
+            return {}
+        cursor = Db.get().cursor()
+        cursor.execute('DELETE FROM paths WHERE id = ?', (self.id, ))
+        cursor.close()
         Db.get().commit()
         return {"Path":[type(self).get_id(self.src, self.dst)]}
 
@@ -90,17 +88,12 @@ class Path(metaclass=Unique):
     def find_all(cls, src=None, dst=None):
         """Find all Paths
 
-        if src==None:
-            srcId = 0
-        else:
-            srcId = src.id
-
         Args:
             src (:class:`.Host` or `None`): the Host to use as source, `"Local"` if `(int)0`
             dst (:class:`.Endpoint`): the Endpoint to use as destination
 
         Returns:
-            A list of all `Path`\ s in the :class:`.Workspace`
+            A list of all `Path` s in the :class:`.Workspace`
         """
 
         if src is not None and src == 0:
@@ -108,20 +101,20 @@ class Path(metaclass=Unique):
         elif src is not None:
             src_id = src.id
         ret = []
-        c = Db.get().cursor()
+        cursor = Db.get().cursor()
         if src is None:
             if dst is None:
-                req = c.execute('SELECT src, dst FROM paths')
+                req = cursor.execute('SELECT src, dst FROM paths')
             else:
-                req = c.execute('SELECT src, dst FROM paths WHERE dst=?', (dst.id, ))
+                req = cursor.execute('SELECT src, dst FROM paths WHERE dst=?', (dst.id, ))
         else:
             if dst is None:
-                req = c.execute('SELECT src, dst FROM paths WHERE src=?', (src_id, ))
+                req = cursor.execute('SELECT src, dst FROM paths WHERE src=?', (src_id, ))
             else:
-                req = c.execute('SELECT src, dst FROM paths WHERE src=? AND dst=?', (src_id, dst.id ))
+                req = cursor.execute('SELECT src, dst FROM paths WHERE src=? AND dst=?', (src_id, dst.id))
         for row in req:
             ret.append(Path(Host.find_one(host_id=row[0]), Endpoint.find_one(endpoint_id=row[1])))
-        c.close()
+        cursor.close()
         return ret
 
     @classmethod
@@ -137,17 +130,17 @@ class Path(metaclass=Unique):
 
         if path_id is None:
             return None
-        c = Db.get().cursor()
-        c.execute('''SELECT src, dst FROM paths WHERE id=?''', (path_id, ))
-        row = c.fetchone()
-        c.close()
+        cursor = Db.get().cursor()
+        cursor.execute('''SELECT src, dst FROM paths WHERE id=?''', (path_id, ))
+        row = cursor.fetchone()
+        cursor.close()
         if row is None:
             return None
         return Path(Host.find_one(host_id=row[0]), Endpoint.find_one(endpoint_id=row[1]))
-    
+
     @classmethod
-    def hasDirectPath(cls, dst):
-        """Check if there is a Path from `"Local"` to an Endpoint
+    def direct(cls, dst):
+        """Check if there is a direct Path from `"Local"` to an Endpoint
 
         Args:
             dst (:class:`.Endpoint`): the Endpoint to use as destination
@@ -156,14 +149,14 @@ class Path(metaclass=Unique):
             `True` if there is a `Path` from `"Local"` to dst, `False` otherwise
         """
 
-        c = Db.get().cursor()
-        c.execute('''SELECT id FROM paths WHERE src=0 and dst=?''', (dst.id, ))
-        row = c.fetchone()
-        c.close()
+        cursor = Db.get().cursor()
+        cursor.execute('''SELECT id FROM paths WHERE src=0 and dst=?''', (dst.id, ))
+        row = cursor.fetchone()
+        cursor.close()
         return row is not None
 
     @classmethod
-    def getPath(cls, dst, first=True):
+    def get(cls, dst, first=True):
         """Get the chain of paths from `"Local"` to an `Endpoint`
 
         Args:
@@ -181,15 +174,14 @@ class Path(metaclass=Unique):
         except NoPathError as exc:
             raise exc
         if previous_hop is None:
-            return [None,dst.host]
-        chain = cls.getPath(previous_hop.closest_endpoint, first=False)
+            return [None, dst.host]
+        chain = cls.get(previous_hop.closest_endpoint, first=False)
         if first:
             chain.append(dst)
             return chain
-        else:
-            chain.append(dst.host)
-            return chain
-    
+        chain.append(dst.host)
+        return chain
+
     def __str__(self):
         if self.src is not None:
             src = str(self.src)
@@ -200,4 +192,3 @@ class Path(metaclass=Unique):
         else:
             dst = str(self.dst)
         return src+" -> "+dst
-

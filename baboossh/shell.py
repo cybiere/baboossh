@@ -19,8 +19,7 @@ import argparse
 import shutil
 import cmd2
 import tabulate
-from baboossh.exceptions import *
-from baboossh.utils import workspacesDir
+from baboossh.utils import WORKSPACES_DIR
 from baboossh.extensions import Extensions
 from baboossh.workspace import Workspace
 
@@ -41,12 +40,12 @@ def yes_no(prompt, default=None):
         choices = "[Y, n]"
     else:
         choices = "[y, N]"
-    a = ""
-    while a not in ["y", "n"]:
-        a = input(prompt+" "+choices+" ").lower()
-        if a == "" and default is not None:
-            a = "y" if default else "n"
-    return a == "y"
+    answer = ""
+    while answer not in ["y", "n"]:
+        answer = input(prompt+" "+choices+" ").lower()
+        if answer == "" and default is not None:
+            answer = "y" if default else "n"
+    return answer == "y"
 
 
 Extensions.load()
@@ -75,7 +74,7 @@ class Shell(cmd2.Cmd):
         return self.workspace.get_objects(hosts=True, scope=True)
 
     def __get_arg_workspaces(self):
-        return [name for name in os.listdir(workspacesDir) if os.path.isdir(os.path.join(workspacesDir, name))]
+        return [name for name in os.listdir(WORKSPACES_DIR) if os.path.isdir(os.path.join(WORKSPACES_DIR, name))]
 
     def __get_option_gateway(self):
         return self.workspace.get_objects(local=True, hosts=True, scope=True)
@@ -87,7 +86,7 @@ class Shell(cmd2.Cmd):
         return self.workspace.get_objects(endpoints=True, scope=True)
 
     def __get_option_payload(self):
-        return Extensions.payloadsAvail()
+        return Extensions.payloads.keys()
 
     def __get_option_connection(self):
         return self.workspace.get_objects(connections=True, scope=True)
@@ -116,7 +115,7 @@ class Shell(cmd2.Cmd):
 
     def __workspace_list(self, stmt):
         print("Existing workspaces :")
-        workspaces = [name for name in os.listdir(workspacesDir) if os.path.isdir(os.path.join(workspacesDir, name))]
+        workspaces = [name for name in os.listdir(WORKSPACES_DIR) if os.path.isdir(os.path.join(WORKSPACES_DIR, name))]
         for workspace in workspaces:
             if workspace == self.workspace.name:
                 print(" -["+workspace+"]")
@@ -130,7 +129,7 @@ class Shell(cmd2.Cmd):
             print('Invalid characters in workspace name. Allowed characters are letters, numbers and ._-')
             return
         #Check if workspace already exists
-        if os.path.exists(os.path.join(workspacesDir, name)):
+        if os.path.exists(os.path.join(WORKSPACES_DIR, name)):
             print("Workspace already exists")
             return
         try:
@@ -143,7 +142,7 @@ class Shell(cmd2.Cmd):
     def __workspace_use(self, stmt):
         name = vars(stmt)['name']
         #Check if workspace already exists
-        if not os.path.exists(os.path.join(workspacesDir, name)):
+        if not os.path.exists(os.path.join(WORKSPACES_DIR, name)):
             print("Workspace does not exist")
             return
         try:
@@ -156,7 +155,7 @@ class Shell(cmd2.Cmd):
     def __workspace_del(self, stmt):
         name = vars(stmt)['name']
         #Check if workspace already exists
-        if not os.path.exists(os.path.join(workspacesDir, name)):
+        if not os.path.exists(os.path.join(WORKSPACES_DIR, name)):
             print("Workspace does not exist")
             return
         if self.workspace.name == name:
@@ -164,7 +163,7 @@ class Shell(cmd2.Cmd):
             return
         if not yes_no("Are you sure you want to delete workspace "+name+"?", default=False):
             return
-        shutil.rmtree(os.path.join(workspacesDir, name))
+        shutil.rmtree(os.path.join(WORKSPACES_DIR, name))
         print("Workspace deleted !")
 
     __parser_wspace = argparse.ArgumentParser(prog="workspace")
@@ -230,7 +229,7 @@ class Shell(cmd2.Cmd):
             print("Invalid field specified, use one of "+str(allowed_fields)+".")
             return
         val = vars(stmt)['val']
-        hosts = self.workspace.searchHosts(field, val, show_all)
+        hosts = self.workspace.host_search(field, val, show_all)
         print("Search result for hosts:")
         if not hosts:
             print("No results")
@@ -319,8 +318,8 @@ class Shell(cmd2.Cmd):
         port = str(vars(stmt)['port'])
         try:
             self.workspace.endpoint_add(ip_add, port)
-        except Exception as e:
-            print("Endpoint addition failed: "+str(e))
+        except Exception as exc:
+            print("Endpoint addition failed: "+str(exc))
         else:
             print("Endpoint "+ip_add+":"+port+" added.")
 
@@ -396,8 +395,8 @@ class Shell(cmd2.Cmd):
         name = vars(stmt)['name']
         try:
             self.workspace.user_add(name)
-        except Exception as e:
-            print("User addition failed: "+str(e))
+        except Exception as exc:
+            print("User addition failed: "+str(exc))
         else:
             print("User "+name+" added.")
 
@@ -435,8 +434,8 @@ class Shell(cmd2.Cmd):
     def __creds_types(self, stmt):
         print("Supported credential types:")
         data = []
-        for key in Extensions.authMethodsAvail():
-            data.append([key, Extensions.getAuthMethod(key).descr()])
+        for key in Extensions.auths:
+            data.append([key, Extensions.auths[key].descr()])
         print(tabulate.tabulate(data, headers=["Key", "Description"]))
 
     def __creds_list(self, stmt):
@@ -467,8 +466,8 @@ class Shell(cmd2.Cmd):
         creds_type = vars(stmt)['type']
         try:
             creds_id = self.workspace.creds_add(creds_type, stmt)
-        except Exception as e:
-            print("Credentials addition failed: "+str(e))
+        except Exception as exc:
+            print("Credentials addition failed: "+str(exc))
         else:
             print("Credentials #"+str(creds_id)+" added.")
 
@@ -483,8 +482,8 @@ class Shell(cmd2.Cmd):
     __parser_creds_edit.add_argument('id', help='Creds identifier', choices_method=__get_option_creds)
     __parser_creds_add = __subparser_creds.add_parser("add", help='Add a new credentials')
     __subparser_creds_add = __parser_creds_add.add_subparsers(title='Add creds', help='Available creds types')
-    for __methodName in Extensions.authMethodsAvail():
-        __method = Extensions.getAuthMethod(__methodName)
+    for __methodName in Extensions.auths:
+        __method = Extensions.auths[__methodName]
         __parser_method = __subparser_creds_add.add_parser(__methodName, help=__method.descr())
         __parser_method.set_defaults(type=__methodName)
         __method.buildParser(__parser_method)
@@ -515,8 +514,8 @@ class Shell(cmd2.Cmd):
     def __payload_list(self, stmt):
         print("Available payloads:")
         data = []
-        for key in Extensions.payloadsAvail():
-            data.append([key, Extensions.getPayload(key).descr()])
+        for key in Extensions.payloads:
+            data.append([key, Extensions.payloads[key].descr()])
         print(tabulate.tabulate(data, headers=["Key", "Description"]))
 
     __parser_payload = argparse.ArgumentParser(prog="payload")
@@ -723,9 +722,9 @@ class Shell(cmd2.Cmd):
     def do_probe(self, stmt):
         '''Try to reach an endpoint through pivoting, using an existing path or finding a new one'''
         target = getattr(stmt, 'target', None)
-        verbose = getattr(stmt,'verbose',False)
-        force = getattr(stmt,'force',False)
-        new = getattr(stmt,'new',False)
+        verbose = getattr(stmt, 'verbose', False)
+        force = getattr(stmt, 'force', False)
+        new = getattr(stmt, 'new', False)
         gateway = getattr(stmt, 'gateway', "auto")
         if gateway is None:
             gateway = "auto"
@@ -758,14 +757,14 @@ class Shell(cmd2.Cmd):
         '''Try connection to endpoint and identify host'''
         connection = getattr(stmt, 'connection', None)
         verbose = vars(stmt)['verbose']
-        force = getattr(stmt,'force',False)
+        force = getattr(stmt, 'force', False)
         probe_auto = getattr(stmt, 'probe', False)
         gateway = getattr(stmt, 'gateway', "auto")
         if gateway is None:
             gateway = "auto"
 
         if probe_auto:
-            force=True
+            force = True
 
         targets = [target for endpoint in self.workspace.enum_targets(connection, force=force).values() for target in endpoint]
         nb_targets = len(targets)
@@ -781,8 +780,8 @@ class Shell(cmd2.Cmd):
     __parser_run.add_argument("-c", "--connect", help="Automatically test connection if it wasn't yet", action="store_true")
     __parser_run.add_argument("-p", "--probe", help="Automatically probe the endpoint if it wasn't yet (implies --connect)", action="store_true")
     __subparser_run = __parser_run.add_subparsers(title='Actions', help='Available actions')
-    for __payloadName in Extensions.payloadsAvail():
-        __payload = Extensions.getPayload(__payloadName)
+    for __payloadName in Extensions.payloads:
+        __payload = Extensions.payloads[__payloadName]
         __parser_payload = __subparser_run.add_parser(__payloadName, help=__payload.descr())
         __parser_payload.set_defaults(type=__payloadName)
         __payload.buildParser(__parser_payload)
@@ -797,7 +796,7 @@ class Shell(cmd2.Cmd):
         self._reset_completion_defaults()
 
         if payload is not None:
-            payload = Extensions.getPayload(payload)
+            payload = Extensions.payloads[payload]
         else:
             payload = self.workspace.options["payload"]
             params = self.workspace.options["params"]
@@ -806,7 +805,6 @@ class Shell(cmd2.Cmd):
             if params is None:
                 params = ""
             stmt, junk = __parser.parse_known_args(params.split())
-        
 
         if payload is None:
             print("Error : No payload specified")
@@ -819,7 +817,7 @@ class Shell(cmd2.Cmd):
             force = True
         if connect_auto:
             working = False
-    
+
         targets = [target for endpoint in self.workspace.enum_targets(connection, working=working, force=force).values() for target in endpoint]
         nb_targets = len(targets)
         if nb_targets > 1:
@@ -883,8 +881,8 @@ class Shell(cmd2.Cmd):
     __parser_export = argparse.ArgumentParser(prog="export")
     __subparser_export = __parser_export.add_subparsers(title='Actions', help='Available exporters')
     __parser_method = __subparser_export.add_parser('list', help='List available exporters')
-    for __key in Extensions.exportsAvail():
-        __export = Extensions.getExport(__key)
+    for __key in Extensions.exports:
+        __export = Extensions.exports[__key]
         __parser_method = __subparser_export.add_parser(__key, help=__export.descr())
         __parser_method.set_defaults(exporter=__key)
         __export.buildParser(__parser_method)
@@ -896,14 +894,14 @@ class Shell(cmd2.Cmd):
         if key == 'list':
             print("Available exporters:")
             data = []
-            for key in Extensions.exportsAvail():
-                data.append([key, Extensions.getExport(key).descr()])
+            for key in Extensions.exports:
+                data.append([key, Extensions.exports[key].descr()])
             print(tabulate.tabulate(data, headers=["Key", "Description"]))
             return
         try:
-            exporter = Extensions.getExport(key)
-        except Exception as e:
-            print("Error: "+str(e))
+            exporter = Extensions.exports[key]
+        except Exception as exc:
+            print("Error: "+str(exc))
             return
         exporter.run(stmt, self.workspace)
 
@@ -914,8 +912,8 @@ class Shell(cmd2.Cmd):
     __parser_import = argparse.ArgumentParser(prog="import")
     __subparser_import = __parser_import.add_subparsers(title='Actions', help='Available importers')
     __parser_method = __subparser_import.add_parser('list', help='List available importers')
-    for __key in Extensions.importsAvail():
-        __importer = Extensions.getImport(__key)
+    for __key in Extensions.imports:
+        __importer = Extensions.imports[__key]
         __parser_method = __subparser_import.add_parser(__key, help=__importer.descr())
         __parser_method.set_defaults(importer=__key)
         __importer.buildParser(__parser_method)
@@ -927,14 +925,14 @@ class Shell(cmd2.Cmd):
         if key == 'list':
             print("Available importers:")
             data = []
-            for key in Extensions.importsAvail():
-                data.append([key, Extensions.getImport(key).descr()])
+            for key in Extensions.imports:
+                data.append([key, Extensions.imports[key].descr()])
             print(tabulate.tabulate(data, headers=["Key", "Description"]))
             return
         try:
-            importer = Extensions.getImport(key)
-        except Exception as e:
-            print("Error: "+str(e))
+            importer = Extensions.imports[key]
+        except Exception as exc:
+            print("Error: "+str(exc))
             return
         importer.run(stmt, self.workspace)
 
@@ -960,7 +958,7 @@ class Shell(cmd2.Cmd):
     def do_store(self, arg):
         for obj_type, objects in self.workspace.store.items():
             print(obj_type)
-            for obj_id,obj in objects.items():
+            for obj_id, obj in objects.items():
                 print('\t'+str(obj)+' > '+str(obj_id))
 
 
@@ -1016,11 +1014,11 @@ class Shell(cmd2.Cmd):
 
         super().__init__()
 
-        if not os.path.exists(workspacesDir):
+        if not os.path.exists(WORKSPACES_DIR):
             print("> First run ? Creating workspaces directory")
-            os.makedirs(workspacesDir)
+            os.makedirs(WORKSPACES_DIR)
         #Create default workspace if not exists
-        if not os.path.exists(os.path.join(workspacesDir, 'default')):
+        if not os.path.exists(os.path.join(WORKSPACES_DIR, 'default')):
             Workspace.create('default')
 
         self.intro = '''  %%%%%/      %%%     %%%%%.      .%%/     %%     %/   /%%%/   ,%%%/  *%%    %%

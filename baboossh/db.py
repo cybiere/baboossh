@@ -1,7 +1,7 @@
 import sqlite3
 import threading
 import os
-from baboossh.utils import workspacesDir
+from baboossh.utils import WORKSPACES_DIR
 
 class Db():
     """A singleton handling the database connection
@@ -9,9 +9,9 @@ class Db():
     This class allows the use of a single sqlite connection for earch thread
     """
 
-    __conn=None
-    __threadsConn={}
-    __workspace=None
+    __conn = None
+    __threadsConn = {}
+    __workspace = None
 
     @classmethod
     def get(cls):
@@ -24,14 +24,13 @@ class Db():
             An open :class:`sqlite3.Connection`
         """
 
-        mainThreadName = threading.main_thread().getName()
-        currentName = threading.currentThread().getName()
-        if currentName != mainThreadName:
-            if currentName in cls.__threadsConn.keys():
-                return cls.__threadsConn[currentName]
-            else:
-                cls.connect(cls.__workspace)
-                return cls.__threadsConn[currentName]
+        main_thread_name = threading.main_thread().getName()
+        current_thread_name = threading.currentThread().getName()
+        if current_thread_name != main_thread_name:
+            if current_thread_name in cls.__threadsConn.keys():
+                return cls.__threadsConn[current_thread_name]
+            cls.connect(cls.__workspace)
+            return cls.__threadsConn[current_thread_name]
         if cls.__conn is None:
             raise ValueError("Trying to use unconnected database")
         return cls.__conn
@@ -44,18 +43,18 @@ class Db():
             workspace (str): the workspace's name
         """
 
-        dbPath = os.path.join(workspacesDir, workspace, "workspace.db")
-        c = sqlite3.connect(dbPath)
-        c.execute('''CREATE TABLE hosts (
+        db_path = os.path.join(WORKSPACES_DIR, workspace, "workspace.db")
+        connection = sqlite3.connect(db_path)
+        connection.execute('''CREATE TABLE hosts (
             id INTEGER PRIMARY KEY ASC,
             name TEXT NOT NULL UNIQUE,
             hostname TEXT,
             uname TEXT,
             issue TEXT,
-            machineid TEXT,
+            machine_id TEXT,
             macs TEXT
             )''')
-        c.execute('''CREATE TABLE endpoints (
+        connection.execute('''CREATE TABLE endpoints (
             id INTEGER PRIMARY KEY ASC,
             scope INTEGER NOT NULL,
             host INTEGER,
@@ -67,14 +66,14 @@ class Db():
             FOREIGN KEY(found) REFERENCES endpoints(id),
             FOREIGN KEY(host) REFERENCES hosts(id)
             )''')
-        c.execute('''CREATE TABLE users (
+        connection.execute('''CREATE TABLE users (
             id INTEGER PRIMARY KEY ASC,
             scope INTEGER NOT NULL,
             username TEXT NOT NULL,
             found INTEGER,
             FOREIGN KEY(found) REFERENCES endpoints(id)
             )''')
-        c.execute('''CREATE TABLE creds (
+        connection.execute('''CREATE TABLE creds (
             id INTEGER PRIMARY KEY ASC,
             scope INTEGER NOT NULL,
             type TEXT NOT NULL,
@@ -83,7 +82,7 @@ class Db():
             found INTEGER,
             FOREIGN KEY(found) REFERENCES endpoints(id)
             )''')
-        c.execute('''CREATE TABLE connections (
+        connection.execute('''CREATE TABLE connections (
             id INTEGER PRIMARY KEY ASC,
             root INTEGER NOT NULL,
             endpoint INTEGER NOT NULL,
@@ -93,20 +92,20 @@ class Db():
             FOREIGN KEY(user) REFERENCES users(id)
             FOREIGN KEY(cred) REFERENCES creds(id)
             )''')
-        c.execute('''CREATE TABLE paths (
+        connection.execute('''CREATE TABLE paths (
             id INTEGER PRIMARY KEY ASC,
             src INTEGER NOT NULL,
             dst INTEGER NOT NULL,
             FOREIGN KEY(src) REFERENCES hosts(id)
             FOREIGN KEY(dst) REFERENCES endpoints(id)
             )''')
-        c.commit()
-        c.close()
+        connection.commit()
+        connection.close()
 
     @classmethod
     def connect(cls, workspace):
         """Open the connection to the database for a :class:`Workspace`
-        
+
         If this function is called from the main thread, it closes existing
         sqlite connections and opens a new one. Else, if a connection isn't
         already open for the current thread, it opens the connection.
@@ -118,33 +117,31 @@ class Db():
             ValueError: raised if the database file doesn't exist
         """
 
-        dbPath = os.path.join(workspacesDir, workspace, "workspace.db")
-        mainThreadName = threading.main_thread().getName()
-        currentName = threading.currentThread().getName()
-        if currentName != mainThreadName:
-            if currentName in cls.__threadsConn.keys():
+        db_path = os.path.join(WORKSPACES_DIR, workspace, "workspace.db")
+        main_thread_name = threading.main_thread().getName()
+        current_thread_name = threading.currentThread().getName()
+        if current_thread_name != main_thread_name:
+            if current_thread_name in cls.__threadsConn.keys():
                 return
-            else:
-                cls.__threadsConn[currentName] = sqlite3.connect(dbPath)
-                return
+            cls.__threadsConn[current_thread_name] = sqlite3.connect(db_path)
+            return
         if cls.__conn is not None:
             cls.__conn.close()
         cls.__workspace = workspace
-        if not os.path.exists(dbPath):
+        if not os.path.exists(db_path):
             raise ValueError("Workspace database not found, the workspace must be corrupted !")
-        cls.__conn = sqlite3.connect(dbPath)
+        cls.__conn = sqlite3.connect(db_path)
 
     @classmethod
     def close(cls):
         """Closes the connection for the current Thread"""
 
-        mainThreadName = threading.main_thread().getName()
-        currentName = threading.currentThread().getName()
-        if currentName != mainThreadName:
-            if currentName in cls.__threadsConn.keys():
-                cls.__threadsConn[currentName].close()
-                del cls.__threadsConn[currentName]
+        main_thread_name = threading.main_thread().getName()
+        current_thread_name = threading.currentThread().getName()
+        if current_thread_name != main_thread_name:
+            if current_thread_name in cls.__threadsConn.keys():
+                cls.__threadsConn[current_thread_name].close()
+                del cls.__threadsConn[current_thread_name]
             return
         cls.__conn.close()
         cls.__conn = None
-

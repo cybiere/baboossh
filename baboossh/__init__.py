@@ -1,5 +1,5 @@
 from baboossh.exceptions import *
-from baboossh.utils import workspacesDir
+from baboossh.utils import WORKSPACES_DIR
 from baboossh.extensions import *
 from baboossh.db import *
 from baboossh.creds import *

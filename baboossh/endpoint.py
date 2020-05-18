@@ -1,9 +1,7 @@
 import ipaddress
-import json
 import hashlib
 from baboossh import Db
 from baboossh import Host
-from baboossh.exceptions import *
 from baboossh.utils import Unique
 
 class Endpoint(metaclass=Unique):
@@ -39,22 +37,22 @@ class Endpoint(metaclass=Unique):
         self.reachable = None
         self.distance = None
         self.found = None
-        c = Db.get().cursor()
-        c.execute('SELECT id, host, reachable, distance, scope, found FROM endpoints WHERE ip=? AND port=?', (self.ip, self.port))
-        savedEndpoint = c.fetchone()
-        c.close()
-        if savedEndpoint is not None:
-            self.id = savedEndpoint[0]
-            self.host = Host.find_one(host_id=savedEndpoint[1])
-            if savedEndpoint[2] is None:
+        cursor = Db.get().cursor()
+        cursor.execute('SELECT id, host, reachable, distance, scope, found FROM endpoints WHERE ip=? AND port=?', (self.ip, self.port))
+        saved_endpoint = cursor.fetchone()
+        cursor.close()
+        if saved_endpoint is not None:
+            self.id = saved_endpoint[0]
+            self.host = Host.find_one(host_id=saved_endpoint[1])
+            if saved_endpoint[2] is None:
                 self.reachable = None
             else:
-                self.reachable = savedEndpoint[2] != 0
-            if savedEndpoint[3] is not None:
-                self.distance = savedEndpoint[3]
-            self.scope = savedEndpoint[4] != 0
-            if savedEndpoint[5] is not None :
-                self.found = Endpoint.find_one(endpoint_id=savedEndpoint[5])
+                self.reachable = saved_endpoint[2] != 0
+            if saved_endpoint[3] is not None:
+                self.distance = saved_endpoint[3]
+            self.scope = saved_endpoint[4] != 0
+            if saved_endpoint[5] is not None:
+                self.found = Endpoint.find_one(endpoint_id=saved_endpoint[5])
     
     @classmethod
     def get_id(cls, ip, port):
@@ -81,10 +79,10 @@ class Endpoint(metaclass=Unique):
 
         """
 
-        c = Db.get().cursor()
+        cursor = Db.get().cursor()
         if self.id is not None:
             #If we have an ID, the endpoint is already saved in the database : UPDATE
-            c.execute('''UPDATE endpoints 
+            cursor.execute('''UPDATE endpoints 
                 SET
                     ip = ?,
                     port = ?,
@@ -94,17 +92,17 @@ class Endpoint(metaclass=Unique):
                     scope = ?,
                     found = ?
                 WHERE id = ?''',
-                (self.ip, self.port, self.host.id if self.host is not None else None, self.reachable, self.distance, self.scope, self.found.id if self.found is not None else None, self.id))
+                           (self.ip, self.port, self.host.id if self.host is not None else None, self.reachable, self.distance, self.scope, self.found.id if self.found is not None else None, self.id))
         else:
             #The endpoint doesn't exists in database : INSERT
-            c.execute('''INSERT INTO endpoints(ip, port, host, reachable, distance, scope, found)
+            cursor.execute('''INSERT INTO endpoints(ip, port, host, reachable, distance, scope, found)
                 VALUES (?, ?, ?, ?, ?, ?, ?) ''',
-                (self.ip, self.port, self.host.id if self.host is not None else None, self.reachable, self.distance, self.scope, self.found.id if self.found is not None else None))
-            c.close()
-            c = Db.get().cursor()
-            c.execute('SELECT id FROM endpoints WHERE ip=? AND port=?', (self.ip, self.port))
-            self.id  = c.fetchone()[0]
-        c.close()
+                           (self.ip, self.port, self.host.id if self.host is not None else None, self.reachable, self.distance, self.scope, self.found.id if self.found is not None else None))
+            cursor.close()
+            cursor = Db.get().cursor()
+            cursor.execute('SELECT id FROM endpoints WHERE ip=? AND port=?', (self.ip, self.port))
+            self.id = cursor.fetchone()[0]
+        cursor.close()
         Db.get().commit()
 
     def delete(self):
@@ -119,16 +117,16 @@ class Endpoint(metaclass=Unique):
         if self.host is not None:
             endpoints = self.host.endpoints
             if len(endpoints) == 1:
-                unstore_targets_merge(del_data,self.host.delete())
+                unstore_targets_merge(del_data, self.host.delete())
         for connection in Connection.find_all(endpoint=self):
-            unstore_targets_merge(del_data,connection.delete())
+            unstore_targets_merge(del_data, connection.delete())
         for path in Path.find_all(dst=self):
-            unstore_targets_merge(del_data,path.delete())
-        c = Db.get().cursor()
-        c.execute('DELETE FROM endpoints WHERE id = ?', (self.id, ))
-        c.close()
+            unstore_targets_merge(del_data, path.delete())
+        cursor = Db.get().cursor()
+        cursor.execute('DELETE FROM endpoints WHERE id = ?', (self.id, ))
+        cursor.close()
         Db.get().commit()
-        unstore_targets_merge(del_data,{"Endpoint":[type(self).get_id(self.ip, self.port)]})
+        unstore_targets_merge(del_data, {"Endpoint":[type(self).get_id(self.ip, self.port)]})
         return del_data
 
     @classmethod
@@ -136,27 +134,27 @@ class Endpoint(metaclass=Unique):
         """Find all Endpoints matching the criteria
 
         Args:
-            scope (bool): 
+            scope (bool):
                 List Endpoints in scope (`True`), out of scope (`False`), or both (`None`)
             found (:class:`Endpoint`):
                 The `Endpoint` the endpoints were discovered on
-    
+
         Returns:
-            A list of all `Endpoint`\ s in the :class:`.Workspace`
+            A list of all `Endpoint` s in the :class:`.Workspace`
         """
 
         ret = []
-        c = Db.get().cursor()
+        cursor = Db.get().cursor()
         if found is None:
             if scope is None:
-                req = c.execute('SELECT ip, port FROM endpoints')
+                req = cursor.execute('SELECT ip, port FROM endpoints')
             else:
-                req = c.execute('SELECT ip, port FROM endpoints WHERE scope=?', (scope, ))
+                req = cursor.execute('SELECT ip, port FROM endpoints WHERE scope=?', (scope, ))
         else:
             if scope is None:
-                req = c.execute('SELECT ip, port FROM endpoints WHERE found=?', (endpoint.id if endpoint is not None else None, ))
+                req = cursor.execute('SELECT ip, port FROM endpoints WHERE found=?', (found.id, ))
             else:
-                req = c.execute('SELECT ip, port FROM endpoints WHERE scope=? and found=?', (scope, endpoint.id if endpoint is not None else None))
+                req = cursor.execute('SELECT ip, port FROM endpoints WHERE scope=? and found=?', (scope, found.id))
         for row in req:
             ret.append(Endpoint(row[0], row[1]))
         return ret
@@ -173,24 +171,24 @@ class Endpoint(metaclass=Unique):
             A single `Endpoint` or `None`.
         """
 
-        c = Db.get().cursor()
+        cursor = Db.get().cursor()
 
         if endpoint_id is not None:
             if endpoint_id == 0:
-                c.close()
+                cursor.close()
                 return None
-            c.execute('''SELECT ip, port FROM endpoints WHERE id=?''', (endpoint_id, ))
+            cursor.execute('''SELECT ip, port FROM endpoints WHERE id=?''', (endpoint_id, ))
         elif ip_port is not None:
             ip, sep, port = ip_port.partition(":")
             if port == "":
                 raise ValueError
-            c.execute('''SELECT ip, port FROM endpoints WHERE ip=? and port=?''', (ip, port))
+            cursor.execute('''SELECT ip, port FROM endpoints WHERE ip=? and port=?''', (ip, port))
         else:
-            c.close()
+            cursor.close()
             return None
 
-        row = c.fetchone()
-        c.close()
+        row = cursor.fetchone()
+        cursor.close()
         if row is None:
             return None
         return Endpoint(row[0], row[1])
@@ -205,23 +203,22 @@ class Endpoint(metaclass=Unique):
         Args:
             field (str): the `Endpoint` attribute to search in
             val (str): the value to search for
-            show_all (bool): whether to include out-of scope `Endpoint`\ s in search results
+            show_all (bool): whether to include out-of scope `Endpoint` s in search results
 
         Returns:
-            A `List` of `Endpoint`\ s corresponding to the search.
+            A `List` of `Endpoint` s corresponding to the search.
         """
 
         if field not in cls.search_fields:
             raise ValueError
         ret = []
-        print(field);
-        c = Db.get().cursor()
+        cursor = Db.get().cursor()
         val = "%"+val+"%"
         if show_all:
             #Ok this sounds fugly, but there seems to be no way to set a column name in a parameter. The SQL injection risk is mitigated as field must be in allowed fields, but if you find something better I take it
-            c.execute('SELECT ip, port FROM endpoints WHERE {} LIKE ?'.format(field), (val, ))
+            cursor.execute('SELECT ip, port FROM endpoints WHERE {} LIKE ?'.format(field), (val, ))
         else:
-            c.execute('SELECT ip, port FROM endpoints WHERE scope=? and {} LIKE ?'.format(field), (True, val))
-        for row in c:
+            cursor.execute('SELECT ip, port FROM endpoints WHERE scope=? and {} LIKE ?'.format(field), (True, val))
+        for row in cursor:
             ret.append(Endpoint(row[0], row[1]))
         return ret

@@ -2,8 +2,7 @@ import os
 
 BABOOSSH_VERSION = "1.1.0-dev"
 
-home = os.path.expanduser("~")
-workspacesDir = os.path.join(home, ".baboossh")
+WORKSPACES_DIR = os.path.join(os.path.expanduser("~"), ".baboossh")
 
 class Unique(type):
     def __call__(cls, *args, **kwargs):
@@ -26,4 +25,4 @@ def unstore_targets_merge(original, new_data):
         if obj_type in original:
             original[obj_type] = [*original[obj_type], *obj_list]
         else:
-            original[obj_type] = obj_list 
+            original[obj_type] = obj_list
