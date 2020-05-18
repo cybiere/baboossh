@@ -1,7 +1,9 @@
 import sqlite3
+import hashlib
+import fabric, paramiko, sys
 from baboossh import Db, Extensions, Endpoint, User, Creds, Path, Host
 from baboossh.exceptions import *
-import fabric, paramiko, sys
+from baboossh.utils import Unique
 
 try:
     from invoke.vendor.six import string_types
@@ -24,7 +26,7 @@ def monkey_open_gateway(self):
 
 fabric.Connection.open_gateway = monkey_open_gateway
 
-class Connection():
+class Connection(metaclass=Unique):
     """A :class:`User` and :class:`Creds` to authenticate on an :class:`Endpoint`
     
     A connection represents the working association of those 3 objects to connect
@@ -56,6 +58,10 @@ class Connection():
         if savedConnection is not None:
             self.id = savedConnection[0]
             self.root = savedConnection[1] != 0
+
+    @classmethod
+    def get_id(cls, endpoint, user, cred):
+        return hashlib.sha256((str(endpoint)+str(user)+str(cred)).encode()).hexdigest()
 
     @property
     def scope(self):

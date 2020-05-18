@@ -394,8 +394,8 @@ class Shell(cmd2.Cmd):
         data = []
         for user in users:
             scope = "o" if user.scope else ""
-            data.append([scope, user, id(user)])
-        print(tabulate.tabulate(data, headers=["", "Username", "id"]))
+            data.append([scope, user])
+        print(tabulate.tabulate(data, headers=["", "Username"]))
 
     def __user_add(self, stmt):
         name = vars(stmt)['name']

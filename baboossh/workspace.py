@@ -267,7 +267,6 @@ class Workspace():
                 value = endpoint
             elif option == "user":
                 user = User.find_one(name=value)
-                print(id(user))
                 if user is None:
                     raise ValueError
                 value = user
@@ -373,20 +372,17 @@ class Workspace():
             if user is None:
                 users = User.find_all(scope=True)
             else:
-                #WARNING the "find the object I already have" seems stupid but
-                #it refreshes its params from the database. Without this it
-                #would be stuck in the state it was when "set"
-                users = [User.find_one(user_id=user.id)]
+                users = [user]
             endpoint = self.options["endpoint"]
             if endpoint is None:
                 endpoints = Endpoint.find_all(scope=True)
             else:
-                endpoints = [Endpoint.find_one(endpoint_id=endpoint.id)]
+                endpoints = [endpoint]
             cred = self.options["creds"]
             if cred is None:
                 creds = Creds.find_all(scope=True)
             else:
-                creds = [Creds.find_one(creds_id=cred.id)]
+                creds = [cred]
         else:
             endpoints, users, creds = self.__enum_from_statement(target)
 

@@ -1,10 +1,12 @@
 import ipaddress
 import json
+import hashlib
 from baboossh import Db
 from baboossh import Host
 from baboossh.exceptions import *
+from baboossh.utils import Unique
 
-class Endpoint():
+class Endpoint(metaclass=Unique):
     """A SSH endpoint
 
     An Endpoint is a couple of an IP address and a port on which a SSH server is
@@ -53,6 +55,10 @@ class Endpoint():
             self.scope = savedEndpoint[4] != 0
             if savedEndpoint[5] is not None :
                 self.found = Endpoint.find_one(endpoint_id=savedEndpoint[5])
+    
+    @classmethod
+    def get_id(cls, ip, port):
+        return hashlib.sha256((ip+str(port)).encode()).hexdigest()
 
     @property
     def port(self):

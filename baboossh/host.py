@@ -1,10 +1,12 @@
 import sqlite3
 import json
+import hashlib
 from baboossh import Db
 from baboossh.exceptions import *
+from baboossh.utils import Unique
 
 
-class Host():
+class Host(metaclass=Unique):
     """A machine with one or several :class:`Endpoint`
 
     This is used to aggregate endpoints as a single machine can have several
@@ -40,6 +42,10 @@ class Host():
         c.close()
         if savedHost is not None:
             self.id = savedHost[0]
+
+    @classmethod
+    def get_id(cls, name, uname, issue, machineId, macs):
+        return hashlib.sha256((name+uname+issue+machineId+json.dumps(macs)).encode()).hexdigest()
 
     @property
     def scope(self):

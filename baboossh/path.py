@@ -1,9 +1,11 @@
 import sqlite3
 import collections
+import hashlib
 from baboossh.exceptions import *
 from baboossh import Db, Endpoint, Host
+from baboossh.utils import Unique
 
-class Path():
+class Path(metaclass=Unique):
     """Indicates an endpoint is reachable from a host
 
     A path is created when an :class:`.Endpoint` can be reached from a :class:`.Host`,
@@ -33,6 +35,10 @@ class Path():
         c.close()
         if savedPath is not None:
             self.id = savedPath[0]
+
+    @classmethod
+    def get_id(cls, src, dst):
+        return hashlib.sha256((str(src)+str(dst)).encode()).hexdigest()
 
     @property
     def scope(self):
@@ -169,7 +175,7 @@ class Path():
         Raises:
             NoPathError: if no path could be found to `dst`
         """
-        print(dst)
+
         try:
             previous_hop = Host.find_one(prev_hop_to=dst)
         except NoPathError as exc:

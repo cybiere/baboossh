@@ -1,8 +1,9 @@
-import sqlite3
+import hashlib
 from baboossh import Db, Extensions
+from baboossh.utils import Unique
 
 
-class Creds():
+class Creds(metaclass=Unique):
     """The credentials to authenticate with on servers.
 
     The Creds class is an interface to handle various :class:`Extension`\ s for
@@ -38,6 +39,11 @@ class Creds():
             if savedCreds[2] is not None :
                 from baboossh import Endpoint
                 self.found = Endpoint.find_one(endpoint_id=savedCreds[2])
+
+    @classmethod
+    def get_id(cls, credsType, credsContent):
+        obj = Extensions.getAuthMethod(credsType)(credsContent)
+        return hashlib.sha256((credsType+obj.identifier).encode()).hexdigest()
 
     def save(self):
         """Save the `Creds` to the :class:`Workspace`\ 's database"""

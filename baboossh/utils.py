@@ -11,7 +11,6 @@ class Unique(type):
         workspace = Workspace.active
         obj_id = cls.get_id(*args, **kwargs)
         if obj_id not in workspace.store[cls.__name__]:
-            print("new")
             self = cls.__new__(cls, *args, **kwargs)
             cls.__init__(self, *args, **kwargs)
             workspace.store[cls.__name__][obj_id] = self
