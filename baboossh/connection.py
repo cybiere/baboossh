@@ -1,5 +1,5 @@
 import sqlite3
-from baboossh import dbConn, Extensions, Endpoint, User, Creds, Path, Host
+from baboossh import Db, Extensions, Endpoint, User, Creds, Path, Host
 from baboossh.exceptions import *
 import fabric, paramiko, sys
 
@@ -49,7 +49,7 @@ class Connection():
         self.gateway = None
         if user is None or cred is None:
             return
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         c.execute('SELECT id, root FROM connections WHERE endpoint=? AND user=? AND cred=?', (self.endpoint.id, self.user.id, self.creds.id))
         savedConnection = c.fetchone()
         c.close()
@@ -76,7 +76,7 @@ class Connection():
         if self.user is None or self.creds is None:
             return
         """Save the `Connection` to the :class:`Workspace` 's database"""
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         if self.id is not None:
             #If we have an ID, the endpoint is already saved in the database : UPDATE
             c.execute('''UPDATE connections 
@@ -93,20 +93,20 @@ class Connection():
                 VALUES (?, ?, ?, ?) ''',
                 (self.endpoint.id, self.user.id, self.creds.id, self.root ))
             c.close()
-            c = dbConn.get().cursor()
+            c = Db.get().cursor()
             c.execute('SELECT id FROM connections WHERE endpoint=? AND user=? AND cred=?', (self.endpoint.id, self.user.id, self.creds.id))
             self.id  = c.fetchone()[0]
         c.close()
-        dbConn.get().commit()
+        Db.get().commit()
 
     def delete(self):
         """Delete the `Connection` from the :class:`Workspace` 's database"""
         if self.id is None:
             return
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         c.execute('DELETE FROM connections WHERE id = ?', (self.id, ))
         c.close()
-        dbConn.get().commit()
+        Db.get().commit()
         return
 
 
@@ -134,7 +134,7 @@ class Connection():
                 return None
             return cls.find_one(endpoint=closest_host.closest_endpoint, scope=True)
 
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         if connection_id is not None:
             req = c.execute('SELECT endpoint, user, cred FROM connections WHERE id=?', (connection_id, ))
         elif endpoint is not None:
@@ -160,7 +160,7 @@ class Connection():
     @classmethod
     def find_all(cls, endpoint=None, user=None, creds=None, scope=None):
         ret = []
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
 
         query = 'SELECT endpoint, user, cred FROM connections'
         params = []

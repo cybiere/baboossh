@@ -1,6 +1,6 @@
 import ipaddress
 import json
-from baboossh import dbConn
+from baboossh import Db
 from baboossh import Host
 from baboossh.exceptions import *
 
@@ -37,7 +37,7 @@ class Endpoint():
         self.reachable = None
         self.distance = None
         self.found = None
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         c.execute('SELECT id, host, reachable, distance, scope, found FROM endpoints WHERE ip=? AND port=?', (self.ip, self.port))
         savedEndpoint = c.fetchone()
         c.close()
@@ -75,7 +75,7 @@ class Endpoint():
 
         """
 
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         if self.id is not None:
             #If we have an ID, the endpoint is already saved in the database : UPDATE
             c.execute('''UPDATE endpoints 
@@ -95,11 +95,11 @@ class Endpoint():
                 VALUES (?, ?, ?, ?, ?, ?, ?) ''',
                 (self.ip, self.port, self.host.id if self.host is not None else None, self.reachable, self.distance, self.scope, self.found.id if self.found is not None else None))
             c.close()
-            c = dbConn.get().cursor()
+            c = Db.get().cursor()
             c.execute('SELECT id FROM endpoints WHERE ip=? AND port=?', (self.ip, self.port))
             self.id  = c.fetchone()[0]
         c.close()
-        dbConn.get().commit()
+        Db.get().commit()
 
     def delete(self):
         """Delete an Endpoint from the :class:`.Workspace`"""
@@ -116,10 +116,10 @@ class Endpoint():
             connection.delete()
         for path in Path.find_all(dst=self):
             path.delete()
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         c.execute('DELETE FROM endpoints WHERE id = ?', (self.id, ))
         c.close()
-        dbConn.get().commit()
+        Db.get().commit()
         return
 
     @classmethod
@@ -137,7 +137,7 @@ class Endpoint():
         """
 
         ret = []
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         if found is None:
             if scope is None:
                 req = c.execute('SELECT ip, port FROM endpoints')
@@ -164,7 +164,7 @@ class Endpoint():
             A single `Endpoint` or `None`.
         """
 
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
 
         if endpoint_id is not None:
             if endpoint_id == 0:
@@ -206,7 +206,7 @@ class Endpoint():
             raise ValueError
         ret = []
         print(field);
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         val = "%"+val+"%"
         if show_all:
             #Ok this sounds fugly, but there seems to be no way to set a column name in a parameter. The SQL injection risk is mitigated as field must be in allowed fields, but if you find something better I take it

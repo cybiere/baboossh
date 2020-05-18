@@ -1,6 +1,6 @@
 import os
 import re
-from baboossh import User, Creds, Host, Endpoint, Tunnel, Path, Connection, dbConn, Extensions, workspacesDir
+from baboossh import User, Creds, Host, Endpoint, Tunnel, Path, Connection, Db, Extensions, workspacesDir
 
 class Workspace():
     """A container to hold all related objects
@@ -45,7 +45,7 @@ class Workspace():
             print("Workspace already exists")
             raise ValueError
         #create database
-        dbConn.build(name)
+        Db.build(name)
         return Workspace(name)
 
     def __init__(self, name):
@@ -57,7 +57,7 @@ class Workspace():
         self.workspace_folder = os.path.join(workspacesDir, name)
         if not os.path.exists(self.workspace_folder):
             raise ValueError("Workspace "+name+" does not exist")
-        dbConn.connect(name)
+        Db.connect(name)
         self.name = name
         self.tunnels = {}
         self.options = {
@@ -676,5 +676,5 @@ class Workspace():
     def close(self):
         for tunnel in self.tunnels.values():
             tunnel.close()
-        dbConn.close()
+        Db.close()
         print("Closing workspace "+self.name)

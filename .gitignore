@@ -1,5 +1,6 @@
 baboossh/__pycache__
-baboossh/extensions/__pycache__
+baboossh/ext_dir/__pycache__
 baboossh.egg-info/
+baboossh/tests
 build/
 dist/

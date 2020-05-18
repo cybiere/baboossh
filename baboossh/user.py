@@ -1,4 +1,4 @@
-from baboossh import dbConn
+from baboossh import Db
 
 class User():
 
@@ -16,7 +16,7 @@ class User():
         self.id = None
         self.scope = True
         self.found = None
-        cursor = dbConn.get().cursor()
+        cursor = Db.get().cursor()
         cursor.execute('SELECT id, scope, found FROM users WHERE username=?', (self.name, ))
         saved_user = cursor.fetchone()
         cursor.close()
@@ -34,7 +34,7 @@ class User():
         so it is updated. Else it is inserted and the id is set in the object.
 
         """
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         if self.id is not None:
             #If we have an ID, the user is already saved in the database : UPDATE
             c.execute('''UPDATE users 
@@ -50,11 +50,11 @@ class User():
                 VALUES (?, ?, ?) ''',
                 (self.name, self.scope, self.found.id if self.found is not None else None))
             c.close()
-            c = dbConn.get().cursor()
+            c = Db.get().cursor()
             c.execute('SELECT id FROM users WHERE username=?', (self.name, ))
             self.id = c.fetchone()[0]
         c.close()
-        dbConn.get().commit()
+        Db.get().commit()
 
     def delete(self):
         """Delete a User from the :class:`.Workspace`"""
@@ -64,10 +64,10 @@ class User():
             return
         for connection in Connection.find_all(user=self):
             connection.delete()
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         c.execute('DELETE FROM users WHERE id = ?', (self.id, ))
         c.close()
-        dbConn.get().commit()
+        Db.get().commit()
         return
 
     @classmethod
@@ -85,7 +85,7 @@ class User():
         """
 
         ret = []
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         if found is None:
             if scope is None:
                 req = c.execute('SELECT username FROM users')
@@ -112,7 +112,7 @@ class User():
             A single `User` or `None`.
         """
 
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         if user_id is not None:
             c.execute('''SELECT username FROM users WHERE id=?''', (user_id, ))
         elif name is not None:

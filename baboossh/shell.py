@@ -20,7 +20,8 @@ import shutil
 import cmd2
 import tabulate
 from baboossh.exceptions import *
-from baboossh.params import Extensions, workspacesDir
+from baboossh.utils import workspacesDir
+from baboossh.extensions import Extensions
 from baboossh.workspace import Workspace
 
 def yes_no(prompt, default=None):

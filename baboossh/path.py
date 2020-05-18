@@ -1,7 +1,7 @@
 import sqlite3
 import collections
 from baboossh.exceptions import *
-from baboossh import dbConn, Endpoint, Host
+from baboossh import Db, Endpoint, Host
 
 class Path():
     """Indicates an endpoint is reachable from a host
@@ -27,7 +27,7 @@ class Path():
         self.src = src
         self.dst = dst
         self.id = None
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         c.execute('SELECT id FROM paths WHERE src=? AND dst=?', (self.src.id if self.src is not None else 0, self.dst.id))
         savedPath = c.fetchone()
         c.close()
@@ -50,7 +50,7 @@ class Path():
 
         """
 
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         if self.id is not None:
             c.execute('''UPDATE paths 
                 SET
@@ -63,21 +63,21 @@ class Path():
                 VALUES (?, ?) ''',
                 (self.src.id if self.src is not None else 0, self.dst.id))
             c.close()
-            c = dbConn.get().cursor()
+            c = Db.get().cursor()
             c.execute('SELECT id FROM paths WHERE src=? AND dst=?', (self.src.id if self.src is not None else 0, self.dst.id))
             self.id = c.fetchone()[0]
         c.close()
-        dbConn.get().commit()
+        Db.get().commit()
 
     def delete(self):
         """Delete an Path from the :class:`.Workspace`"""
 
         if self.id is None:
             return
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         c.execute('DELETE FROM paths WHERE id = ?', (self.id, ))
         c.close()
-        dbConn.get().commit()
+        Db.get().commit()
         return
 
     @classmethod
@@ -102,7 +102,7 @@ class Path():
         elif src is not None:
             src_id = src.id
         ret = []
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         if src is None:
             if dst is None:
                 req = c.execute('SELECT src, dst FROM paths')
@@ -131,7 +131,7 @@ class Path():
 
         if path_id is None:
             return None
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         c.execute('''SELECT src, dst FROM paths WHERE id=?''', (path_id, ))
         row = c.fetchone()
         c.close()
@@ -150,7 +150,7 @@ class Path():
             `True` if there is a `Path` from `"Local"` to dst, `False` otherwise
         """
 
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         c.execute('''SELECT id FROM paths WHERE src=0 and dst=?''', (dst.id, ))
         row = c.fetchone()
         c.close()

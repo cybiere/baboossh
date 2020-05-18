@@ -1,5 +1,5 @@
 import sqlite3
-from baboossh import dbConn, Extensions
+from baboossh import Db, Extensions
 
 
 class Creds():
@@ -28,7 +28,7 @@ class Creds():
         self.id = None
         self.scope = True
         self.found = None
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         c.execute('SELECT id, scope, found FROM creds WHERE type=? AND identifier=?', (self.credsType, self.obj.identifier))
         savedCreds = c.fetchone()
         c.close()
@@ -41,7 +41,7 @@ class Creds():
 
     def save(self):
         """Save the `Creds` to the :class:`Workspace`\ 's database"""
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         if self.id is not None:
             #If we have an ID, the creds is already saved in the database : UPDATE
             c.execute('''UPDATE creds 
@@ -59,11 +59,11 @@ class Creds():
                 VALUES (?, ?, ?, ?, ?) ''',
                 (self.credsType, self.credsContent, self.obj.identifier, self.scope, self.found.id if self.found is not None else None))
             c.close()
-            c = dbConn.get().cursor()
+            c = Db.get().cursor()
             c.execute('SELECT id FROM creds WHERE type=? and identifier=?', (self.credsType, self.obj.identifier))
             self.id = c.fetchone()[0]
         c.close()
-        dbConn.get().commit()
+        Db.get().commit()
 
     def delete(self):
         """Delete a `Creds` from the :class:`.Workspace`"""
@@ -73,10 +73,10 @@ class Creds():
         for connection in Connection.find_all(creds=self):
             connection.delete()
         self.obj.delete()
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         c.execute('DELETE FROM creds WHERE id = ?', (self.id, ))
         c.close()
-        dbConn.get().commit()
+        Db.get().commit()
         return
 
     @property
@@ -99,7 +99,7 @@ class Creds():
         """
 
         ret = []
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         if found is None:
             if scope is None:
                 req = c.execute('SELECT type, content FROM creds')
@@ -125,7 +125,7 @@ class Creds():
             A single `Creds` or `None`.
         """
 
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         c.execute('''SELECT type, content FROM creds WHERE id=?''', (creds_id, ))
         row = c.fetchone()
         c.close()

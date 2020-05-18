@@ -1,6 +1,6 @@
 import sqlite3
 import json
-from baboossh import dbConn
+from baboossh import Db
 from baboossh.exceptions import *
 
 
@@ -34,7 +34,7 @@ class Host():
         self.issue = issue
         self.machineId = machineId
         self.macs = macs
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         c.execute('SELECT id FROM hosts WHERE name=? AND uname=? AND issue=? AND machineid=? AND macs=?', (self.name, self.uname, self.issue, self.machineId, json.dumps(self.macs)))
         savedHost = c.fetchone()
         c.close()
@@ -63,7 +63,7 @@ class Host():
     def distance(self):
         """Returns the `Host` 's number of hops from `"Local"`"""
 
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         c.execute('SELECT distance FROM endpoints WHERE host=? ORDER BY distance DESC', (self.id, ))
         row = c.fetchone()
         c.close()
@@ -73,7 +73,7 @@ class Host():
     def closest_endpoint(self):
         """Returns the `Host` 's closest :class:`Endpoint`"""
         
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         c.execute('SELECT ip, port FROM endpoints WHERE host=? ORDER BY distance DESC', (self.id, ))
         row = c.fetchone()
         c.close()
@@ -85,7 +85,7 @@ class Host():
         """Returns a `List` of the `Host` 's :class:`Endpoint` s"""
         from baboossh import Endpoint
         endpoints = []
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         for row in c.execute('SELECT ip, port FROM endpoints WHERE host=?', (self.id, )):
             endpoints.append(Endpoint(row[0], row[1]))
         c.close()
@@ -93,7 +93,7 @@ class Host():
 
     def save(self):
         """Saves the `Host` in the :class:`Workspace` 's database"""
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         if self.id is not None:
             #If we have an ID, the host is already saved in the database : UPDATE
             c.execute('''UPDATE hosts 
@@ -111,11 +111,11 @@ class Host():
                 VALUES (?, ?, ?, ?, ?) ''',
                 (self.name, self.uname, self.issue, self.machineId, json.dumps(self.macs)))
             c.close()
-            c = dbConn.get().cursor()
+            c = Db.get().cursor()
             c.execute('SELECT id FROM hosts WHERE name=? AND uname=? AND issue=? AND machineid=? AND macs=?', (self.name, self.uname, self.issue, self.machineId, json.dumps(self.macs)))
             self.id = c.fetchone()[0]
         c.close()
-        dbConn.get().commit()
+        Db.get().commit()
 
     def delete(self):
         """Removes the `Host` from the :class:`Workspace`
@@ -131,10 +131,10 @@ class Host():
         for endpoint in self.endpoints:
             endpoint.host = None
             endpoint.save()
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         c.execute('DELETE FROM hosts WHERE id = ?', (self.id, ))
         c.close()
-        dbConn.get().commit()
+        Db.get().commit()
         return
 
     @classmethod
@@ -151,7 +151,7 @@ class Host():
         """
 
         ret = []
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         if name is None:
             req = c.execute('SELECT name, uname, issue, machineId, macs FROM hosts')
         else:
@@ -198,7 +198,7 @@ class Host():
                 raise NoPathError
             return closest
         
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         if host_id is not None:
             c.execute('''SELECT name, uname, issue, machineId, macs FROM hosts WHERE id=?''', (host_id, ))
         elif name is not None:
@@ -230,7 +230,7 @@ class Host():
             raise ValueError
         ret = []
         print(field);
-        c = dbConn.get().cursor()
+        c = Db.get().cursor()
         val = "%"+val+"%"
         #Ok this sounds fugly, but there seems to be no way to set a column name in a parameter. The SQL injection risk is mitigated as field must be in allowed fields, but if you find something better I take it
         c.execute('SELECT name, uname, issue, machineId, macs FROM hosts WHERE {} LIKE ?'.format(field), (val, ))

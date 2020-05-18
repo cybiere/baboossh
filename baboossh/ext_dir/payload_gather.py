@@ -245,7 +245,7 @@ class BaboosshExt(object,metaclass=ExtStr):
     def getKeyToCreds(self,keyfile,basePath=".ssh"):
         if basePath != ".":
             keyfile = os.path.join(basePath,keyfile)
-        from baboossh.params import Extensions
+        from baboossh.extensions import Extensions
         keysFolder = os.path.join(self.wspaceFolder,"keys")
         filename = str(self.connection.endpoint).replace(":","-")+"_"+str(self.connection.user)+"_"+keyfile.replace("/","_")
         filepath = os.path.join(keysFolder,filename)
