@@ -67,14 +67,17 @@ class User(metaclass=Unique):
 
         from baboossh import Connection
         if self.id is None:
-            return
+            return {}
+        from baboossh.utils import unstore_targets_merge
+        del_data = {}
         for connection in Connection.find_all(user=self):
-            connection.delete()
+            unstore_targets_merge(del_data,connection.delete())
         c = Db.get().cursor()
         c.execute('DELETE FROM users WHERE id = ?', (self.id, ))
         c.close()
         Db.get().commit()
-        return
+        unstore_targets_merge(del_data,{"User":[type(self).get_id(self.name)]})
+        return del_data
 
     @classmethod
     def find_all(cls, scope=None, found=None):

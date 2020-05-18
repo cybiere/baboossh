@@ -76,14 +76,17 @@ class Creds(metaclass=Unique):
         from baboossh import Connection
         if self.id is None:
             return
+        from baboossh.utils import unstore_targets_merge
+        del_data = {}
         for connection in Connection.find_all(creds=self):
-            connection.delete()
+            unstore_targets_merge(del_data,connection.delete())
         self.obj.delete()
         c = Db.get().cursor()
         c.execute('DELETE FROM creds WHERE id = ?', (self.id, ))
         c.close()
         Db.get().commit()
-        return
+        unstore_targets_merge(del_data,{"Creds":[type(self).get_id(self.credsType,self.credsContent)]})
+        return del_data
 
     @property
     def kwargs(self):

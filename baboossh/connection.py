@@ -113,7 +113,7 @@ class Connection(metaclass=Unique):
         c.execute('DELETE FROM connections WHERE id = ?', (self.id, ))
         c.close()
         Db.get().commit()
-        return
+        return {"Connection":[type(self).get_id(self.endpoint, self.user, self.creds)]}
 
 
     @classmethod

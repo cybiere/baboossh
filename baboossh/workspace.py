@@ -108,7 +108,9 @@ class Workspace():
         if endpoint is None:
             print("Could not find endpoint.")
             return False
-        return endpoint.delete()
+        if self.options["endpoint"] == endpoint:
+            self.set_option("endpoint",None)
+        self.unstore(endpoint.delete())
 
 #################################################################
 ###################           USERS           ###################
@@ -134,7 +136,9 @@ class Workspace():
         if user is None:
             print("Could not find user.")
             return False
-        return user.delete()
+        if self.options["user"] == user:
+            self.set_option("user",None)
+        self.unstore(user.delete())
 
 #################################################################
 ###################           HOSTS           ###################
@@ -154,7 +158,7 @@ class Workspace():
         if len(hosts) > 1:
             print("Several hosts corresponding. Please delete endpoints.")
             return False
-        return hosts[0].delete()
+        self.unstore(hosts[0].delete())
 
 
 #################################################################
@@ -217,7 +221,9 @@ class Workspace():
         if creds is None:
             print("Specified creds not found")
             return False
-        return creds.delete()
+        if self.options["creds"] == creds:
+            self.set_option("creds",None)
+        self.unstore(creds.delete())
 
 #################################################################
 ###################          OPTIONS          ###################
@@ -301,7 +307,7 @@ class Workspace():
         if connection is None:
             print("Connection not found.")
             return False
-        return connection.delete()
+        self.unstore(connection.delete())
 
     def __enum_from_statement(self, target):
         if '@' not in target:
@@ -512,7 +518,7 @@ class Workspace():
         if p.id is None:
             print("The specified Path doesn't exist in this workspace.")
             return False
-        return p.delete()
+        self.unstore(p.delete())
 
     def path_add(self, src, dst):
         if src.lower() != "local":
@@ -679,6 +685,13 @@ class Workspace():
         if obj == "Host":
             return Host.search_fields
         return []
+
+    def unstore(self,data):
+        for obj_type, objects in data.items():
+            for item in objects:
+                obj = self.store[obj_type].pop(item,None)
+                if obj is not None:
+                    print('Removed '+str(obj)+' from '+obj_type)
 
     def close(self):
         for tunnel in self.tunnels.values():

@@ -244,7 +244,7 @@ class Shell(cmd2.Cmd):
 
     def __host_del(self, stmt):
         host = getattr(stmt, 'host', None)
-        return self.workspace.host_del(host)
+        self.workspace.host_del(host)
 
     __parser_host = argparse.ArgumentParser(prog="host")
     __subparser_host = __parser_host.add_subparsers(title='Actions', help='Available actions')
@@ -331,7 +331,7 @@ class Shell(cmd2.Cmd):
 
     def __endpoint_del(self, stmt):
         endpoint = vars(stmt)['endpoint']
-        return self.workspace.endpoint_del(endpoint)
+        self.workspace.endpoint_del(endpoint)
 
     def __endpoint_search(self, stmt):
         show_all = getattr(stmt, 'all', False)
@@ -408,7 +408,7 @@ class Shell(cmd2.Cmd):
 
     def __user_del(self, stmt):
         name = vars(stmt)['name']
-        return self.workspace.user_del(name)
+        self.workspace.user_del(name)
 
     __parser_user = argparse.ArgumentParser(prog="user")
     __subparser_user = __parser_user.add_subparsers(title='Actions', help='Available actions')
@@ -561,7 +561,7 @@ class Shell(cmd2.Cmd):
 
     def __connection_del(self, stmt):
         connection = getattr(stmt, "connection", None)
-        return self.workspace.connection_del(connection)
+        self.workspace.connection_del(connection)
 
     __parser_connection = argparse.ArgumentParser(prog="connection")
     __subparser_connection = __parser_connection.add_subparsers(title='Actions', help='Available actions')
@@ -949,6 +949,14 @@ class Shell(cmd2.Cmd):
 #################################################################
 ###################            CMD            ###################
 #################################################################
+
+    def do_store(self, arg):
+        for obj_type, objects in self.workspace.store.items():
+            print(obj_type)
+            for obj_id,obj in objects.items():
+                print('\t'+str(obj)+' > '+str(obj_id))
+
+
 
     def do_exit(self, arg):
         'Close active workspace & quit Baboossh'

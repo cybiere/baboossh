@@ -84,7 +84,7 @@ class Path(metaclass=Unique):
         c.execute('DELETE FROM paths WHERE id = ?', (self.id, ))
         c.close()
         Db.get().commit()
-        return
+        return {"Path":[type(self).get_id(self.src, self.dst)]}
 
     @classmethod
     def find_all(cls, src=None, dst=None):

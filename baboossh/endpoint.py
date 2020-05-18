@@ -113,20 +113,23 @@ class Endpoint(metaclass=Unique):
         from baboossh import Path
         from baboossh import Connection
         if self.id is None:
-            return
+            return {}
+        from baboossh.utils import unstore_targets_merge
+        del_data = {}
         if self.host is not None:
             endpoints = self.host.endpoints
             if len(endpoints) == 1:
-                self.host.delete()
+                unstore_targets_merge(del_data,self.host.delete())
         for connection in Connection.find_all(endpoint=self):
-            connection.delete()
+            unstore_targets_merge(del_data,connection.delete())
         for path in Path.find_all(dst=self):
-            path.delete()
+            unstore_targets_merge(del_data,path.delete())
         c = Db.get().cursor()
         c.execute('DELETE FROM endpoints WHERE id = ?', (self.id, ))
         c.close()
         Db.get().commit()
-        return
+        unstore_targets_merge(del_data,{"Endpoint":[type(self).get_id(self.ip, self.port)]})
+        return del_data
 
     @classmethod
     def find_all(cls, scope=None, found=None):

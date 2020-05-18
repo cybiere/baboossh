@@ -19,4 +19,9 @@ class Unique(type):
     def __init__(cls, name, bases, attributes):
         super().__init__(name, bases, attributes)
 
-
+def unstore_targets_merge(original, new_data):
+    for obj_type, obj_list in new_data.items():
+        if obj_type in original:
+            original[obj_type] = [*original[obj_type], *obj_list]
+        else:
+            original[obj_type] = obj_list 

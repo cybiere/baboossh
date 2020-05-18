@@ -131,9 +131,11 @@ class Host(metaclass=Unique):
 
         from baboossh import Path
         if self.id is None:
-            return
+            return {}
+        from baboossh.utils import unstore_targets_merge
+        del_data = {}
         for path in Path.find_all(src=self):
-            path.delete()
+            unstore_targets_merge(del_data,path.delete())
         for endpoint in self.endpoints:
             endpoint.host = None
             endpoint.save()
@@ -141,7 +143,8 @@ class Host(metaclass=Unique):
         c.execute('DELETE FROM hosts WHERE id = ?', (self.id, ))
         c.close()
         Db.get().commit()
-        return
+        unstore_targets_merge(del_data,{"Host":[type(self).get_id(self.name, self.uname, self.issue, self.machineId, self.macs)]})
+        return del_data
 
     @classmethod
     def find_all(cls, scope=None, name=None):
