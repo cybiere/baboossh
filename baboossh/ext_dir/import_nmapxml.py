@@ -46,14 +46,11 @@ class BaboosshExt(object,metaclass=ExtStr):
             src = None
             distance = 0
         else:
-            hosts = Host.find_all(name=from_host)
-            if len(hosts) > 1:
-                print("Several hosts corresponding.")
-                return False
-            elif len(hosts) == 0:
+            host = Host.find_one(name=from_host)
+            if host is None:
                 print("No host corresponding.")
                 return False
-            src = hosts[0]
+            src = host
             distance = src.distance + 1
         try:
             report = NmapParser.parse_fromfile(nmapfile)

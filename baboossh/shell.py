@@ -78,12 +78,7 @@ class Shell(cmd2.Cmd):
         return [name for name in os.listdir(workspacesDir) if os.path.isdir(os.path.join(workspacesDir, name))]
 
     def __get_option_gateway(self):
-        ret = ["local"]
-        endpoints = self.workspace.get_objects(endpoints=True, scope=True)
-        for endpoint in endpoints:
-            if endpoint.connection is not None:
-                ret.append(endpoint)
-        return ret
+        return self.workspace.get_objects(local=True, hosts=True, scope=True)
 
     def __get_option_user(self):
         return self.workspace.get_objects(users=True, scope=True)
@@ -216,7 +211,7 @@ class Shell(cmd2.Cmd):
                     endpoints = endpoints + ", "+str(endpoint)
             scope = "o" if host.scope else ""
             data.append([scope, host.id, host.name, host.distance, endpoints])
-        print(tabulate.tabulate(data, headers=["", "ID", "Hostname", "Dist", "Endpoints"]))
+        print(tabulate.tabulate(data, headers=["", "ID", "Name", "Dist", "Endpoints"]))
 
     def __host_list(self, stmt):
         print("Current hosts in workspace:")

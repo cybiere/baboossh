@@ -1,6 +1,7 @@
 import os
 import re
 from baboossh import User, Creds, Host, Endpoint, Tunnel, Path, Connection, Db, Extensions, workspacesDir
+from baboossh.exceptions import *
 
 class Workspace():
     """A container to hold all related objects
@@ -154,11 +155,8 @@ class Workspace():
         if host not in [host.name for host in Host.find_all()]:
             print("Not a known Host name.")
             return False
-        hosts = Host.find_all(name=host)
-        if len(hosts) > 1:
-            print("Several hosts corresponding. Please delete endpoints.")
-            return False
-        self.unstore(hosts[0].delete())
+        host = Host.find_one(name=host)
+        self.unstore(host.delete())
 
 
 #################################################################
@@ -311,21 +309,13 @@ class Workspace():
 
     def __enum_from_statement(self, target):
         if '@' not in target:
-            #TODO
-            hosts = Host.find_all(name=target)
-            if len(hosts) != 0:
-                endpoints = []
-                users = []
-                creds = []
-                for host in hosts:
-                    conn = Connection.find_one(endpoint=host.closest_endpoint)
-                    endpoints.append(conn.endpoint)
-                    users.append(conn.user)
-                    creds.append(conn.creds)
-                return (endpoints, users, creds)
+            host = Host.find_one(name=target)
+            if host is not None:
+                conn = Connection.find_one(endpoint=host.closest_endpoint)
+                return ([conn.endpoint], [conn.user], [conn.creds])
             endpoint = Endpoint.find_one(ip_port=target)
             if endpoint is None:
-                raise ValueError("Supplied endpoint doesn't match a valid endpoint")
+                raise ValueError("Supplied value doesn't match a host nor an endpoint")
             return ([endpoint],[None],[None])
         else:
             auth, sep, endpoint = target.partition('@')
@@ -438,7 +428,7 @@ class Workspace():
         if gateway == "local":
             gateway = None
         elif gateway != "auto":
-            gateway = Connection.fromTarget(gateway)
+            gateway = Connection.find_one(endpoint=Host.find_one(name=gateway).closest_endpoint)
 
         for connection in targets:
             if not connection.endpoint.reachable:
@@ -467,16 +457,14 @@ class Workspace():
 
     def path_find_existing(self, dst, as_ip=False):
         if dst in [host.name for host in Host.find_all()]:
-            hosts = Host.find_all(name=dst)
-            if len(hosts) > 1:
-                print("Several hosts corresponding. Please target endpoint.")
+            host = Host.find_one(name=dst)
+            dst = host.closest_endpoint
+        else:
+            try:
+                dst = Endpoint.find_one(ip_port=dst)
+            except:
+                print("Please specify a valid endpoint in the IP:PORT form")
                 return
-            dst = str(hosts[0].closest_endpoint)
-        try:
-            dst = Endpoint.find_one(ip_port=dst)
-        except:
-            print("Please specify a valid endpoint in the IP:PORT form")
-            return
         if dst is None:
             print("The endpoint provided doesn't exist in this workspace")
             return
@@ -500,11 +488,7 @@ class Workspace():
             if src not in [host.name for host in Host.find_all()]:
                 print("Not a known Host name.")
                 return False
-            hosts = Host.find_all(name=src)
-            if len(hosts) > 1:
-                print("Several hosts corresponding. Add failed")
-                return False
-            src = hosts[0]
+            src = Host.find_one(name=src)
             if src is None:
                 print("The source Host provided doesn't exist in this workspace")
                 return False
@@ -528,11 +512,7 @@ class Workspace():
             if src not in [host.name for host in Host.find_all()]:
                 print("Not a known Host name.")
                 return
-            hosts = Host.find_all(name=src)
-            if len(hosts) > 1:
-                print("Several hosts corresponding. Add failed")
-                return
-            src = hosts[0]
+            src = Host.find_one(name=src)
             if src is None:
                 print("The source Host provided doesn't exist in this workspace")
                 return
@@ -554,18 +534,20 @@ class Workspace():
 #################################################################
 
     def probe(self, targets, gateway="auto", verbose=False, force=False):
+        if gateway != "auto":
+            if gateway == "local":
+               gateway = None
+               host = None
+            else:
+                host = Host.find_one(name=gateway)
+                gateway = Connection.find_one(endpoint=host.closest_endpoint)
+
         for endpoint in targets:
             conn = Connection(endpoint, None, None)
-            if not force and endpoint.reachable and gateway == "auto":
+            if not force and endpoint.reachable and str(gateway) == "auto":
                 working = conn.probe()
                 host = Host.find_one(prev_hop_to=endpoint)
-            elif gateway != "auto":
-                if gateway == "local":
-                    gateway = None
-                    host = None
-                else:
-                    gateway = Connection.find_one(endpoint=gateway)
-                    host = gateway.endpoint.host
+            elif str(gateway) != "auto":
                 working = conn.probe(gateway=gateway)
             else:
                 try:
@@ -617,12 +599,9 @@ class Workspace():
                 return dst
         except:
             pass
-        hosts = Host.find_all(name=target)
-        if len(hosts) > 1:
-            print("Multiple hosts matching, use endpoints")
-            return None
-        if len(hosts) == 1:
-            return hosts[0]
+        host = Host.find_one(name=target)
+        if host is not None:
+            return host
         print("Could not identify object.")
         return None
 

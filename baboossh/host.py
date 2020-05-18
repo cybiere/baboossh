@@ -29,23 +29,45 @@ class Host(metaclass=Unique):
 
     search_fields = ['name', 'uname']
 
-    def __init__(self, name, uname, issue, machineId, macs):
-        self.name = name
+    def __init__(self, hostname, uname, issue, machineId, macs):
+        self.hostname = hostname
         self.id = None
         self.uname = uname
         self.issue = issue
         self.machineId = machineId
         self.macs = macs
         c = Db.get().cursor()
-        c.execute('SELECT id FROM hosts WHERE name=? AND uname=? AND issue=? AND machineid=? AND macs=?', (self.name, self.uname, self.issue, self.machineId, json.dumps(self.macs)))
-        savedHost = c.fetchone()
+        c.execute('SELECT id, name FROM hosts WHERE hostname=? AND uname=? AND issue=? AND machineid=? AND macs=?', (self.hostname, self.uname, self.issue, self.machineId, json.dumps(self.macs)))
+        saved_host = c.fetchone()
         c.close()
-        if savedHost is not None:
-            self.id = savedHost[0]
+        if saved_host is not None:
+            self.id = saved_host[0]
+            self.name = saved_host[1]
+        else:
+            if hostname != "":
+                name = hostname.split(".")[0]
+                if len(name) > 20:
+                    name = name[:20]
+                incr = 0
+            else:
+                name = "host"
+                incr = 1
+
+            self.name = None
+            while self.name is None:
+                fullname = name if incr == 0 else name+"_"+str(incr)
+                c = Db.get().cursor()
+                c.execute('SELECT id FROM hosts WHERE name=?', (fullname, ))
+                if c.fetchone() is not None:
+                    incr = incr + 1
+                else:
+                    self.name = fullname
+                c.close
+
 
     @classmethod
-    def get_id(cls, name, uname, issue, machineId, macs):
-        return hashlib.sha256((name+uname+issue+machineId+json.dumps(macs)).encode()).hexdigest()
+    def get_id(cls, hostname, uname, issue, machineId, macs):
+        return hashlib.sha256((hostname+uname+issue+machineId+json.dumps(macs)).encode()).hexdigest()
 
     @property
     def scope(self):
@@ -105,20 +127,21 @@ class Host(metaclass=Unique):
             c.execute('''UPDATE hosts 
                 SET
                     name = ?,
+                    hostname = ?,
                     uname = ?,
                     issue = ?,
                     machineid = ?,
                     macs = ?
                 WHERE id = ?''',
-                (self.name, self.uname, self.issue, self.machineId, json.dumps(self.macs), self.id))
+                (self.name, self.hostname, self.uname, self.issue, self.machineId, json.dumps(self.macs), self.id))
         else:
             #The host doesn't exists in database : INSERT
-            c.execute('''INSERT INTO hosts(name, uname, issue, machineid, macs)
-                VALUES (?, ?, ?, ?, ?) ''',
-                (self.name, self.uname, self.issue, self.machineId, json.dumps(self.macs)))
+            c.execute('''INSERT INTO hosts(name, hostname, uname, issue, machineid, macs)
+                VALUES (?, ?, ?, ?, ?, ?) ''',
+                (self.name, self.hostname, self.uname, self.issue, self.machineId, json.dumps(self.macs)))
             c.close()
             c = Db.get().cursor()
-            c.execute('SELECT id FROM hosts WHERE name=? AND uname=? AND issue=? AND machineid=? AND macs=?', (self.name, self.uname, self.issue, self.machineId, json.dumps(self.macs)))
+            c.execute('SELECT id FROM hosts WHERE name=?', (self.name, ))
             self.id = c.fetchone()[0]
         c.close()
         Db.get().commit()
@@ -143,11 +166,11 @@ class Host(metaclass=Unique):
         c.execute('DELETE FROM hosts WHERE id = ?', (self.id, ))
         c.close()
         Db.get().commit()
-        unstore_targets_merge(del_data,{"Host":[type(self).get_id(self.name, self.uname, self.issue, self.machineId, self.macs)]})
+        unstore_targets_merge(del_data,{"Host":[type(self).get_id(self.hostname, self.uname, self.issue, self.machineId, self.macs)]})
         return del_data
 
     @classmethod
-    def find_all(cls, scope=None, name=None):
+    def find_all(cls, scope=None):
         """Returns a `List` of all `Host` s in the :class:`Workspace` matching the criteria
 
         Args:
@@ -161,10 +184,9 @@ class Host(metaclass=Unique):
 
         ret = []
         c = Db.get().cursor()
-        if name is None:
-            req = c.execute('SELECT name, uname, issue, machineId, macs FROM hosts')
-        else:
-            req = c.execute('''SELECT name, uname, issue, machineId, macs FROM hosts WHERE name=?''', (name, ))
+        
+        req = c.execute('SELECT hostname, uname, issue, machineId, macs FROM hosts')
+
         for row in req:
             h = Host(row[0], row[1], row[2], row[3], json.loads(row[4]))
             if scope is None:
@@ -209,9 +231,9 @@ class Host(metaclass=Unique):
         
         c = Db.get().cursor()
         if host_id is not None:
-            c.execute('''SELECT name, uname, issue, machineId, macs FROM hosts WHERE id=?''', (host_id, ))
+            c.execute('''SELECT hostname, uname, issue, machineId, macs FROM hosts WHERE id=?''', (host_id, ))
         elif name is not None:
-            c.execute('''SELECT name, uname, issue, machineId, macs FROM hosts WHERE name=?''', (name, ))
+            c.execute('''SELECT hostname, uname, issue, machineId, macs FROM hosts WHERE name=?''', (name, ))
         else:
             c.close()
             return None
@@ -242,7 +264,7 @@ class Host(metaclass=Unique):
         c = Db.get().cursor()
         val = "%"+val+"%"
         #Ok this sounds fugly, but there seems to be no way to set a column name in a parameter. The SQL injection risk is mitigated as field must be in allowed fields, but if you find something better I take it
-        c.execute('SELECT name, uname, issue, machineId, macs FROM hosts WHERE {} LIKE ?'.format(field), (val, ))
+        c.execute('SELECT hostname, uname, issue, machineId, macs FROM hosts WHERE {} LIKE ?'.format(field), (val, ))
         for row in c:
             ret.append(Host(row[0], row[1], row[2], row[3], json.loads(row[4])))
         return ret

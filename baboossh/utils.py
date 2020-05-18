@@ -1,5 +1,7 @@
 import os
 
+BABOOSSH_VERSION = "1.1.0-dev"
+
 home = os.path.expanduser("~")
 workspacesDir = os.path.join(home, ".baboossh")
 

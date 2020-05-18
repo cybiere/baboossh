@@ -242,24 +242,23 @@ class Connection(metaclass=Unique):
             hostname = result.stdout.rstrip()
             result = socket.run("uname -a", hide='both')
             uname = result.stdout.rstrip()
-            socket.run("cat /etc/issue", hide='both')
+            result = socket.run("cat /etc/issue", hide='both')
             issue = result.stdout.rstrip()
-            socket.run("cat /etc/machine-id", hide='both')
+            result = socket.run("cat /etc/machine-id", hide='both')
             machineId = result.stdout.rstrip()
-            socket.run("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done", hide='both')
+            result = socket.run("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done", hide='both')
             macStr = result.stdout.rstrip()
             macs = macStr.split()
-            newHost = Host(hostname, uname, issue, machineId, macs)
-            e = self.endpoint
-            if newHost.id is None:
-                print("\t"+str(self)+" is a new host: "+hostname)
+            new_host = Host(hostname, uname, issue, machineId, macs)
+            if new_host.id is None:
+                print("\t"+str(self)+" is a new host: " + new_host.name)
             else:
-                print("\t"+str(self)+" is an existing host: "+hostname)
-                if not newHost.scope:
-                    e.scope = False
-            newHost.save()
-            e.host = newHost
-            e.save()
+                print("\t"+str(self)+" is an existing host: " + new_host.name)
+                if not new_host.scope:
+                    self.endpoint.scope = False
+            new_host.save()
+            self.endpoint.host = new_host
+            self.endpoint.save()
         except Exception as e:
             print("Error : "+str(e))
             return False
@@ -315,7 +314,9 @@ class Connection(metaclass=Unique):
 
         print("\033[1;32mOK\033[0m")
         self.endpoint.reachable=True
-        self.endpoint.distance = 1 if gw is None else gateway.endpoint.distance + 1
+        new_distance = 1 if gw is None else gateway.endpoint.distance + 1
+        if self.endpoint.distance is None or self.endpoint.distance > new_distance:
+            self.endpoint.distance = new_distance
         self.endpoint.save()
         return True
 

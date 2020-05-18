@@ -1,11 +1,12 @@
 from setuptools import setup, find_namespace_packages
+from baboossh.utils import BABOOSSH_VERSION
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(
     name="baboossh",
-    version="1.0.2",
+    version=BABOOSSH_VERSION,
     packages=find_namespace_packages(include=['baboossh*']),
     scripts=['bin/baboossh'],
 
@@ -26,7 +27,7 @@ setup(
     url="https://github.com/cybiere/BabooSSH",   # project home page, if any
     project_urls={
         "Bug Tracker": "https://github.com/cybiere/BabooSSH/issues",
-        "Documentation": "https://github.com/cybiere/BabooSSH/wiki",
+        "Documentation": "https://baboossh.cybiere.fr/",
         "Source Code": "https://github.com/cybiere/BabooSSH",
     },
     classifiers=[

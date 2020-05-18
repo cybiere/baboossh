@@ -48,7 +48,8 @@ class Db():
         c = sqlite3.connect(dbPath)
         c.execute('''CREATE TABLE hosts (
             id INTEGER PRIMARY KEY ASC,
-            name TEXT NOT NULL,
+            name TEXT NOT NULL UNIQUE,
+            hostname TEXT,
             uname TEXT,
             issue TEXT,
             machineid TEXT,
