@@ -334,7 +334,6 @@ class Connection():
         hostname = ""
         if self.endpoint.host is not None:
             hostname = " ("+str(self.endpoint.host)+")"
-
         print("Connecting to \033[1;34m"+str(self)+"\033[0m"+hostname+" > ", end="")
         conn = fabric.Connection(host=self.endpoint.ip, port=self.endpoint.port, user=self.user.name, connect_kwargs=paramiko_args, gateway=gw, connect_timeout=3)
         try:

@@ -11,6 +11,7 @@ class Workspace():
 
     """
 
+    active = None
 
 #################################################################
 ###################           INIT            ###################
@@ -66,6 +67,15 @@ class Workspace():
             "creds":None,
             "payload":None,
             "params":None,
+                }
+        type(self).active = self
+        self.store = {
+            "Connection": {},
+            "Creds": {},
+            "Endpoint": {},
+            "Host": {},
+            "Path": {},
+            "User": {},
                 }
 
 #################################################################
@@ -257,6 +267,7 @@ class Workspace():
                 value = endpoint
             elif option == "user":
                 user = User.find_one(name=value)
+                print(id(user))
                 if user is None:
                     raise ValueError
                 value = user
@@ -676,5 +687,9 @@ class Workspace():
     def close(self):
         for tunnel in self.tunnels.values():
             tunnel.close()
+        for obj in self.store.values():
+            for instance in obj.values():
+                del instance
         Db.close()
+        type(self).active = None
         print("Closing workspace "+self.name)

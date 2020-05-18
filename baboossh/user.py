@@ -1,6 +1,8 @@
+import hashlib
 from baboossh import Db
+from baboossh.utils import Unique
 
-class User():
+class User(metaclass=Unique):
 
     """A username to authenticate with on servers.
 
@@ -26,6 +28,10 @@ class User():
             if saved_user[2] is not None:
                 from baboossh import Endpoint
                 self.found = Endpoint.find_one(endpoint_id=saved_user[2])
+
+    @classmethod
+    def get_id(cls, name):
+        return hashlib.sha256(name.encode()).hexdigest()
 
     def save(self):
         """Save the user in database
