@@ -414,7 +414,7 @@ class Workspace():
                             ret[endpoint].append(c)
         return ret
 
-    def run(self, targets, payload, stmt):
+    def run(self, targets, payload, stmt, probe_auto):
         """Run a payload on a list of :class:`Connection`
 
         Args:
@@ -424,6 +424,14 @@ class Workspace():
         """
 
         for connection in targets:
+            if not connection.endpoint.reachable:
+                if probe_auto:
+                    self.probe([connection.endpoint])
+                    if not connection.endpoint.reachable:
+                        raise NoPathException
+                else:
+                    raise NoPathException
+
             connection.run(payload, self.workspace_folder, stmt)
 
     def connect(self, targets, gateway="auto", verbose=False, probe_auto=False):
@@ -436,15 +444,10 @@ class Workspace():
             if not connection.endpoint.reachable:
                 if probe_auto:
                     self.probe([connection.endpoint], gateway, verbose)
-                    #Reload the endpoint from DB to check if it is reachable
-                    #TODO this is why we need to save the objects in RAM to not have shitloads of objects for the same endpoint/connection/whatever
-                    new_endpoint = Endpoint.find_one(endpoint_id=connection.endpoint.id)
-                    if not new_endpoint.reachable:
-                        continue
-                    connection.endpoint = new_endpoint
+                    if not connection.endpoint.reachable:
+                        raise NoPathException
                 else:
-                    print(str(connection)+"> You must manually probe the endpoint or add --probe to connect it")
-                    continue
+                    raise NoPathException
 
             if connection.open(gateway=gateway, verbose=verbose):
                 connection.close()
@@ -565,18 +568,25 @@ class Workspace():
                     host = gateway.endpoint.host
                 working = conn.probe(gateway=gateway)
             else:
-                host = None
-                working = conn.probe(gateway=None)
-                if not working:
-                    hosts = Host.find_all(scope=True)
-                    hosts.sort(key=lambda h: h.distance)
-                    working = False
-                    for host in hosts:
-                        gateway_endpoint = host.closest_endpoint
-                        gateway = Connection.find_one(endpoint=gateway_endpoint)
-                        working = conn.probe(gateway=gateway)
-                        if working:
-                            break
+                try:
+                    path = Path.getPath(endpoint)
+                except NoPathError:
+                    host = None
+                    working = conn.probe(gateway=None)
+                    if not working:
+                        hosts = Host.find_all(scope=True)
+                        hosts.sort(key=lambda h: h.distance)
+                        working = False
+                        for host in hosts:
+                            gateway_endpoint = host.closest_endpoint
+                            gateway = Connection.find_one(endpoint=gateway_endpoint)
+                            working = conn.probe(gateway=gateway)
+                            if working:
+                                break
+                else:
+                    working = conn.probe()
+                    host = Host.find_one(prev_hop_to=endpoint)
+
             if working:
                 p = Path(host, endpoint)
                 p.save()

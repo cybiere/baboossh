@@ -783,6 +783,8 @@ class Shell(cmd2.Cmd):
 
     __parser_run = argparse.ArgumentParser(prog="run")
     __parser_run.add_argument('connection', help='Connection string', nargs="?", choices_method=__get_run_targets)
+    __parser_run.add_argument("-c", "--connect", help="Automatically test connection if it wasn't yet", action="store_true")
+    __parser_run.add_argument("-p", "--probe", help="Automatically probe the endpoint if it wasn't yet (implies --connect)", action="store_true")
     __subparser_run = __parser_run.add_subparsers(title='Actions', help='Available actions')
     for __payloadName in Extensions.payloadsAvail():
         __payload = Extensions.getPayload(__payloadName)
@@ -795,31 +797,41 @@ class Shell(cmd2.Cmd):
         '''Run a payload on a connection'''
         connection = getattr(stmt, 'connection', None)
         payload = getattr(stmt, 'type', None)
+        connect_auto = getattr(stmt, 'connect', False)
+        probe_auto = getattr(stmt, 'probe', False)
         self._reset_completion_defaults()
 
         if payload is not None:
             payload = Extensions.getPayload(payload)
         else:
             payload = self.workspace.options["payload"]
+            params = self.workspace.options["params"]
+            __parser = argparse.ArgumentParser(description='Params __parser')
+            payload.buildParser(__parser)
+            if params is None:
+                params = ""
+            stmt, junk = __parser.parse_known_args(params.split())
+        
 
         if payload is None:
             print("Error : No payload specified")
             return
 
-        params = self.workspace.options["params"]
-        __parser = argparse.ArgumentParser(description='Params __parser')
-        payload.buildParser(__parser)
-        if params is None:
-            params = ""
-        stmt, junk = __parser.parse_known_args(params.split())
-
-        targets = [target for endpoint in self.workspace.enum_targets(connection, working=True).values() for target in endpoint]
+        working = True
+        force = False
+        if probe_auto:
+            connect_auto = True
+            force = True
+        if connect_auto:
+            working = False
+    
+        targets = [target for endpoint in self.workspace.enum_targets(connection, working=working, force=force).values() for target in endpoint]
         nb_targets = len(targets)
         if nb_targets > 1:
             if not yes_no("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):
                 return
 
-        self.workspace.run(targets, payload, stmt)
+        self.workspace.run(targets, payload, stmt, probe_auto)
 
 #################################################################
 ###################          TUNNELS          ###################
