@@ -1,9 +1,10 @@
-Connect
-*******
+Connect command
+===============
+
 Test provided parameters validity to establish a connection. If a connection is established, identifies the targeted ~baboossh.Endpoint's ~baboossh.Host.
 
 Syntax
-======
+++++++
 
 `connect [-v|--verbose] [-g|--gateway <gateway>] [<connection>]`
 
@@ -24,7 +25,7 @@ If `<connection>` is provided, test it is working, eventually forcing specified 
 If `<connection>` is not provided, use the current [workspace options]([Object]-Workspace) to determine which [User]([Object]-User) and [Creds]([Object]-Creds) to connect to which [Endpoint]([Object]-Endpoint). If any of these option is not set, try every object in the workspace for the option until a connection is successfully established or all combinations are tested.
 
 Examples
-========
+++++++++
 
 Verbosity
 ---------

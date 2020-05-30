@@ -62,6 +62,10 @@ class Shell(cmd2.Cmd):
         debug (bool): Boolean for debug output
     """
 
+    __CMD_CAT_OBJ = "Object management"
+    __CMD_CAT_CON = "Connecting hosts"
+    __CMD_CAT_WSP = "Workspace management"
+
 
 #################################################################
 ###################          GETTERS          ###################
@@ -182,10 +186,13 @@ class Shell(cmd2.Cmd):
     __parser_wspace_del.set_defaults(func=__workspace_del)
 
     @cmd2.with_argparser(__parser_wspace)
+    @cmd2.with_category(__CMD_CAT_WSP)
     def do_workspace(self, stmt: argparse.Namespace):
-        '''Manage workspaces
-
-        List, add, delete and switch workspaces.
+        '''Create, list, delete and use workspaces.
+        
+        Each workspace is a container for every object available in BabooSSH.
+        Having several workspaces allows you to segregate various environments,
+        keeping your findings and your loot organised.
 
         '''
         func = getattr(stmt, 'func', None)
@@ -256,8 +263,14 @@ class Shell(cmd2.Cmd):
     __parser_host_del.set_defaults(func=__host_del)
 
     @cmd2.with_argparser(__parser_host)
+    @cmd2.with_category(__CMD_CAT_OBJ)
     def do_host(self, stmt):
-        '''Manage hosts'''
+        '''Search, list and delete hosts.
+
+        You can list or delete hosts, and use them as pivots to force using a
+        specific path. Host addition is performed automatically when you
+        successfully connect to an endpoint for the first time.
+        '''
         func = getattr(stmt, 'func', None)
         if func is not None:
             # Call whatever subcommand function was selected
@@ -365,8 +378,14 @@ class Shell(cmd2.Cmd):
     __parser_endpoint_del.set_defaults(func=__endpoint_del)
 
     @cmd2.with_argparser(__parser_endpoint)
+    @cmd2.with_category(__CMD_CAT_OBJ)
     def do_endpoint(self, stmt):
-        '''Manage endpoints'''
+        '''Create, list, search and delete endpoints.
+
+        An endpoint is a couple of an IP and a port on which a SSH service 
+        should be running. Once added, an endpoint must be reached using "probe"
+        and then connected using "connect".
+        '''
         func = getattr(stmt, 'func', None)
         if func is not None:
             # Call whatever subcommand function was selected
@@ -418,8 +437,13 @@ class Shell(cmd2.Cmd):
     __parser_user_del.set_defaults(func=__user_del)
 
     @cmd2.with_argparser(__parser_user)
+    @cmd2.with_category(__CMD_CAT_OBJ)
     def do_user(self, stmt):
-        '''Manage users'''
+        '''Create, list and delete users.
+        
+        A user is a username used to authenticate on an endpoint. Once a user
+        is added to the workspace, it can be used with "set" and "connect".
+        '''
         func = getattr(stmt, 'func', None)
         if func is not None:
             # Call whatever subcommand function was selected
@@ -480,7 +504,7 @@ class Shell(cmd2.Cmd):
     __parser_creds_show.add_argument('id', help='Creds identifier', choices_method=__get_option_creds)
     __parser_creds_edit = __subparser_creds.add_parser("edit", help='Edit credentials details')
     __parser_creds_edit.add_argument('id', help='Creds identifier', choices_method=__get_option_creds)
-    __parser_creds_add = __subparser_creds.add_parser("add", help='Add a new credentials')
+    __parser_creds_add = __subparser_creds.add_parser("add", help='Add new credentials')
     __subparser_creds_add = __parser_creds_add.add_subparsers(title='Add creds', help='Available creds types')
     for __methodName in Extensions.auths:
         __method = Extensions.auths[__methodName]
@@ -498,8 +522,16 @@ class Shell(cmd2.Cmd):
     __parser_creds_del.set_defaults(func=__creds_del)
 
     @cmd2.with_argparser(__parser_creds)
+    @cmd2.with_category(__CMD_CAT_OBJ)
     def do_creds(self, stmt):
-        '''Manage credentials'''
+        '''Create, list, edit and delete credentials.
+
+        Credentials are secrets used to authenticate. They can be of different
+        types (see "creds types" to list supported types) and are used with "set"
+        and "connect". 
+
+        The creds object provides a unified interface for the underlying types.
+        '''
         func = getattr(stmt, 'func', None)
         if func is not None:
             # Call whatever subcommand function was selected
@@ -525,8 +557,9 @@ class Shell(cmd2.Cmd):
     __parser_payload_list.set_defaults(func=__payload_list)
 
     @cmd2.with_argparser(__parser_payload)
+    @cmd2.with_category(__CMD_CAT_WSP)
     def do_payload(self, stmt):
-        '''Manage payloads'''
+        '''List available payloads'''
         func = getattr(stmt, 'func', None)
         if func is not None:
             # Call whatever subcommand function was selected
@@ -568,8 +601,14 @@ class Shell(cmd2.Cmd):
     __parser_connection_del.set_defaults(func=__connection_del)
 
     @cmd2.with_argparser(__parser_connection)
+    @cmd2.with_category(__CMD_CAT_OBJ)
     def do_connection(self, stmt):
-        '''Manage connections'''
+        '''List and delete working connections.
+
+        A connection object is saved whenever a user and a creds object work on
+        an endpoint, as tested by the "connect" command. Once the object is
+        created, it can be used with "set" and "run" to run payloads.
+        '''
         func = getattr(stmt, 'func', None)
         if func is not None:
             # Call whatever subcommand function was selected
@@ -612,8 +651,14 @@ class Shell(cmd2.Cmd):
     __parser_option_params.set_defaults(option="params")
 
     @cmd2.with_argparser(__parser_option)
+    @cmd2.with_category(__CMD_CAT_WSP)
     def do_set(self, stmt):
-        '''Manage options'''
+        '''Set the workspace active options.
+
+        Once set, the options will be used when running "probe", "connect" and
+        "run" without parameters to define which connections to target and 
+        which payload to run with which options.
+        '''
         if 'option' not in vars(stmt):
             self.__options_list()
             return
@@ -698,6 +743,7 @@ class Shell(cmd2.Cmd):
     __parser_path_del.set_defaults(func=__path_del)
 
     @cmd2.with_argparser(__parser_path)
+    @cmd2.with_category(__CMD_CAT_OBJ)
     def do_path(self, stmt):
         '''Manage paths'''
         func = getattr(stmt, 'func', None)
@@ -719,6 +765,7 @@ class Shell(cmd2.Cmd):
     __parser_probe.add_argument('target', help='Endpoint to probe', nargs="?", choices_method=__get_option_endpoint)
 
     @cmd2.with_argparser(__parser_probe)
+    @cmd2.with_category(__CMD_CAT_CON)
     def do_probe(self, stmt):
         '''Try to reach an endpoint through pivoting, using an existing path or finding a new one'''
         target = getattr(stmt, 'target', None)
@@ -753,8 +800,9 @@ class Shell(cmd2.Cmd):
     __parser_connect.add_argument('connection', help='Connection string', nargs="?", choices_method=__get_option_connection)
 
     @cmd2.with_argparser(__parser_connect)
+    @cmd2.with_category(__CMD_CAT_CON)
     def do_connect(self, stmt):
-        '''Try connection to endpoint and identify host'''
+        '''Try to authenticate on an Enpoint using a User and Creds'''
         connection = getattr(stmt, 'connection', None)
         verbose = vars(stmt)['verbose']
         force = getattr(stmt, 'force', False)
@@ -787,6 +835,7 @@ class Shell(cmd2.Cmd):
         __payload.buildParser(__parser_payload)
 
     @cmd2.with_argparser(__parser_run)
+    @cmd2.with_category(__CMD_CAT_CON)
     def do_run(self, stmt):
         '''Run a payload on a connection'''
         connection = getattr(stmt, 'connection', None)
@@ -864,6 +913,7 @@ class Shell(cmd2.Cmd):
     __parser_tunnel_close.set_defaults(func=__tunnel_close)
 
     @cmd2.with_argparser(__parser_tunnel)
+    @cmd2.with_category(__CMD_CAT_CON)
     def do_tunnel(self, stmt):
         '''Manage tunnels'''
         func = getattr(stmt, 'func', None)
@@ -888,6 +938,7 @@ class Shell(cmd2.Cmd):
         __export.buildParser(__parser_method)
 
     @cmd2.with_argparser(__parser_export)
+    @cmd2.with_category(__CMD_CAT_WSP)
     def do_export(self, stmt):
         '''Export workspace info'''
         key = getattr(stmt, 'exporter', 'list')
@@ -919,6 +970,7 @@ class Shell(cmd2.Cmd):
         __importer.buildParser(__parser_method)
 
     @cmd2.with_argparser(__parser_import)
+    @cmd2.with_category(__CMD_CAT_WSP)
     def do_import(self, stmt):
         '''Import workspace info'''
         key = getattr(stmt, 'importer', 'list')
@@ -946,6 +998,7 @@ class Shell(cmd2.Cmd):
     __parser_scope = argparse.ArgumentParser(prog="scope")
     __parser_scope.add_argument('target', help='Object to scope', choices_method=__get_all_objects)
     @cmd2.with_argparser(__parser_scope)
+    @cmd2.with_category(__CMD_CAT_WSP)
     def do_scope(self, stmt):
         '''Toggle object in/out of scope'''
         key = getattr(stmt, 'target', None)
@@ -955,6 +1008,7 @@ class Shell(cmd2.Cmd):
 ###################            CMD            ###################
 #################################################################
 
+    @cmd2.with_category(__CMD_CAT_WSP)
     def do_store(self, arg):
         for obj_type, objects in self.workspace.store.items():
             print(obj_type)
@@ -1027,7 +1081,7 @@ class Shell(cmd2.Cmd):
   %%   %%% %%%%%%%%,  %%   %%(%          %%         %     %%%     %%% *%%    %% 
   %%%%%%  ,%%     %%  %%%%%%   %%      ,%   %#   %%   %%%%%.  %%%%%.  *%%    %%
 
-Welcome to BabooSSH. Type help or ? to list commands.'''
+Welcome to BabooSSH. To start, use "help -v" to list commands.'''
 
         self.workspace = Workspace("default")
         self.__init_prompt()

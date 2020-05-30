@@ -1,7 +1,5 @@
 import os
 
-BABOOSSH_VERSION = "1.1.0-dev"
-
 WORKSPACES_DIR = os.path.join(os.path.expanduser("~"), ".baboossh")
 
 class Unique(type):

@@ -14,6 +14,7 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../'))
 sys.path.insert(0, os.path.abspath('../baboossh'))
+from baboossh import version as baboossh_version
 
 
 # -- Project information -----------------------------------------------------
@@ -23,7 +24,7 @@ copyright = '2020, Cybiere'
 author = 'Cybiere'
 
 # The full version, including alpha/beta/rc tags
-release = '1.0.2'
+release = baboossh_version
 
 
 # -- General configuration ---------------------------------------------------
@@ -38,7 +39,6 @@ extensions = [
         'sphinx.ext.viewcode', 
         'sphinx.ext.intersphinx',
         'sphinx.ext.autosummary',
-        'sphinx_automodapi.automodapi',
 ]
 numpydoc_show_class_members = False
 
@@ -56,7 +56,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'baboossh.egg-info','set
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

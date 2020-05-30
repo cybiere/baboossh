@@ -11,3 +11,5 @@ from baboossh.path import *
 from baboossh.connection import *
 from baboossh.shell import *
 from baboossh.workspace import *
+
+version = "1.1.0"
