@@ -1,0 +1,5 @@
+cmd2
+tabulate
+fabric
+paramiko
+python-libnmap
