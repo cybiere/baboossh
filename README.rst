@@ -1,4 +1,4 @@
-.. image:: https://raw.githubusercontent.com/wiki/cybiere/baboossh/img/logo.png
+.. image:: https://raw.githubusercontent.com/cybiere/baboossh/master/logo.png
 SSH spreading made easy for red teams in a hurry.
 
 
@@ -23,6 +23,6 @@ Quick start
 Documentation
 +++++++++++++
 
-Have a look on the [wiki](https://github.com/cybiere/BabooSSH/wiki).
+Have a look on the `wiki <https://github.com/cybiere/BabooSSH/wiki>`_ .
 
 
