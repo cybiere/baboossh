@@ -26,6 +26,8 @@ author = 'Cybiere'
 # The full version, including alpha/beta/rc tags
 release = baboossh_version
 
+master_doc = 'index'
+
 
 # -- General configuration ---------------------------------------------------
 
