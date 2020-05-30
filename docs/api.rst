@@ -4,7 +4,7 @@ API Reference
 .. currentmodule:: baboossh
 
 .. autosummary::
-   :toctree: api
+   :toctree: source
 
    Shell
    Workspace
