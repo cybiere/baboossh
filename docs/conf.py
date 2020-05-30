@@ -28,7 +28,6 @@ release = baboossh_version
 
 master_doc = 'index'
 
-
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
@@ -37,7 +36,7 @@ master_doc = 'index'
 extensions = [
         'sphinx.ext.autodoc',
         'sphinx.ext.coverage',
-        'sphinxcontrib.napoleon',
+        'sphinx.ext.napoleon',
         'sphinx.ext.viewcode', 
         'sphinx.ext.intersphinx',
         'sphinx.ext.autosummary',
