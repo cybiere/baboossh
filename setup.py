@@ -1,7 +1,7 @@
 from setuptools import setup, find_namespace_packages
 from baboossh import version as baboossh_version
 
-with open("README.md", "r") as fh:
+with open("README.rst", "r") as fh:
     long_description = fh.read()
 
 setup(
