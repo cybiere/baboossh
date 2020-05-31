@@ -40,6 +40,7 @@ extensions = [
         'sphinx.ext.viewcode', 
         'sphinx.ext.intersphinx',
         'sphinx.ext.autosummary',
+        'sphinx.ext.autosectionlabel',
 ]
 numpydoc_show_class_members = False
 

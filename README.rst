@@ -17,9 +17,6 @@ It's as easy as a::
 
    pip install baboossh
 
-Quick start
-+++++++++++
-
 
 Documentation
 +++++++++++++

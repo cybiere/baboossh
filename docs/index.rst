@@ -7,9 +7,11 @@ Welcome
    :maxdepth: 2
    :caption: Contents:
 
+   quickstart
    core
    command
    api
+   extensions
 
 Indices and tables
 ==================

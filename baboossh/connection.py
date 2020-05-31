@@ -237,6 +237,10 @@ class Connection(metaclass=Unique):
         return connection
 
     def identify(self, socket):
+        """Indentify the host
+
+        #TODO
+        """
         try:
             result = socket.run("hostname", hide='both')
             hostname = result.stdout.rstrip()

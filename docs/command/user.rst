@@ -1,5 +1,5 @@
-user
-====
+user command
+============
 
 Manage :class:`~baboossh.User` objects
 
