@@ -319,22 +319,15 @@ class Connection(metaclass=Unique):
         self.endpoint.save()
         return True
 
-    def open(self, gateway="auto", verbose=False, target=False):
+    def open(self, verbose=False, target=False):
         if self.conn is not None:
             return True
+
+        gateway = Connection.find_one(gateway_to=self.endpoint)
         if gateway is not None:
-            if gateway == "auto":
-                gateway = Connection.find_one(gateway_to=self.endpoint)
-                if gateway is not None:
-                    if not gateway.open(verbose=verbose):
-                        raise ConnectionClosedError("Could not open gateway "+str(gateway))
-                    gw = gateway.conn
-                else:
-                    gw = None
-            else:
-                if not gateway.open(verbose=verbose):
-                    raise ConnectionClosedError("Could not open gateway "+str(gateway))
-                gw = gateway.conn
+            if not gateway.open(verbose=verbose):
+                raise ConnectionClosedError("Could not open gateway "+str(gateway))
+            gw = gateway.conn
         else:
             gw = None
 

@@ -804,8 +804,7 @@ class Shell(cmd2.Cmd):
     __parser_connect = argparse.ArgumentParser(prog="connect")
     __parser_connect.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     __parser_connect.add_argument("-f", "--force", help="force connection even if already existing", action="store_true")
-    __parser_connect.add_argument("-g", "--gateway", help="force specific gateway", choices_method=__get_option_gateway)
-    __parser_connect.add_argument("-p", "--probe", help="Automatically probe the endpoint if it wasn't yet, using gateway if specified", action="store_true")
+    __parser_connect.add_argument("-p", "--probe", help="Automatically probe the endpoint if it wasn't yet", action="store_true")
     __parser_connect.add_argument('connection', help='Connection string', nargs="?", choices_method=__get_option_connection)
 
     @cmd2.with_argparser(__parser_connect)
@@ -816,26 +815,18 @@ class Shell(cmd2.Cmd):
         verbose = vars(stmt)['verbose']
         force = getattr(stmt, 'force', False)
         probe_auto = getattr(stmt, 'probe', False)
-        gateway = getattr(stmt, 'gateway', "auto")
-        if gateway is None:
-            gateway = "auto"
 
-        if probe_auto:
-            force = True
-
-        targets = [target for endpoint in self.workspace.enum_targets(connection, force=force).values() for target in endpoint]
+        targets = self.workspace.enum_connect(connection, force=force, unprobed=probe_auto)
         nb_targets = len(targets)
         if nb_targets > 1:
             if not yes_no("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):
                 return
 
-        self.workspace.connect(targets, gateway, verbose, probe_auto)
+        self.workspace.connect(targets, verbose, probe_auto)
 
 
     __parser_run = argparse.ArgumentParser(prog="run")
     __parser_run.add_argument('connection', help='Connection string', nargs="?", choices_method=__get_run_targets)
-    __parser_run.add_argument("-c", "--connect", help="Automatically test connection if it wasn't yet", action="store_true")
-    __parser_run.add_argument("-p", "--probe", help="Automatically probe the endpoint if it wasn't yet (implies --connect)", action="store_true")
     __subparser_run = __parser_run.add_subparsers(title='Actions', help='Available actions')
     for __payloadName in Extensions.payloads:
         __payload = Extensions.payloads[__payloadName]
@@ -849,8 +840,6 @@ class Shell(cmd2.Cmd):
         '''Run a payload on a connection'''
         connection = getattr(stmt, 'connection', None)
         payload = getattr(stmt, 'type', None)
-        connect_auto = getattr(stmt, 'connect', False)
-        probe_auto = getattr(stmt, 'probe', False)
         self._reset_completion_defaults()
 
         if payload is not None:
@@ -868,21 +857,16 @@ class Shell(cmd2.Cmd):
             print("Error : No payload specified")
             return
 
-        working = True
-        force = False
-        if probe_auto:
-            connect_auto = True
-            force = True
-        if connect_auto:
-            working = False
-
-        targets = [target for endpoint in self.workspace.enum_targets(connection, working=working, force=force).values() for target in endpoint]
+        targets = self.workspace.enum_run(connection)
         nb_targets = len(targets)
+        if nb_targets == 0:
+            print("No valid targets found.")
+            return
         if nb_targets > 1:
-            if not yes_no("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):
+            if not yes_no("The payload will be run on "+str(nb_targets)+" connections. Proceed ?", False):
                 return
 
-        self.workspace.run(targets, payload, stmt, probe_auto)
+        self.workspace.run(targets, payload, stmt)
 
 #################################################################
 ###################          TUNNELS          ###################

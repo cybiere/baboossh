@@ -345,62 +345,47 @@ class Workspace():
 
         return endpoints
 
-    def __enum_from_statement(self, target):
-        if '@' not in target:
-            host = Host.find_one(name=target)
-            if host is not None:
-                conn = Connection.find_one(endpoint=host.closest_endpoint)
-                return ([conn.endpoint], [conn.user], [conn.creds])
-            endpoint = Endpoint.find_one(ip_port=target)
-            if endpoint is None:
-                raise ValueError("Supplied value doesn't match a host nor an endpoint")
-            return ([endpoint], [None], [None])
-        auth, sep, endpoint = target.partition('@')
-        if endpoint == "*":
-            endpoints = Endpoint.find_all(scope=True)
+    def enum_connect(self, target=None, force=False, unprobed=False):
+        if target is not None:
+            if '@' not in target:
+                host = Host.find_one(name=target)
+                if host is not None:
+                    conn = Connection.find_one(endpoint=host.closest_endpoint)
+                    if conn is not None:
+                        return [conn]
+                raise ValueError("Supplied value doesn't match a known host or a connection string")
+
+            auth, sep, endpoint = target.partition('@')
+            if endpoint == "*":
+                endpoints = Endpoint.find_all(scope=True)
+            else:
+                endpoint = Endpoint.find_one(ip_port=endpoint)
+                if endpoint is None:
+                    raise ValueError("Supplied endpoint isn't in workspace")
+                endpoints = [endpoint]
+    
+            user, sep, cred = auth.partition(":")
+            if sep == "":
+                raise ValueError("No credentials supplied")
+            if user == "*":
+                users = User.find_all(scope=True)
+            else:
+                user = User.find_one(name=user)
+                if user is None:
+                    raise ValueError("Supplied user isn't in workspace")
+                users = [user]
+            if cred == "*":
+                creds = Creds.find_all(scope=True)
+            else:
+                if cred[0] == "#":
+                    cred = cred[1:]
+                cred = Creds.find_one(creds_id=cred)
+                if cred is None:
+                    raise ValueError("Supplied credentials aren't in workspace")
+                creds = [cred]
+            if len(endpoints)*len(users)*len(creds) == 1:
+                return [Connection(endpoints[0],users[0],creds[0])]
         else:
-            endpoint = Endpoint.find_one(ip_port=endpoint)
-            if endpoint is None:
-                raise ValueError("Supplied endpoint isn't in workspace")
-            endpoints = [endpoint]
-
-        user, sep, cred = auth.partition(":")
-        if sep == "":
-            raise ValueError("No credentials supplied")
-
-        if user == "*":
-            users = User.find_all(scope=True)
-        else:
-            user = User.find_one(name=user)
-            if user is None:
-                raise ValueError("Supplied user isn't in workspace")
-            users = [user]
-        if cred == "*":
-            creds = Creds.find_all(scope=True)
-        else:
-            if cred[0] == "#":
-                cred = cred[1:]
-            cred = Creds.find_one(creds_id=cred)
-            if cred is None:
-                raise ValueError("Supplied credentials aren't in workspace")
-            creds = [cred]
-        return (endpoints, users, creds)
-
-
-    def enum_targets(self, target=None, force=False, working=False):
-        """Get the active target(s)
-
-        #TODO
-
-        Args:
-            target: The target string passed to the command (if any)
-
-        Returns:
-            A dict where each <value> is a List of :class:`Connection` s to the
-                <key> :class:`Endpoint`
-        """
-
-        if target is None:
             user = self.options["user"]
             if user is None:
                 users = User.find_all(scope=True)
@@ -416,32 +401,74 @@ class Workspace():
                 creds = Creds.find_all(scope=True)
             else:
                 creds = [cred]
-        else:
-            endpoints, users, creds = self.__enum_from_statement(target)
+            if len(endpoints)*len(users)*len(creds) == 1:
+                return [Connection(endpoints[0],users[0],creds[0])]
 
-        ret = {}
+        ret = []
         for endpoint in endpoints:
-            if not force and not endpoint.reachable:
+            if not unprobed and not endpoint.reachable:
                 continue
-            ret[endpoint] = []
             for user in users:
-                working_connections = Connection.find_all(endpoint=endpoint, user=user)
-                if not working and not force and working_connections:
-                    #We already have something working with this user & endpoint, ignore
-                    continue
+                if len(creds) != 1:
+                    working_connections = Connection.find_all(endpoint=endpoint, user=user)
+                    if not force and working_connections:
+                        #TODO add debug flag
+                        print("Connection already found with user "+str(user)+" on endpoint "+str(endpoint)+", creds bruteforcing is disabled. Specify creds or use --force.")
+                        continue
                 for cred in creds:
                     conn = Connection(endpoint, user, cred)
-                    if working:
-                        if conn.id is not None:
-                            ret[endpoint].append(conn)
-                    elif force:
-                        ret[endpoint].append(conn)
+                    if force:
+                        ret.append(conn)
                     else:
                         if conn.id is None:
-                            ret[endpoint].append(conn)
+                            ret.append(conn)
         return ret
 
-    def run(self, targets, payload, stmt, probe_auto):
+ 
+    def enum_run(self, target=None):
+        if target is not None:
+            if '@' not in target:
+                host = Host.find_one(name=target)
+                if host is not None:
+                    conn = Connection.find_one(endpoint=host.closest_endpoint)
+                    if conn is not None:
+                        return [conn]
+                raise ValueError("Supplied value doesn't match a known host or a connection string")
+
+            auth, sep, endpoint = target.partition('@')
+            if endpoint == "*":
+                endpoint = None
+            else:
+                endpoint = Endpoint.find_one(ip_port=endpoint)
+                if endpoint is None:
+                    raise ValueError("Supplied endpoint isn't in workspace")
+    
+            user, sep, cred = auth.partition(":")
+            if sep == "":
+                raise ValueError("No credentials supplied")
+            if user == "*":
+                user = None
+            else:
+                user = User.find_one(name=user)
+                if user is None:
+                    raise ValueError("Supplied user isn't in workspace")
+            if cred == "*":
+                cred = None
+            else:
+                if cred[0] == "#":
+                    cred = cred[1:]
+                cred = Creds.find_one(creds_id=cred)
+                if cred is None:
+                    raise ValueError("Supplied credentials aren't in workspace")
+        else:
+            user = self.options["user"]
+            endpoint = self.options["endpoint"]
+            cred = self.options["creds"]
+
+        return Connection.find_all(endpoint=endpoint, user=user, creds=cred)
+    
+
+    def run(self, targets, payload, stmt):
         """Run a payload on a list of :class:`Connection`
 
         Args:
@@ -452,21 +479,11 @@ class Workspace():
 
         for connection in targets:
             if not connection.endpoint.reachable:
-                if probe_auto:
-                    self.probe([connection.endpoint])
-                    if not connection.endpoint.reachable:
-                        raise NoPathError
-                else:
-                    raise NoPathError
+                raise NoPathError
 
             connection.run(payload, self.workspace_folder, stmt)
 
-    def connect(self, targets, gateway="auto", verbose=False, probe_auto=False):
-        if gateway == "local":
-            gateway = None
-        elif gateway != "auto":
-            gateway = Connection.find_one(endpoint=Host.find_one(name=gateway).closest_endpoint)
-
+    def connect(self, targets, verbose=False, probe_auto=False):
         for connection in targets:
             if not connection.endpoint.reachable:
                 if probe_auto:
@@ -475,17 +492,7 @@ class Workspace():
                         raise NoPathError
                 else:
                     raise NoPathError
-
-            if connection.open(gateway=gateway, verbose=verbose):
-                if gateway != "auto":
-                    if gateway is None:
-                        path_src = None
-                    elif gateway.endpoint.host is None:
-                        continue
-                    else:
-                        path_src = gateway.endpoint.host
-                    path = Path(path_src, connection.endpoint)
-                    path.save()
+            connection.open(verbose=verbose)
 
 #################################################################
 ###################           PATHS           ###################
