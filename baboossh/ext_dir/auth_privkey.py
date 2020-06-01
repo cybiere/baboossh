@@ -111,6 +111,8 @@ class BaboosshExt():
 
     def getKwargs(self):
         if self.haspass:
+            if self.passphrase == "":
+                raise ValueError("Cannot use this privkey, passphrase is unknown")
             return {"key_filename":self.keypath,"passphrase":self.passphrase}
         return {"key_filename":[self.keypath]}
     

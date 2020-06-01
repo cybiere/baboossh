@@ -330,12 +330,17 @@ class Connection(metaclass=Unique):
             gw = gateway.conn
         else:
             gw = None
-
-        paramiko_args = {**self.creds.kwargs, 'look_for_keys':False, 'allow_agent':False}
+        
         hostname = ""
         if self.endpoint.host is not None:
             hostname = " ("+str(self.endpoint.host)+")"
         print("Connecting to \033[1;34m"+str(self)+"\033[0m"+hostname+" > ", end="")
+
+        try:
+            paramiko_args = {**self.creds.kwargs, 'look_for_keys':False, 'allow_agent':False}
+        except ValueError as exc:
+            print("\033[1;31mKO\033[0m. "+str(exc))
+            return False
         conn = fabric.Connection(host=self.endpoint.ip, port=self.endpoint.port, user=self.user.name, connect_kwargs=paramiko_args, gateway=gw, connect_timeout=3)
         try:
             conn.open()
