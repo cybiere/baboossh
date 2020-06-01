@@ -23,27 +23,43 @@ from baboossh.utils import WORKSPACES_DIR
 from baboossh.extensions import Extensions
 from baboossh.workspace import Workspace
 
-def yes_no(prompt, default=None):
+def yes_no(prompt, default=None, list_val=None):
     """Simple Yes/No prompt to ask questions
 
     Args:
         prompt (str): The question to ask
         default (bool): The default answer
+        list_val ([]): A list of values to output with "l" key
 
     Returns:
         A `bool` with `True` for yes else `False`
     """
-
-    if default is None:
-        choices = "[y, n]"
-    elif default:
-        choices = "[Y, n]"
+    if list_val is None:
+        if default is None:
+            choices = "[y, n]"
+        elif default:
+            choices = "[Y, n]"
+        else:
+            choices = "[y, N]"
     else:
-        choices = "[y, N]"
+        if default is None:
+            choices = "[y, n, l, ?]"
+        elif default:
+            choices = "[Y, n, l, ?]"
+        else:
+            choices = "[y, N, l, ?]"
     answer = ""
     while answer not in ["y", "n"]:
         answer = input(prompt+" "+choices+" ").lower()
-        if answer == "" and default is not None:
+        if answer == "?":
+            print(" y => Yes")
+            print(" n => No")
+            print(" l => List values")
+            print(" ? => Show help")
+        elif list_val is not None and answer == "l":
+            for elt in list_val:
+                print(" "+str(elt))
+        elif answer == "" and default is not None:
             answer = "y" if default else "n"
     return answer == "y"
 
@@ -792,7 +808,7 @@ class Shell(cmd2.Cmd):
         targets = self.workspace.enum_probe(target, again)
         nb_targets = len(targets)
         if nb_targets > 1:
-            if not yes_no("This will probe "+str(nb_targets)+" endpoints. Proceed ?", False):
+            if not yes_no("This will probe "+str(nb_targets)+" endpoints. Proceed ?", False, list_val=targets):
                 return
 
         self.workspace.probe(targets, gateway, verbose, new)
@@ -819,7 +835,7 @@ class Shell(cmd2.Cmd):
         targets = self.workspace.enum_connect(connection, force=force, unprobed=probe_auto)
         nb_targets = len(targets)
         if nb_targets > 1:
-            if not yes_no("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False):
+            if not yes_no("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False, list_val=targets):
                 return
 
         self.workspace.connect(targets, verbose, probe_auto)
@@ -863,7 +879,7 @@ class Shell(cmd2.Cmd):
             print("No valid targets found.")
             return
         if nb_targets > 1:
-            if not yes_no("The payload will be run on "+str(nb_targets)+" connections. Proceed ?", False):
+            if not yes_no("The payload will be run on "+str(nb_targets)+" connections. Proceed ?", False, list_val = targets):
                 return
 
         self.workspace.run(targets, payload, stmt)
