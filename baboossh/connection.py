@@ -38,7 +38,7 @@ class Connection(metaclass=Unique):
         user (:class:`User`): the `Connection` 's user
         creds (:class:`Creds`): the `Connection` 's credentials
         id (int): the `Connection` 's id
-        used_by_connections ([Connection,...]): a list of :class:`Connection` 
+        used_by_connections ([Connection,...]): a list of :class:`Connection`
             using the current one as a pivot. Used for recursive connection
             closure.
     """
@@ -314,7 +314,7 @@ class Connection(metaclass=Unique):
                 raise exc
         if conn is not None:
             conn.close()
-        
+
         if verbose:
             print("\033[1;32mOK\033[0m")
 
@@ -344,7 +344,7 @@ class Connection(metaclass=Unique):
             gw = gateway.conn
         else:
             gw = None
-        
+
         try:
             paramiko_args = {**self.creds.kwargs, 'look_for_keys':False, 'allow_agent':False}
         except ValueError as exc:
@@ -400,12 +400,13 @@ class Connection(metaclass=Unique):
         return True
 
     def close(self):
-        if self.conn is not None:
-            for connection in self.used_by_connections:
-                connection.close()
-            self.conn.close()
-            self.conn = None
-            print("Closed "+str(self))
-    
+        if self.conn is None:
+            return
+        for connection in self.used_by_connections:
+            connection.close()
+        self.conn.close()
+        self.conn = None
+        print("Closed "+str(self))
+
     def __str__(self):
         return str(self.user)+":"+str(self.creds)+"@"+str(self.endpoint)

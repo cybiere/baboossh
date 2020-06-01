@@ -53,7 +53,7 @@ class Endpoint(metaclass=Unique):
             self.scope = saved_endpoint[4] != 0
             if saved_endpoint[5] is not None:
                 self.found = Endpoint.find_one(endpoint_id=saved_endpoint[5])
-    
+
     @classmethod
     def get_id(cls, ip, port):
         return hashlib.sha256((ip+str(port)).encode()).hexdigest()
@@ -82,7 +82,7 @@ class Endpoint(metaclass=Unique):
         cursor = Db.get().cursor()
         if self.id is not None:
             #If we have an ID, the endpoint is already saved in the database : UPDATE
-            cursor.execute('''UPDATE endpoints 
+            cursor.execute('''UPDATE endpoints
                 SET
                     ip = ?,
                     port = ?,

@@ -264,6 +264,8 @@ class Host(metaclass=Unique):
         #Ok this sounds fugly, but there seems to be no way to set a column name in a parameter. The SQL injection risk is mitigated as field must be in allowed fields, but if you find something better I take it
         for row in cursor.execute('SELECT hostname, uname, issue, machine_id, macs FROM hosts WHERE {} LIKE ?'.format(field), (val, )):
             ret.append(Host(row[0], row[1], row[2], row[3], json.loads(row[4])))
+        if not show_all:
+            ret = [host for host in ret if host.scope]
         return ret
 
     def __str__(self):

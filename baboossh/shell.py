@@ -205,7 +205,7 @@ class Shell(cmd2.Cmd):
     @cmd2.with_category(__CMD_CAT_WSP)
     def do_workspace(self, stmt: argparse.Namespace):
         '''Create, list, delete and use workspaces.
-        
+
         Each workspace is a container for every object available in BabooSSH.
         Having several workspaces allows you to segregate various environments,
         keeping your findings and your loot organised.
@@ -398,7 +398,7 @@ class Shell(cmd2.Cmd):
     def do_endpoint(self, stmt):
         '''Create, list, search and delete endpoints.
 
-        An endpoint is a couple of an IP and a port on which a SSH service 
+        An endpoint is a couple of an IP and a port on which a SSH service
         should be running. Once added, an endpoint must be reached using "probe"
         and then connected using "connect".
         '''
@@ -456,7 +456,7 @@ class Shell(cmd2.Cmd):
     @cmd2.with_category(__CMD_CAT_OBJ)
     def do_user(self, stmt):
         '''Create, list and delete users.
-        
+
         A user is a username used to authenticate on an endpoint. Once a user
         is added to the workspace, it can be used with "set" and "connect".
         '''
@@ -544,7 +544,7 @@ class Shell(cmd2.Cmd):
 
         Credentials are secrets used to authenticate. They can be of different
         types (see "creds types" to list supported types) and are used with "set"
-        and "connect". 
+        and "connect".
 
         The creds object provides a unified interface for the underlying types.
         '''
@@ -603,10 +603,10 @@ class Shell(cmd2.Cmd):
         print(tabulate.tabulate(data, headers=["Endpoint", "User", "Creds", "Open"]))
         return True
 
-    def __connection_close(self,stmt):
+    def __connection_close(self, stmt):
         connection = getattr(stmt, "connection", None)
         return self.workspace.connection_close(connection)
-        
+
 
     def __connection_del(self, stmt):
         connection = getattr(stmt, "connection", None)
@@ -681,7 +681,7 @@ class Shell(cmd2.Cmd):
         '''Set the workspace active options.
 
         Once set, the options will be used when running "probe", "connect" and
-        "run" without parameters to define which connections to target and 
+        "run" without parameters to define which connections to target and
         which payload to run with which options.
         '''
         if 'option' not in vars(stmt):
@@ -828,7 +828,7 @@ class Shell(cmd2.Cmd):
     def do_connect(self, stmt):
         '''Try to authenticate on an Enpoint using a User and Creds'''
         connection = getattr(stmt, 'connection', None)
-        verbose = getattr(stmt,'verbose', False)
+        verbose = getattr(stmt, 'verbose', False)
         force = getattr(stmt, 'force', False)
         probe_auto = getattr(stmt, 'probe', False)
 
@@ -858,7 +858,7 @@ class Shell(cmd2.Cmd):
         '''Run a payload on a connection'''
         connection = getattr(stmt, 'connection', None)
         payload = getattr(stmt, 'type', None)
-        verbose = getattr(stmt,'verbose', False)
+        verbose = getattr(stmt, 'verbose', False)
         self._reset_completion_defaults()
 
         if payload is not None:
@@ -882,7 +882,7 @@ class Shell(cmd2.Cmd):
             print("No valid targets found.")
             return
         if nb_targets > 1:
-            if not yes_no("The payload will be run on "+str(nb_targets)+" connections. Proceed ?", False, list_val = targets):
+            if not yes_no("The payload will be run on "+str(nb_targets)+" connections. Proceed ?", False, list_val=targets):
                 return
 
         self.workspace.run(targets, payload, stmt, verbose=verbose)

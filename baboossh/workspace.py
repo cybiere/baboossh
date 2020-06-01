@@ -363,7 +363,7 @@ class Workspace():
                 if endpoint is None:
                     raise ValueError("Supplied endpoint isn't in workspace")
                 endpoints = [endpoint]
-    
+
             user, sep, cred = auth.partition(":")
             if sep == "":
                 raise ValueError("No credentials supplied")
@@ -384,7 +384,7 @@ class Workspace():
                     raise ValueError("Supplied credentials aren't in workspace")
                 creds = [cred]
             if len(endpoints)*len(users)*len(creds) == 1:
-                return [Connection(endpoints[0],users[0],creds[0])]
+                return [Connection(endpoints[0], users[0], creds[0])]
         else:
             user = self.options["user"]
             if user is None:
@@ -402,7 +402,7 @@ class Workspace():
             else:
                 creds = [cred]
             if len(endpoints)*len(users)*len(creds) == 1:
-                return [Connection(endpoints[0],users[0],creds[0])]
+                return [Connection(endpoints[0], users[0], creds[0])]
 
         ret = []
         for endpoint in endpoints:
@@ -424,7 +424,6 @@ class Workspace():
                             ret.append(conn)
         return ret
 
- 
     def enum_run(self, target=None):
         if target is not None:
             if '@' not in target:
@@ -442,7 +441,7 @@ class Workspace():
                 endpoint = Endpoint.find_one(ip_port=endpoint)
                 if endpoint is None:
                     raise ValueError("Supplied endpoint isn't in workspace")
-    
+
             user, sep, cred = auth.partition(":")
             if sep == "":
                 raise ValueError("No credentials supplied")
@@ -466,7 +465,7 @@ class Workspace():
             cred = self.options["creds"]
 
         return Connection.find_all(endpoint=endpoint, user=user, creds=cred)
-    
+
 
     def run(self, targets, payload, stmt, verbose=False):
         """Run a payload on a list of :class:`Connection`
@@ -551,7 +550,8 @@ class Workspace():
         if path.id is None:
             print("The specified Path doesn't exist in this workspace.")
             return False
-        self.unstore(p.delete())
+        self.unstore(path.delete())
+        return True
 
     def path_add(self, src, dst):
         if src.lower() != "local":
@@ -613,7 +613,7 @@ class Workspace():
                     working = conn.probe(verbose=verbose)
                     host = Host.find_one(prev_hop_to=endpoint)
                     if not working:
-                        self.path_del(host,endpoint)
+                        self.path_del(host, endpoint)
             if not working:
                 if verbose:
                     print("\nTrying to reach directly from local...")
@@ -629,7 +629,7 @@ class Workspace():
                     gateway_endpoint = host.closest_endpoint
                     loop_gateway = Connection.find_one(endpoint=gateway_endpoint)
                     working = conn.probe(gateway=loop_gateway, verbose=verbose)
-                    if working: 
+                    if working:
                         break
 
             if working:
