@@ -38,6 +38,9 @@ class Connection(metaclass=Unique):
         user (:class:`User`): the `Connection` 's user
         creds (:class:`Creds`): the `Connection` 's credentials
         id (int): the `Connection` 's id
+        used_by_connections ([Connection,...]): a list of :class:`Connection` 
+            using the current one as a pivot. Used for recursive connection
+            closure.
     """
 
 
@@ -48,7 +51,7 @@ class Connection(metaclass=Unique):
         self.id = None
         self.root = False
         self.conn = None
-        self.gateway = None
+        self.used_by_connections = []
         if user is None or cred is None:
             return
         cursor = Db.get().cursor()
@@ -293,19 +296,13 @@ class Connection(metaclass=Unique):
             conn.open()
         except paramiko.ssh_exception.NoValidConnectionsError:
             print("\033[1;31mKO\033[0m.")
-            if gw is not None:
-                gw.close()
             return False
         except paramiko.ssh_exception.ChannelException:
             print("\033[1;31mKO\033[0m.")
-            if gw is not None:
-                gw.close()
             return False
         except paramiko.ssh_exception.SSHException as exc:
             if "Timeout" in str(exc):
                 print("\033[1;31mKO\033[0m.")
-                if gw is not None:
-                    gw.close()
                 return False
             if "No authentication methods available" in str(exc):
                 pass
@@ -313,8 +310,6 @@ class Connection(metaclass=Unique):
                 raise exc
         if conn is not None:
             conn.close()
-        if gw is not None:
-            gw.close()
 
         print("\033[1;32mOK\033[0m")
         self.endpoint.reachable = True
@@ -325,6 +320,8 @@ class Connection(metaclass=Unique):
         return True
 
     def open(self, gateway="auto", verbose=False, target=False):
+        if self.conn is not None:
+            return True
         if gateway is not None:
             if gateway == "auto":
                 gateway = Connection.find_one(gateway_to=self.endpoint)
@@ -352,8 +349,8 @@ class Connection(metaclass=Unique):
         except paramiko.ssh_exception.NoValidConnectionsError:
             print("\033[1;31mKO\033[0m. Could not reach destination.")
             if gw is not None:
-                gateway.close()
                 #TODO remove path
+                pass
             return False
         except (paramiko.ssh_exception.AuthenticationException, paramiko.ssh_exception.SSHException) as exc:
             if isinstance(exc, paramiko.ssh_exception.AuthenticationException) or "encountered" in str(exc):
@@ -366,6 +363,7 @@ class Connection(metaclass=Unique):
         if gateway is None:
             path_src = None
         else:
+            gateway.used_by_connections.append(self)
             if gateway.endpoint.host is not None:
                 path_src = gateway.endpoint.host
             else:
@@ -377,28 +375,23 @@ class Connection(metaclass=Unique):
         if self.endpoint.host is None:
             self.identify(conn)
 
-        self.gateway = gateway
         self.conn = conn
 
         return True
 
     def run(self, payload, current_workspace_directory, stmt):
-        opens = False
-        if self.conn is None:
-            if not self.open(target=True):
-                return False
-            opens = True
+        if not self.open(target=True):
+            return False
         payload.run(self, current_workspace_directory, stmt)
-        if opens:
-            self.close()
         return True
 
     def close(self):
         if self.conn is not None:
+            for connection in self.used_by_connections:
+                connection.close()
             self.conn.close()
-        print("Closed "+str(self))
-        if self.gateway is not None:
-            self.gateway.close()
-
+            self.conn = None
+            print("Closed "+str(self))
+    
     def __str__(self):
         return str(self.user)+":"+str(self.creds)+"@"+str(self.endpoint)

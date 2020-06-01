@@ -577,27 +577,36 @@ class Shell(cmd2.Cmd):
         connections = self.workspace.get_objects(connections=True, scope=None if show_all else True)
         if not connections:
             print("No connections in current workspace")
-            return
+            return True
         data = []
         for connection in connections:
             if not show_all:
                 if not connection.scope:
                     continue
-            data.append([connection.endpoint, connection.user, connection.creds])
-        print(tabulate.tabulate(data, headers=["Endpoint", "User", "Creds"]))
+            data.append([connection.endpoint, connection.user, connection.creds, "o" if connection.conn is not None else ""])
+        print(tabulate.tabulate(data, headers=["Endpoint", "User", "Creds", "Open"]))
+        return True
+
+    def __connection_close(self,stmt):
+        connection = getattr(stmt, "connection", None)
+        return self.workspace.connection_close(connection)
+        
 
     def __connection_del(self, stmt):
         connection = getattr(stmt, "connection", None)
-        self.workspace.connection_del(connection)
+        return self.workspace.connection_del(connection)
 
     __parser_connection = argparse.ArgumentParser(prog="connection")
     __subparser_connection = __parser_connection.add_subparsers(title='Actions', help='Available actions')
     __parser_connection_list = __subparser_connection.add_parser("list", help='List connections')
     __parser_connection_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
+    __parser_connection_close = __subparser_connection.add_parser("close", help='Close connection')
+    __parser_connection_close.add_argument('connection', help='Connection string', nargs="?", choices_method=__get_option_connection)
     __parser_connection_del = __subparser_connection.add_parser("delete", help='Delete connection')
     __parser_connection_del.add_argument('connection', help='Connection string', choices_method=__get_option_connection)
 
     __parser_connection_list.set_defaults(func=__connection_list)
+    __parser_connection_close.set_defaults(func=__connection_close)
     __parser_connection_del.set_defaults(func=__connection_del)
 
     @cmd2.with_argparser(__parser_connection)

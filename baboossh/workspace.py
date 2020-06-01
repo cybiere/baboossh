@@ -298,6 +298,19 @@ class Workspace():
 ###################        CONNECTIONS        ###################
 #################################################################
 
+    def connection_close(self, target):
+        """Close a :class:`Connection` and any connection or tunnel using it
+
+        Args:
+            target (str): the `Connection` string
+        """
+
+        connection = Connection.from_target(target)
+        if connection is None:
+            print("Connection not found.")
+            return False
+        return connection.close()
+
     def connection_del(self, target):
         """Remove a :class:`Connection` from the workspace
 
@@ -444,7 +457,6 @@ class Workspace():
                     raise NoPathError
 
             if connection.open(gateway=gateway, verbose=verbose):
-                connection.close()
                 if gateway != "auto":
                     if gateway is None:
                         path_src = None
@@ -688,6 +700,9 @@ class Workspace():
     def close(self):
         for tunnel in self.tunnels.values():
             tunnel.close()
+        for connection in Connection.find_all():
+            if connection.conn is not None:
+                connection.close()
         for obj in self.store.values():
             for instance in obj.values():
                 del instance
