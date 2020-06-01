@@ -468,7 +468,7 @@ class Workspace():
         return Connection.find_all(endpoint=endpoint, user=user, creds=cred)
     
 
-    def run(self, targets, payload, stmt):
+    def run(self, targets, payload, stmt, verbose=False):
         """Run a payload on a list of :class:`Connection`
 
         Args:
@@ -481,18 +481,21 @@ class Workspace():
             if not connection.endpoint.reachable:
                 raise NoPathError
 
-            connection.run(payload, self.workspace_folder, stmt)
+            connection.run(payload, self.workspace_folder, stmt, verbose=verbose)
 
     def connect(self, targets, verbose=False, probe_auto=False):
+        nb_working = 0
         for connection in targets:
             if not connection.endpoint.reachable:
                 if probe_auto:
-                    self.probe([connection.endpoint], gateway, verbose)
+                    self.probe([connection.endpoint], verbose=verbose)
                     if not connection.endpoint.reachable:
                         raise NoPathError
                 else:
                     raise NoPathError
-            connection.open(verbose=verbose)
+            if connection.open(verbose=verbose, target=True):
+                nb_working = nb_working + 1
+        return nb_working
 
 #################################################################
 ###################           PATHS           ###################
@@ -576,49 +579,70 @@ class Workspace():
 ###################           PROBE           ###################
 #################################################################
 
-    def probe(self, targets, gateway="auto", verbose=False, force=False):
-        if gateway != "auto":
-            if gateway == "local":
-                gateway = None
-                host = None
-            else:
-                host = Host.find_one(name=gateway)
-                gateway = Connection.find_one(endpoint=host.closest_endpoint)
-
+    def probe(self, targets, gateway="auto", verbose=False, find_new=False):
         for endpoint in targets:
+            print("Probing \033[1;34m"+str(endpoint)+"\033[0m > ", end="", flush=True)
+            if verbose:
+                print("")
+
             conn = Connection(endpoint, None, None)
-            if not force and endpoint.reachable and str(gateway) == "auto":
-                working = conn.probe()
+            working = False
+            if not find_new and endpoint.reachable and str(gateway) == "auto":
+                if verbose:
+                    print("\nEndpoint is supposed to be reachable, trying...")
+                working = conn.probe(verbose=verbose)
                 host = Host.find_one(prev_hop_to=endpoint)
-            elif str(gateway) != "auto":
-                working = conn.probe(gateway=gateway)
-            else:
+            if not working and str(gateway) != "auto":
+                if verbose:
+                    print("\nA gateway was given, trying...")
+                if gateway == "local":
+                    gateway = None
+                    host = None
+                else:
+                    host = Host.find_one(name=gateway)
+                    gateway = Connection.find_one(endpoint=host.closest_endpoint)
+                working = conn.probe(gateway=gateway, verbose=verbose)
+            if not working and not find_new:
                 try:
                     Path.get(endpoint)
                 except NoPathError:
-                    host = None
-                    working = conn.probe(gateway=None)
-                    if not working:
-                        hosts = Host.find_all(scope=True)
-                        hosts.sort(key=lambda h: h.distance)
-                        working = False
-                        for host in hosts:
-                            gateway_endpoint = host.closest_endpoint
-                            gateway = Connection.find_one(endpoint=gateway_endpoint)
-                            working = conn.probe(gateway=gateway)
-                            if working:
-                                break
+                    pass
                 else:
-                    working = conn.probe()
+                    if verbose:
+                        print("\nThere is an existing path to the Endpoint, trying...")
+                    working = conn.probe(verbose=verbose)
                     host = Host.find_one(prev_hop_to=endpoint)
+                    if not working:
+                        self.path_del(host,endpoint)
+            if not working:
+                if verbose:
+                    print("\nTrying to reach directly from local...")
+                host = None
+                working = conn.probe(gateway=None, verbose=verbose)
+            if not working:
+                if verbose:
+                    print("\nTrying from every Host from closest to furthest...")
+                hosts = Host.find_all(scope=True)
+                hosts.sort(key=lambda h: h.distance)
+                working = False
+                for host in hosts:
+                    gateway_endpoint = host.closest_endpoint
+                    loop_gateway = Connection.find_one(endpoint=gateway_endpoint)
+                    working = conn.probe(gateway=loop_gateway, verbose=verbose)
+                    if working: 
+                        break
 
             if working:
                 path = Path(host, endpoint)
                 path.save()
                 if host is None:
-                    print("Working directly from local")
+                    print("\033[1;32mOK\033[0m: reached directly from \033[1;34mlocal\033[0m.")
                 else:
-                    print("Working using "+str(host)+" as gateway")
+                    print("\033[1;32mOK\033[0m: reached using \033[1;34m"+str(host)+"\033[0m as gateway")
+            else:
+                print("\033[1;31mKO\033[0m: could not reach the endpoint.")
+            if verbose:
+                print("########################\n")
 
 #################################################################
 ###################           SCOPE           ###################

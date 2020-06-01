@@ -811,7 +811,7 @@ class Shell(cmd2.Cmd):
             if not yes_no("This will probe "+str(nb_targets)+" endpoints. Proceed ?", False, list_val=targets):
                 return
 
-        self.workspace.probe(targets, gateway, verbose, new)
+        self.workspace.probe(targets, gateway, verbose, find_new=new)
 
 #################################################################
 ###################          CONNECT          ###################
@@ -828,7 +828,7 @@ class Shell(cmd2.Cmd):
     def do_connect(self, stmt):
         '''Try to authenticate on an Enpoint using a User and Creds'''
         connection = getattr(stmt, 'connection', None)
-        verbose = vars(stmt)['verbose']
+        verbose = getattr(stmt,'verbose', False)
         force = getattr(stmt, 'force', False)
         probe_auto = getattr(stmt, 'probe', False)
 
@@ -838,10 +838,12 @@ class Shell(cmd2.Cmd):
             if not yes_no("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False, list_val=targets):
                 return
 
-        self.workspace.connect(targets, verbose, probe_auto)
+        nb_working = self.workspace.connect(targets, verbose, probe_auto)
+        print("\033[1;32m"+str(nb_working)+"/"+str(nb_targets)+"\033[0m working.")
 
 
     __parser_run = argparse.ArgumentParser(prog="run")
+    __parser_run.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     __parser_run.add_argument('connection', help='Connection string', nargs="?", choices_method=__get_run_targets)
     __subparser_run = __parser_run.add_subparsers(title='Actions', help='Available actions')
     for __payloadName in Extensions.payloads:
@@ -856,6 +858,7 @@ class Shell(cmd2.Cmd):
         '''Run a payload on a connection'''
         connection = getattr(stmt, 'connection', None)
         payload = getattr(stmt, 'type', None)
+        verbose = getattr(stmt,'verbose', False)
         self._reset_completion_defaults()
 
         if payload is not None:
@@ -882,7 +885,7 @@ class Shell(cmd2.Cmd):
             if not yes_no("The payload will be run on "+str(nb_targets)+" connections. Proceed ?", False, list_val = targets):
                 return
 
-        self.workspace.run(targets, payload, stmt)
+        self.workspace.run(targets, payload, stmt, verbose=verbose)
 
 #################################################################
 ###################          TUNNELS          ###################

@@ -271,7 +271,9 @@ class Connection(metaclass=Unique):
             return False
         return True
 
-    def probe(self, gateway="auto"):
+    def probe(self, gateway="auto", verbose=True):
+        if verbose:
+            print("Reaching \033[1;34m"+str(self.endpoint)+"\033[0m > ", end="", flush=True)
         if gateway is not None:
             if gateway == "auto":
                 gateway = Connection.find_one(gateway_to=self.endpoint)
@@ -290,19 +292,21 @@ class Connection(metaclass=Unique):
 
         paramiko_args = {'look_for_keys':False, 'allow_agent':False}
 
-        print("Reaching \033[1;34m"+str(self.endpoint)+"\033[0m > ", end="")
         conn = fabric.Connection(host=self.endpoint.ip, port=self.endpoint.port, user="user", connect_kwargs=paramiko_args, gateway=gw, connect_timeout=3)
         try:
             conn.open()
         except paramiko.ssh_exception.NoValidConnectionsError:
-            print("\033[1;31mKO\033[0m.")
+            if verbose:
+                print("\033[1;31mKO\033[0m.")
             return False
         except paramiko.ssh_exception.ChannelException:
-            print("\033[1;31mKO\033[0m.")
+            if verbose:
+                print("\033[1;31mKO\033[0m.")
             return False
         except paramiko.ssh_exception.SSHException as exc:
             if "Timeout" in str(exc):
-                print("\033[1;31mKO\033[0m.")
+                if verbose:
+                    print("\033[1;31mKO\033[0m.")
                 return False
             if "No authentication methods available" in str(exc):
                 pass
@@ -310,8 +314,10 @@ class Connection(metaclass=Unique):
                 raise exc
         if conn is not None:
             conn.close()
+        
+        if verbose:
+            print("\033[1;32mOK\033[0m")
 
-        print("\033[1;32mOK\033[0m")
         self.endpoint.reachable = True
         new_distance = 1 if gw is None else gateway.endpoint.distance + 1
         if self.endpoint.distance is None or self.endpoint.distance > new_distance:
@@ -321,7 +327,15 @@ class Connection(metaclass=Unique):
 
     def open(self, verbose=False, target=False):
         if self.conn is not None:
+            if target:
+                print("Connection to \033[1;34m"+str(self)+"\033[0m already open. > \033[1;32mOK\033[0m")
             return True
+
+        hostname = ""
+        if self.endpoint.host is not None:
+            hostname = " ("+str(self.endpoint.host)+")"
+        if target:
+            print("Connecting to \033[1;34m"+str(self)+"\033[0m"+hostname+" > ", end="", flush=True)
 
         gateway = Connection.find_one(gateway_to=self.endpoint)
         if gateway is not None:
@@ -331,32 +345,33 @@ class Connection(metaclass=Unique):
         else:
             gw = None
         
-        hostname = ""
-        if self.endpoint.host is not None:
-            hostname = " ("+str(self.endpoint.host)+")"
-        print("Connecting to \033[1;34m"+str(self)+"\033[0m"+hostname+" > ", end="")
-
         try:
             paramiko_args = {**self.creds.kwargs, 'look_for_keys':False, 'allow_agent':False}
         except ValueError as exc:
-            print("\033[1;31mKO\033[0m. "+str(exc))
+            if target:
+                print("\033[1;31mKO\033[0m. "+str(exc))
             return False
         conn = fabric.Connection(host=self.endpoint.ip, port=self.endpoint.port, user=self.user.name, connect_kwargs=paramiko_args, gateway=gw, connect_timeout=3)
         try:
             conn.open()
         except paramiko.ssh_exception.NoValidConnectionsError:
-            print("\033[1;31mKO\033[0m. Could not reach destination.")
+            if target:
+                print("\033[1;31mKO\033[0m. Could not reach destination.")
             if gw is not None:
                 #TODO remove path
                 pass
             return False
         except (paramiko.ssh_exception.AuthenticationException, paramiko.ssh_exception.SSHException) as exc:
             if isinstance(exc, paramiko.ssh_exception.AuthenticationException) or "encountered" in str(exc):
-                print("\033[1;31mKO\033[0m. Authentication failed.")
+                if target:
+                    print("\033[1;31mKO\033[0m. Authentication failed.")
                 return False
             raise exc
 
-        print("\033[1;32mOK\033[0m")
+        if target:
+            print("\033[1;32mOK\033[0m")
+        elif verbose:
+            print("\033[2;3m"+str(self)+"\033[22;23m > ", end="", flush=True)
 
         if gateway is None:
             path_src = None
@@ -370,15 +385,16 @@ class Connection(metaclass=Unique):
         path.save()
         self.save()
 
-        if self.endpoint.host is None:
-            self.identify(conn)
+        if target:
+            if self.endpoint.host is None:
+                self.identify(conn)
 
         self.conn = conn
 
         return True
 
-    def run(self, payload, current_workspace_directory, stmt):
-        if not self.open(target=True):
+    def run(self, payload, current_workspace_directory, stmt, verbose=False):
+        if not self.open(target=True, verbose=verbose):
             return False
         payload.run(self, current_workspace_directory, stmt)
         return True
