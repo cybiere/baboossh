@@ -325,6 +325,26 @@ class Workspace():
         self.unstore(connection.delete())
         return True
 
+    def enum_probe(self, target=None, again=False):
+        if target is not None:
+            if target == "*":
+                endpoints = Endpoint.find_all(scope=True)
+            else:
+                endpoint = Endpoint.find_one(ip_port=target)
+                if endpoint is None:
+                    raise ValueError("Supplied endpoint isn't in workspace")
+                return [endpoint]
+        elif self.options["endpoint"] is not None:
+            #TODO handle tag
+            return self.options["endpoint"]
+        else:
+            endpoints = Endpoint.find_all(scope=True)
+
+        if not again:
+            endpoints = [endpoint for endpoint in endpoints if not endpoint.reachable]
+
+        return endpoints
+
     def __enum_from_statement(self, target):
         if '@' not in target:
             host = Host.find_one(name=target)

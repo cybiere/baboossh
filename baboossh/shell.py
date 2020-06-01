@@ -768,7 +768,7 @@ class Shell(cmd2.Cmd):
 
     __parser_probe = argparse.ArgumentParser(prog="probe")
     __parser_probe.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
-    __parser_probe.add_argument("-f", "--force", help="probe only unprobed endpoints", action="store_true")
+    __parser_probe.add_argument("-a", "--again", help="include already probed endpoints", action="store_true")
     __parser_probe.add_argument("-n", "--new", help="try finding new shorter path", action="store_true")
     __parser_probe.add_argument("-g", "--gateway", help="force specific gateway", choices_method=__get_option_gateway)
     __parser_probe.add_argument('target', help='Endpoint to probe', nargs="?", choices_method=__get_option_endpoint)
@@ -779,17 +779,17 @@ class Shell(cmd2.Cmd):
         '''Try to reach an endpoint through pivoting, using an existing path or finding a new one'''
         target = getattr(stmt, 'target', None)
         verbose = getattr(stmt, 'verbose', False)
-        force = getattr(stmt, 'force', False)
+        again = getattr(stmt, 'again', False)
         new = getattr(stmt, 'new', False)
         gateway = getattr(stmt, 'gateway', "auto")
         if gateway is None:
             gateway = "auto"
 
-        endpoints = self.workspace.enum_targets(target, force=True).keys()
-        if force:
-            targets = endpoints
-        else:
-            targets = [endpoint for endpoint in endpoints if not endpoint.reachable]
+        if new and gateway != "auto":
+            print("Error: You cannot use both --new and --gateway options.")
+            return
+
+        targets = self.workspace.enum_probe(target, again)
         nb_targets = len(targets)
         if nb_targets > 1:
             if not yes_no("This will probe "+str(nb_targets)+" endpoints. Proceed ?", False):
