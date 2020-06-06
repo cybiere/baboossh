@@ -1,12 +1,12 @@
 from setuptools import setup, find_namespace_packages
-from baboossh import version as baboossh_version
+from baboossh.utils import BABOOSSH_VERSION
 
 with open("README.rst", "r") as fh:
     long_description = fh.read()
 
 setup(
     name="baboossh",
-    version=baboossh_version,
+    version=BABOOSSH_VERSION,
     packages=find_namespace_packages(include=['baboossh*']),
     scripts=['bin/baboossh'],
 
@@ -22,7 +22,7 @@ setup(
     author_email="nicolas@cosnard.io",
     description="SSH spreader made easy for red teams in a hurry",
     long_description=long_description,
-    long_description_content_type="text/markdown",
+    long_description_content_type="text/x-rst",
     keywords="ssh spread redteam pentest",
     url="https://github.com/cybiere/BabooSSH",   # project home page, if any
     project_urls={

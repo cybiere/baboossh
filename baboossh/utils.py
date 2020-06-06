@@ -1,6 +1,7 @@
 import os
 
 WORKSPACES_DIR = os.path.join(os.path.expanduser("~"), ".baboossh")
+BABOOSSH_VERSION = "1.1.0"
 
 class Unique(type):
     def __call__(cls, *args, **kwargs):
@@ -24,3 +25,17 @@ def unstore_targets_merge(original, new_data):
             original[obj_type] = [*original[obj_type], *obj_list]
         else:
             original[obj_type] = obj_list
+
+def is_workspace_compat(workspace_version):
+    if BABOOSSH_VERSION == workspace_version:
+        return True
+
+    b_major, b_minor, b_patch = BABOOSSH_VERSION.split(".")
+    w_major, w_minor, w_patch = workspace_version.split(".")
+    if b_major == "1":
+        if w_major != "1":
+            return False
+        if b_minor == "1":
+            if w_minor in ["1","2"]:
+                return True
+    return False

@@ -1,7 +1,8 @@
 import os
 import re
 from baboossh import User, Creds, Host, Endpoint, Tunnel, Path, Connection, Db, Extensions, WORKSPACES_DIR
-from baboossh.exceptions import NoPathError
+from baboossh.exceptions import NoPathError, WorkspaceVersionError
+from baboossh.utils import BABOOSSH_VERSION, is_workspace_compat
 
 class Workspace():
     """A container to hold all related objects
@@ -39,6 +40,8 @@ class Workspace():
                 os.mkdir(workspace_folder)
                 os.mkdir(os.path.join(workspace_folder, "loot"))
                 os.mkdir(os.path.join(workspace_folder, "keys"))
+                with open(os.path.join(workspace_folder, "workspace.version"),"w") as f:
+                    f.write(BABOOSSH_VERSION)
             except OSError:
                 print("Creation of the directory %s failed" % workspace_folder)
                 raise OSError
@@ -59,6 +62,13 @@ class Workspace():
         self.workspace_folder = os.path.join(WORKSPACES_DIR, name)
         if not os.path.exists(self.workspace_folder):
             raise ValueError("Workspace "+name+" does not exist")
+        try:
+            with open(os.path.join(self.workspace_folder,"workspace.version"),"r") as f:
+                self.version = f.read()
+        except FileNotFoundError:
+            self.version = "1.0.x"
+        if not is_workspace_compat(self.version):
+            raise WorkspaceVersionError(BABOOSSH_VERSION,self.version)
         Db.connect(name)
         self.name = name
         self.tunnels = {}
