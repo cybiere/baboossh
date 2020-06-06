@@ -1,6 +1,6 @@
 import os
 import re
-from baboossh import User, Creds, Host, Endpoint, Tunnel, Path, Connection, Db, Extensions, WORKSPACES_DIR
+from baboossh import User, Creds, Host, Endpoint, Tunnel, Path, Connection, Db, Extensions, WORKSPACES_DIR, Tag
 from baboossh.exceptions import NoPathError, WorkspaceVersionError
 from baboossh.utils import BABOOSSH_VERSION, is_workspace_compat
 
@@ -122,6 +122,44 @@ class Workspace():
         if self.options["endpoint"] == endpoint:
             self.set_option("endpoint", None)
         self.unstore(endpoint.delete())
+        return True
+
+    def endpoint_tag(self, endpoint, tagname):
+        """Add a :class:`Tag` to an :class:`Endpoint`
+
+        Args:
+            endpoint (str): the `Endpoint` 's string (ip:port)
+            tagname (str): the :class:`Tag` name
+        """
+
+        try:
+            endpoint = Endpoint.find_one(ip_port=endpoint)
+        except ValueError:
+            print("Could not find endpoint.")
+            return False
+        if endpoint is None:
+            print("Could not find endpoint.")
+            return False
+        endpoint.tag(tagname)
+        return True
+
+    def endpoint_untag(self, endpoint, tagname):
+        """Remove a :class:`Tag` from an :class:`Endpoint`
+
+        Args:
+            endpoint (str): the `Endpoint` 's string (ip:port)
+            tagname (str): the :class:`Tag` name
+        """
+
+        try:
+            endpoint = Endpoint.find_one(ip_port=endpoint)
+        except ValueError:
+            print("Could not find endpoint.")
+            return False
+        if endpoint is None:
+            print("Could not find endpoint.")
+            return False
+        endpoint.untag(tagname)
         return True
 
 #################################################################
@@ -507,6 +545,27 @@ class Workspace():
         return nb_working
 
 #################################################################
+###################           TAGS            ###################
+#################################################################
+
+    def tag_show(self, name):
+        tag = Tag.find_one(name=name)
+        if tag is None:
+            print("No tag matching "+name)
+            return
+        print("Tag "+name+" members :")
+        for endpoint in tag.endpoints:
+            print(" - "+str(endpoint))
+
+    def tag_del(self, name):
+        tag = Tag.find_one(name=name)
+        if tag is None:
+            print("No tag matching "+name)
+            return
+        tag.delete()
+        print("Tag "+name+" deleted")
+
+#################################################################
 ###################           PATHS           ###################
 #################################################################
 
@@ -718,7 +777,7 @@ class Workspace():
 ###################          GETTERS          ###################
 #################################################################
 
-    def get_objects(self, local=False, hosts=False, connections=False, endpoints=False, users=False, creds=False, tunnels=False, paths=False, scope=None):
+    def get_objects(self, local=False, hosts=False, connections=False, endpoints=False, users=False, creds=False, tunnels=False, paths=False, scope=None, tags=None):
         ret = []
         if local:
             ret.append("local")
@@ -736,6 +795,8 @@ class Workspace():
             ret = ret + list(self.tunnels.keys())
         if paths:
             ret = ret + Path.find_all()
+        if tags:
+            ret = ret + Tag.find_all()
         return ret
 
     def endpoint_search(self, field, val, show_all=False):

@@ -86,7 +86,7 @@ class User(metaclass=Unique):
         Args:
             scope (bool):
                 List Users in scope (`True`), out of scope (`False`), or both (`None`)
-            endpoint (:class:`.Endpoint`):
+            found (:class:`.Endpoint`):
                 the `Endpoint` the users were discovered on
 
         Returns:
@@ -107,6 +107,7 @@ class User(metaclass=Unique):
                 req = cursor.execute('SELECT username FROM users WHERE found=? AND scope=?', (found.id if found is not None else None, scope))
         for row in req:
             ret.append(User(row[0]))
+        cursor.close()
         return ret
 
     @classmethod

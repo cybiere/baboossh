@@ -99,6 +99,13 @@ class Db():
             FOREIGN KEY(src) REFERENCES hosts(id)
             FOREIGN KEY(dst) REFERENCES endpoints(id)
             )''')
+        connection.execute('''CREATE TABLE tags (
+            name INTEGER NOT NULL,
+            endpoint INTEGER NOT NULL,
+            FOREIGN KEY(endpoint) REFERENCES endpoints(id),
+            UNIQUE(name, endpoint)
+            )''')
+            
         connection.commit()
         connection.close()
 

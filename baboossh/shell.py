@@ -129,6 +129,9 @@ class Shell(cmd2.Cmd):
     def __get_endpoint_or_host(self):
         return self.workspace.get_objects(hosts=True, endpoints=True, scope=True)
 
+    def __get_tag(self):
+        return self.workspace.get_objects(tags=True)
+
 #################################################################
 ###################         WORKSPACE         ###################
 #################################################################
@@ -316,8 +319,14 @@ class Shell(cmd2.Cmd):
                 distance = ""
             else:
                 distance = str(endpoint.distance)
-            data.append([scope, endpoint, host, reachable, distance, conn])
-        print(tabulate.tabulate(data, headers=["", "Endpoint", "Host", "Reachable", "Dist", "Working connection"]))
+            first = True
+            taglist = ""
+            for tag in endpoint.tags:
+                taglist = taglist + (tag if first else ", "+tag)
+                first = False
+
+            data.append([scope, endpoint, host, reachable, distance, conn, taglist])
+        print(tabulate.tabulate(data, headers=["", "Endpoint", "Host", "Reachable", "Dist", "Working connection", "Tags"]))
 
     def __endpoint_list(self, stmt):
         print("Current endpoints in workspace:")
@@ -356,6 +365,17 @@ class Shell(cmd2.Cmd):
         endpoint = vars(stmt)['endpoint']
         self.workspace.endpoint_del(endpoint)
 
+    def __endpoint_tag(self, stmt):
+        endpoint = vars(stmt)['endpoint']
+        tagname =  vars(stmt)['tagname']
+        self.workspace.endpoint_tag(endpoint, tagname)
+
+    def __endpoint_untag(self, stmt):
+        endpoint = vars(stmt)['endpoint']
+        tagname =  vars(stmt)['tagname']
+        self.workspace.endpoint_untag(endpoint, tagname)
+
+
     def __endpoint_search(self, stmt):
         show_all = getattr(stmt, 'all', False)
         field = vars(stmt)['field']
@@ -387,11 +407,19 @@ class Shell(cmd2.Cmd):
     __parser_endpoint_search.add_argument('val', help='Value to search')
     __parser_endpoint_del = __subparser_endpoint.add_parser("delete", help='Set target endpoint')
     __parser_endpoint_del.add_argument('endpoint', help='Endpoint', choices_method=__get_option_endpoint)
+    __parser_endpoint_tag = __subparser_endpoint.add_parser("tag", help='Tag an endpoint')
+    __parser_endpoint_tag.add_argument('endpoint', help='Endpoint', choices_method=__get_option_endpoint)
+    __parser_endpoint_tag.add_argument('tagname', help='The tag name to add')
+    __parser_endpoint_untag = __subparser_endpoint.add_parser("untag", help='Tag an endpoint')
+    __parser_endpoint_untag.add_argument('endpoint', help='Endpoint', choices_method=__get_option_endpoint)
+    __parser_endpoint_untag.add_argument('tagname', help='The tag name to add')
 
     __parser_endpoint_list.set_defaults(func=__endpoint_list)
     __parser_endpoint_add.set_defaults(func=__endpoint_add)
     __parser_endpoint_search.set_defaults(func=__endpoint_search)
     __parser_endpoint_del.set_defaults(func=__endpoint_del)
+    __parser_endpoint_tag.set_defaults(func=__endpoint_tag)
+    __parser_endpoint_untag.set_defaults(func=__endpoint_untag)
 
     @cmd2.with_argparser(__parser_endpoint)
     @cmd2.with_category(__CMD_CAT_OBJ)
@@ -711,6 +739,53 @@ class Shell(cmd2.Cmd):
 
         else:
             self.__options_list()
+
+#################################################################
+###################           TAGS            ###################
+#################################################################
+
+    def __tag_list(self, stmt):
+        print("Current tags in workspace:")
+        tags = self.workspace.get_objects(tags=True)
+        if not tags:
+            print("No tags in current workspace")
+            return
+        data = []
+        for tag in tags:
+            data.append([tag])
+        print(tabulate.tabulate(data, headers=["Tag name"]))
+
+    def __tag_show(self, stmt):
+        name = vars(stmt)['tagname']
+        self.workspace.tag_show(name)
+
+    def __tag_del(self, stmt):
+        name = vars(stmt)['tagname']
+        self.workspace.tag_del(name)
+
+    __parser_tag = argparse.ArgumentParser(prog="tag")
+    __subparser_tag = __parser_tag.add_subparsers(title='Actions', help='Available actions')
+    __parser_tag_list = __subparser_tag.add_parser("list", help='List tags')
+    __parser_tag_show = __subparser_tag.add_parser("show", help='Show endpoints with tag')
+    __parser_tag_show.add_argument('tagname', help='Tag name', choices_method=__get_tag)
+    __parser_tag_del = __subparser_tag.add_parser("delete", help='Delete tag')
+    __parser_tag_del.add_argument('tagname', help='Tag name', choices_method=__get_tag)
+
+    __parser_tag_list.set_defaults(func=__tag_list)
+    __parser_tag_show.set_defaults(func=__tag_show)
+    __parser_tag_del.set_defaults(func=__tag_del)
+
+    @cmd2.with_argparser(__parser_tag)
+    @cmd2.with_category(__CMD_CAT_OBJ)
+    def do_tag(self, stmt):
+        '''Manage tags'''
+        func = getattr(stmt, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, stmt)
+        else:
+            self.__tag_list(stmt)
+
 
 #################################################################
 ###################           PATHS           ###################

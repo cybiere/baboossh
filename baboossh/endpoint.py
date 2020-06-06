@@ -1,8 +1,10 @@
 import ipaddress
 import hashlib
+import sqlite3
 from baboossh import Db
 from baboossh import Host
 from baboossh.utils import Unique
+from baboossh.tag import Tag
 
 class Endpoint(metaclass=Unique):
     """A SSH endpoint
@@ -37,10 +39,10 @@ class Endpoint(metaclass=Unique):
         self.reachable = None
         self.distance = None
         self.found = None
+        self.tags = set()
         cursor = Db.get().cursor()
         cursor.execute('SELECT id, host, reachable, distance, scope, found FROM endpoints WHERE ip=? AND port=?', (self.ip, self.port))
         saved_endpoint = cursor.fetchone()
-        cursor.close()
         if saved_endpoint is not None:
             self.id = saved_endpoint[0]
             self.host = Host.find_one(host_id=saved_endpoint[1])
@@ -53,6 +55,9 @@ class Endpoint(metaclass=Unique):
             self.scope = saved_endpoint[4] != 0
             if saved_endpoint[5] is not None:
                 self.found = Endpoint.find_one(endpoint_id=saved_endpoint[5])
+            for row in cursor.execute('SELECT name FROM tags WHERE endpoint=?', (self.id, )):
+                self.tags.add(row[0])
+        cursor.close()
 
     @classmethod
     def get_id(cls, ip, port):
@@ -123,6 +128,7 @@ class Endpoint(metaclass=Unique):
         for path in Path.find_all(dst=self):
             unstore_targets_merge(del_data, path.delete())
         cursor = Db.get().cursor()
+        cursor.execute('DELETE FROM tags WHERE endpoint = ?', (self.id, ))
         cursor.execute('DELETE FROM endpoints WHERE id = ?', (self.id, ))
         cursor.close()
         Db.get().commit()
@@ -192,6 +198,27 @@ class Endpoint(metaclass=Unique):
         if row is None:
             return None
         return Endpoint(row[0], row[1])
+    
+    def tag(self, tagname):
+        cursor = Db.get().cursor()
+        try:
+            cursor.execute('''INSERT INTO tags (name, endpoint) VALUES (?, ?)''', (tagname, self.id))
+        except sqlite3.IntegrityError:
+            pass
+        cursor.close()
+        Db.get().commit()
+        self.tags.add(tagname)
+
+    def untag(self, tagname):
+        cursor = Db.get().cursor()
+        cursor.execute('DELETE FROM tags WHERE name = ? and endpoint = ?', (tagname, self.id))
+        cursor.close()
+        Db.get().commit()
+        try:
+            self.tags.remove(tagname)
+        except KeyError:
+            pass
+
 
     def __str__(self):
         return self.ip+":"+str(self.port)
