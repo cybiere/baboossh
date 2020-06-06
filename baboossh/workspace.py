@@ -336,7 +336,7 @@ class Workspace():
                 return [endpoint]
         elif self.options["endpoint"] is not None:
             #TODO handle tag
-            return self.options["endpoint"]
+            return [self.options["endpoint"]]
         else:
             endpoints = Endpoint.find_all(scope=True)
 
