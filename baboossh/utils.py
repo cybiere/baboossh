@@ -36,6 +36,6 @@ def is_workspace_compat(workspace_version):
         if w_major != "1":
             return False
         if b_minor == "1":
-            if w_minor in ["1","2"]:
+            if w_minor in ["1", "2"]:
                 return True
     return False

@@ -370,12 +370,12 @@ class Shell(cmd2.Cmd):
 
     def __endpoint_tag(self, stmt):
         endpoint = vars(stmt)['endpoint']
-        tagname =  vars(stmt)['tagname']
+        tagname = vars(stmt)['tagname']
         self.workspace.endpoint_tag(endpoint, tagname)
 
     def __endpoint_untag(self, stmt):
         endpoint = vars(stmt)['endpoint']
-        tagname =  vars(stmt)['tagname']
+        tagname = vars(stmt)['tagname']
         self.workspace.endpoint_untag(endpoint, tagname)
 
 

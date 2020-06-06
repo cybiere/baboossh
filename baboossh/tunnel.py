@@ -1,9 +1,8 @@
 import select
 import socket
 import struct
-from socketserver import ThreadingMixIn, TCPServer, StreamRequestHandler, ThreadingTCPServer
+from socketserver import StreamRequestHandler, ThreadingTCPServer
 import threading
-from baboossh import Db
 
 class SocksProxy(StreamRequestHandler):
     SOCKS_VERSION = 5
@@ -48,9 +47,9 @@ class SocksProxy(StreamRequestHandler):
         try:
             if cmd == 1:  # CONNECT
                 remote = self.server.output.transport.open_channel(
-                        kind="direct-tcpip",
-                        dest_addr=(address,port),
-                        src_addr=("",0)
+                    kind="direct-tcpip",
+                    dest_addr=(address, port),
+                    src_addr=("", 0)
                 )
             else:
                 self.server.close_request(self.request)

@@ -40,7 +40,7 @@ class Workspace():
                 os.mkdir(workspace_folder)
                 os.mkdir(os.path.join(workspace_folder, "loot"))
                 os.mkdir(os.path.join(workspace_folder, "keys"))
-                with open(os.path.join(workspace_folder, "workspace.version"),"w") as f:
+                with open(os.path.join(workspace_folder, "workspace.version"), "w") as f:
                     f.write(BABOOSSH_VERSION)
             except OSError:
                 print("Creation of the directory %s failed" % workspace_folder)
@@ -63,12 +63,12 @@ class Workspace():
         if not os.path.exists(self.workspace_folder):
             raise ValueError("Workspace "+name+" does not exist")
         try:
-            with open(os.path.join(self.workspace_folder,"workspace.version"),"r") as f:
+            with open(os.path.join(self.workspace_folder, "workspace.version"), "r") as f:
                 self.version = f.read()
         except FileNotFoundError:
             self.version = "1.0.x"
         if not is_workspace_compat(self.version):
-            raise WorkspaceVersionError(BABOOSSH_VERSION,self.version)
+            raise WorkspaceVersionError(BABOOSSH_VERSION, self.version)
         Db.connect(name)
         self.name = name
         self.tunnels = {}
