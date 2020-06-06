@@ -41,6 +41,9 @@ class Connection(metaclass=Unique):
         used_by_connections ([Connection,...]): a list of :class:`Connection`
             using the current one as a pivot. Used for recursive connection
             closure.
+        used_by_tunnels ([Tunnel,...]): a list of :class:`Tunnel`
+            using the current connection as a pivot. Used for recursive connection
+            closure.
     """
 
 
@@ -52,6 +55,7 @@ class Connection(metaclass=Unique):
         self.root = False
         self.conn = None
         self.used_by_connections = []
+        self.used_by_tunnels = []
         if user is None or cred is None:
             return
         cursor = Db.get().cursor()
@@ -401,6 +405,10 @@ class Connection(metaclass=Unique):
 
     def close(self):
         if self.conn is None:
+            return
+        nb_tunnels = len(self.used_by_tunnels)
+        if nb_tunnels != 0:
+            print(str(nb_tunnels)+" tunnel(s) are open using this connection, please close tunnels first.")
             return
         for connection in self.used_by_connections:
             connection.close()
