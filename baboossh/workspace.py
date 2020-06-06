@@ -132,6 +132,8 @@ class Workspace():
             tagname (str): the :class:`Tag` name
         """
 
+        if tagname[0] == "!":
+            tagname = tagname[1:]
         try:
             endpoint = Endpoint.find_one(ip_port=endpoint)
         except ValueError:
@@ -151,6 +153,8 @@ class Workspace():
             tagname (str): the :class:`Tag` name
         """
 
+        if tagname[0] == "!":
+            tagname = tagname[1:]
         try:
             endpoint = Endpoint.find_one(ip_port=endpoint)
         except ValueError:
@@ -549,6 +553,8 @@ class Workspace():
 #################################################################
 
     def tag_show(self, name):
+        if name[0] == "!":
+            name = name[1:]
         tag = Tag.find_one(name=name)
         if tag is None:
             print("No tag matching "+name)
@@ -558,6 +564,8 @@ class Workspace():
             print(" - "+str(endpoint))
 
     def tag_del(self, name):
+        if name[0] == "!":
+            name = name[1:]
         tag = Tag.find_one(name=name)
         if tag is None:
             print("No tag matching "+name)
@@ -799,8 +807,12 @@ class Workspace():
             ret = ret + Tag.find_all()
         return ret
 
-    def endpoint_search(self, field, val, show_all=False):
-        return Endpoint.search(field, val, show_all)
+    def endpoint_search(self, field, val, show_all=False, add_tag=None):
+        endpoints = Endpoint.search(field, val, show_all)
+        if add_tag is not None:
+            for endpoint in endpoints:
+                endpoint.tag(add_tag)
+        return endpoints
 
     def host_search(self, field, val, show_all=False):
         return Host.search(field, val, show_all)

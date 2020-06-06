@@ -322,7 +322,7 @@ class Shell(cmd2.Cmd):
             first = True
             taglist = ""
             for tag in endpoint.tags:
-                taglist = taglist + (tag if first else ", "+tag)
+                taglist = taglist + ("!"+tag if first else ", !"+tag)
                 first = False
 
             data.append([scope, endpoint, host, reachable, distance, conn, taglist])
@@ -378,13 +378,14 @@ class Shell(cmd2.Cmd):
 
     def __endpoint_search(self, stmt):
         show_all = getattr(stmt, 'all', False)
+        tag = getattr(stmt, 'tag', None)
         field = vars(stmt)['field']
         allowed_fields = self.__get_search_fields_endpoint()
         if field not in allowed_fields:
             print("Invalid field specified, use one of "+str(allowed_fields)+".")
             return
         val = vars(stmt)['val']
-        endpoints = self.workspace.endpoint_search(field, val, show_all)
+        endpoints = self.workspace.endpoint_search(field, val, show_all, add_tag=tag)
         print("Search result for endpoints:")
         if not endpoints:
             print("No results")
@@ -405,14 +406,15 @@ class Shell(cmd2.Cmd):
     __parser_endpoint_search.add_argument("-a", "--all", help="Include out of scope elements in search", action="store_true")
     __parser_endpoint_search.add_argument('field', help='Field to search in', choices_method=__get_search_fields_endpoint)
     __parser_endpoint_search.add_argument('val', help='Value to search')
+    __parser_endpoint_search.add_argument("-t", "--tag", help="Add tag to search results", choices_method=__get_tag)
     __parser_endpoint_del = __subparser_endpoint.add_parser("delete", help='Set target endpoint')
     __parser_endpoint_del.add_argument('endpoint', help='Endpoint', choices_method=__get_option_endpoint)
     __parser_endpoint_tag = __subparser_endpoint.add_parser("tag", help='Tag an endpoint')
     __parser_endpoint_tag.add_argument('endpoint', help='Endpoint', choices_method=__get_option_endpoint)
-    __parser_endpoint_tag.add_argument('tagname', help='The tag name to add')
+    __parser_endpoint_tag.add_argument('tagname', help='The tag name to add', choices_method=__get_tag)
     __parser_endpoint_untag = __subparser_endpoint.add_parser("untag", help='Tag an endpoint')
     __parser_endpoint_untag.add_argument('endpoint', help='Endpoint', choices_method=__get_option_endpoint)
-    __parser_endpoint_untag.add_argument('tagname', help='The tag name to add')
+    __parser_endpoint_untag.add_argument('tagname', help='The tag name to add', choices_method=__get_tag)
 
     __parser_endpoint_list.set_defaults(func=__endpoint_list)
     __parser_endpoint_add.set_defaults(func=__endpoint_add)
