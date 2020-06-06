@@ -105,6 +105,9 @@ class Shell(cmd2.Cmd):
     def __get_option_endpoint(self):
         return self.workspace.get_objects(endpoints=True, scope=True)
 
+    def __get_option_endpoint_tag(self):
+        return self.workspace.get_objects(endpoints=True, scope=True, tags=True)
+
     def __get_option_payload(self):
         return Extensions.payloads.keys()
 
@@ -864,7 +867,7 @@ class Shell(cmd2.Cmd):
     __parser_probe.add_argument("-a", "--again", help="include already probed endpoints", action="store_true")
     __parser_probe.add_argument("-n", "--new", help="try finding new shorter path", action="store_true")
     __parser_probe.add_argument("-g", "--gateway", help="force specific gateway", choices_method=__get_option_gateway)
-    __parser_probe.add_argument('target', help='Endpoint to probe', nargs="?", choices_method=__get_option_endpoint)
+    __parser_probe.add_argument('target', help='Endpoint to probe', nargs="?", choices_method=__get_option_endpoint_tag)
 
     @cmd2.with_argparser(__parser_probe)
     @cmd2.with_category(__CMD_CAT_CON)

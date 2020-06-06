@@ -381,6 +381,9 @@ class Workspace():
         if target is not None:
             if target == "*":
                 endpoints = Endpoint.find_all(scope=True)
+            elif target[0] == "!":
+                tag = Tag(target[1:])
+                endpoints = tag.endpoints
             else:
                 endpoint = Endpoint.find_one(ip_port=target)
                 if endpoint is None:
@@ -410,6 +413,9 @@ class Workspace():
             auth, sep, endpoint = target.partition('@')
             if endpoint == "*":
                 endpoints = Endpoint.find_all(scope=True)
+            elif endpoint[0] == "!":
+                tag = Tag(endpoint[1:])
+                endpoints = tag.endpoints
             else:
                 endpoint = Endpoint.find_one(ip_port=endpoint)
                 if endpoint is None:
@@ -489,6 +495,9 @@ class Workspace():
             auth, sep, endpoint = target.partition('@')
             if endpoint == "*":
                 endpoint = None
+            elif endpoint[0] == "!":
+                tag = Tag(endpoint[1:])
+                endpoints = tag.endpoints
             else:
                 endpoint = Endpoint.find_one(ip_port=endpoint)
                 if endpoint is None:
