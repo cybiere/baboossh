@@ -1,7 +1,7 @@
 import hashlib
 import paramiko
 import fabric
-from baboossh import Db, Endpoint, User, Creds, Path, Host
+from baboossh import Db, Endpoint, User, Creds, Path, Host, Tag
 from baboossh.exceptions import *
 from baboossh.utils import Unique
 
@@ -179,7 +179,7 @@ class Connection(metaclass=Unique):
         query = 'SELECT endpoint, user, cred FROM connections'
         params = []
         first = True
-        if endpoint is not None:
+        if endpoint is not None and not isinstance(endpoint, Tag):
             if first:
                 query = query + ' WHERE '
                 first = False
@@ -187,6 +187,21 @@ class Connection(metaclass=Unique):
                 query = query + ' AND '
             query = query + 'endpoint=?'
             params.append(endpoint.id)
+        elif endpoint is not None and isinstance(endpoint, Tag):
+            if first:
+                query = query + ' WHERE ('
+                first = False
+            else:
+                query = query + ' AND ('
+            first_endpoint = True
+            for end in endpoint.endpoints:
+                if not first_endpoint:
+                    query = query + ' OR '
+                else:
+                    first_endpoint = False
+                query = query + 'endpoint=?'
+                params.append(end.id)
+            query = query + ' )'
         if user is not None:
             if first:
                 query = query + ' WHERE '
@@ -244,10 +259,7 @@ class Connection(metaclass=Unique):
         return connection
 
     def identify(self, socket):
-        """Indentify the host
-
-        #TODO
-        """
+        """Indentify the host"""
         try:
             result = socket.run("hostname", hide='both')
             hostname = result.stdout.rstrip()

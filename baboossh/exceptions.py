@@ -13,6 +13,8 @@ class WorkspaceVersionError(Exception):
     def __init__(self, baboossh_ver, workspace_ver):
         self.baboossh_ver = baboossh_ver
         self.workspace_ver = workspace_ver
+        super().__init__()
+
 
     def __str__(self):
         return "This workspace was created using BabooSSH v"+self.workspace_ver+" which is incompatible with current version (v"+self.baboossh_ver+")"

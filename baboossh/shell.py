@@ -90,7 +90,7 @@ class Shell(cmd2.Cmd):
     def __get_option_creds(self):
         return self.workspace.get_objects(creds=True, scope=True)
 
-    def __get_option_hosts(self):
+    def __get_option_host(self):
         return self.workspace.get_objects(hosts=True, scope=True)
 
     def __get_arg_workspaces(self):
@@ -238,8 +238,8 @@ class Shell(cmd2.Cmd):
                 else:
                     endpoints = endpoints + ", "+str(endpoint)
             scope = "o" if host.scope else ""
-            data.append([scope, host.id, host.name, host.distance, endpoints])
-        print(tabulate.tabulate(data, headers=["", "ID", "Name", "Dist", "Endpoints"]))
+            data.append([scope, host.name, host.distance, endpoints])
+        print(tabulate.tabulate(data, headers=["", "Name", "Dist", "Endpoints"]))
 
     def __host_list(self, stmt):
         print("Current hosts in workspace:")
@@ -252,13 +252,14 @@ class Shell(cmd2.Cmd):
 
     def __host_search(self, stmt):
         show_all = getattr(stmt, 'all', False)
+        tag = getattr(stmt, 'tag', None)
         field = vars(stmt)['field']
         allowed_fields = self.__get_search_fields_host()
         if field not in allowed_fields:
             print("Invalid field specified, use one of "+str(allowed_fields)+".")
             return
         val = vars(stmt)['val']
-        hosts = self.workspace.host_search(field, val, show_all)
+        hosts = self.workspace.host_search(field, val, show_all, add_tag=tag)
         print("Search result for hosts:")
         if not hosts:
             print("No results")
@@ -269,6 +270,16 @@ class Shell(cmd2.Cmd):
         host = getattr(stmt, 'host', None)
         self.workspace.host_del(host)
 
+    def __host_tag(self, stmt):
+        host = vars(stmt)['host']
+        tagname = vars(stmt)['tagname']
+        self.workspace.host_tag(host, tagname)
+
+    def __host_untag(self, stmt):
+        host = vars(stmt)['host']
+        tagname = vars(stmt)['tagname']
+        self.workspace.host_untag(host, tagname)
+
     __parser_host = argparse.ArgumentParser(prog="host")
     __subparser_host = __parser_host.add_subparsers(title='Actions', help='Available actions')
     __parser_host_list = __subparser_host.add_parser("list", help='List hosts')
@@ -276,13 +287,21 @@ class Shell(cmd2.Cmd):
     __parser_host_search = __subparser_host.add_parser("search", help='Search a host')
     __parser_host_search.add_argument('field', help='Field to search in', choices_method=__get_search_fields_host)
     __parser_host_search.add_argument('val', help='Value to search')
-
+    __parser_host_search.add_argument("-t", "--tag", help="Add tag to search results", choices_method=__get_tag)
     __parser_host_del = __subparser_host.add_parser("delete", help='Delete host')
-    __parser_host_del.add_argument('host', help='Host name', choices_method=__get_option_hosts)
+    __parser_host_del.add_argument('host', help='Host name', choices_method=__get_option_host)
+    __parser_host_tag = __subparser_host.add_parser("tag", help='Tag an host')
+    __parser_host_tag.add_argument('host', help='Host', choices_method=__get_option_host)
+    __parser_host_tag.add_argument('tagname', help='The tag name to add', choices_method=__get_tag)
+    __parser_host_untag = __subparser_host.add_parser("untag", help='Tag an host')
+    __parser_host_untag.add_argument('host', help='Host', choices_method=__get_option_host)
+    __parser_host_untag.add_argument('tagname', help='The tag name to add', choices_method=__get_tag)
 
     __parser_host_list.set_defaults(func=__host_list)
     __parser_host_search.set_defaults(func=__host_search)
     __parser_host_del.set_defaults(func=__host_del)
+    __parser_host_tag.set_defaults(func=__host_tag)
+    __parser_host_untag.set_defaults(func=__host_untag)
 
     @cmd2.with_argparser(__parser_host)
     @cmd2.with_category(__CMD_CAT_OBJ)
@@ -411,7 +430,7 @@ class Shell(cmd2.Cmd):
     __parser_endpoint_search.add_argument('val', help='Value to search')
     __parser_endpoint_search.add_argument("-t", "--tag", help="Add tag to search results", choices_method=__get_tag)
     __parser_endpoint_del = __subparser_endpoint.add_parser("delete", help='Set target endpoint')
-    __parser_endpoint_del.add_argument('endpoint', help='Endpoint', choices_method=__get_option_endpoint)
+    __parser_endpoint_del.add_argument('endpoint', help='Endpoint', choices_method=__get_option_endpoint_tag)
     __parser_endpoint_tag = __subparser_endpoint.add_parser("tag", help='Tag an endpoint')
     __parser_endpoint_tag.add_argument('endpoint', help='Endpoint', choices_method=__get_option_endpoint)
     __parser_endpoint_tag.add_argument('tagname', help='The tag name to add', choices_method=__get_tag)
@@ -692,7 +711,7 @@ class Shell(cmd2.Cmd):
     __parser_option_creds = __subparser_option.add_parser("creds", help='Set target creds')
     __parser_option_creds.add_argument('id', help='Creds ID', nargs="?", choices_method=__get_option_creds)
     __parser_option_endpoint = __subparser_option.add_parser("endpoint", help='Set target endpoint')
-    __parser_option_endpoint.add_argument('endpoint', nargs="?", help='Endpoint', choices_method=__get_option_endpoint)
+    __parser_option_endpoint.add_argument('endpoint', nargs="?", help='Endpoint', choices_method=__get_option_endpoint_tag)
     __parser_option_payload = __subparser_option.add_parser("payload", help='Set target payload')
     __parser_option_payload.add_argument('payload', nargs="?", help='Payload name', choices_method=__get_option_payload)
     __parser_option_connection = __subparser_option.add_parser("connection", help='Set target connection')
@@ -917,8 +936,12 @@ class Shell(cmd2.Cmd):
         if nb_targets > 1:
             if not yes_no("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False, list_val=targets):
                 return
-
-        nb_working = self.workspace.connect(targets, verbose, probe_auto)
+        
+        try:
+            nb_working = self.workspace.connect(targets, verbose, probe_auto)
+        except NoPathError:
+            print("Could not find path to the target, run \"probe\" first.")
+            return
         print("\033[1;32m"+str(nb_working)+"/"+str(nb_targets)+"\033[0m working.")
 
 

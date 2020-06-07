@@ -1,3 +1,9 @@
+"""
+BabooSSH : SSH spreading made easy for red teams in a hurry.
+
+For more info see README.rst or documentation
+"""
+
 from baboossh.exceptions import *
 from baboossh.utils import WORKSPACES_DIR
 from baboossh.extensions import *

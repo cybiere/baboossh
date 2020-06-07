@@ -111,6 +111,11 @@ class Workspace():
             endpoint (str): the `Endpoint` 's string (ip:port)
         """
 
+        if endpoint[0] == "!":
+            tag = Tag(endpoint[1:])
+            for endpoint in tag.endpoints:
+                self.unstore(endpoint.delete())
+            return True
         try:
             endpoint = Endpoint.find_one(ip_port=endpoint)
         except ValueError:
@@ -211,6 +216,50 @@ class Workspace():
             return False
         host = Host.find_one(name=host)
         self.unstore(host.delete())
+        return True
+
+    def host_tag(self, host, tagname):
+        """Add a :class:`Tag` to an :class:`Host`
+
+        Args:
+            host (str): the `Host` 's string (ip:port)
+            tagname (str): the :class:`Tag` name
+        """
+
+        if tagname[0] == "!":
+            tagname = tagname[1:]
+        try:
+            host = Host.find_one(name=host)
+        except ValueError:
+            print("Could not find host.")
+            return False
+        if host is None:
+            print("Could not find host.")
+            return False
+        for endpoint in host.endpoints:
+            endpoint.tag(tagname)
+        return True
+
+    def host_untag(self, host, tagname):
+        """Remove a :class:`Tag` from an :class:`Host`
+
+        Args:
+            host (str): the `Host` 's string (ip:port)
+            tagname (str): the :class:`Tag` name
+        """
+
+        if tagname[0] == "!":
+            tagname = tagname[1:]
+        try:
+            host = Host.find_one(name=host)
+        except ValueError:
+            print("Could not find host.")
+            return False
+        if host is None:
+            print("Could not find host.")
+            return False
+        for endpoint in host.endpoints:
+            endpoint.untag(tagname)
         return True
 
 
@@ -321,10 +370,13 @@ class Workspace():
         if value is not None:
             value = value.strip()
             if option == "endpoint":
-                endpoint = Endpoint.find_one(ip_port=value)
-                if endpoint is None:
-                    raise ValueError
-                value = endpoint
+                if value[0] == "!":
+                    value = Tag(value[1:])
+                else:
+                    endpoint = Endpoint.find_one(ip_port=value)
+                    if endpoint is None:
+                        raise ValueError
+                    value = endpoint
             elif option == "user":
                 user = User.find_one(name=value)
                 if user is None:
@@ -390,7 +442,8 @@ class Workspace():
                     raise ValueError("Supplied endpoint isn't in workspace")
                 return [endpoint]
         elif self.options["endpoint"] is not None:
-            #TODO handle tag
+            if isinstance(self.options["endpoint"], Tag):
+                return self.options["endpoint"].endpoints
             return [self.options["endpoint"]]
         else:
             endpoints = Endpoint.find_all(scope=True)
@@ -450,7 +503,9 @@ class Workspace():
             else:
                 users = [user]
             endpoint = self.options["endpoint"]
-            if endpoint is None:
+            if isinstance(endpoint, Tag):
+                endpoints = endpoint.endpoints
+            elif endpoint is None:
                 endpoints = Endpoint.find_all(scope=True)
             else:
                 endpoints = [endpoint]
@@ -470,7 +525,6 @@ class Workspace():
                 if len(creds) != 1:
                     working_connections = Connection.find_all(endpoint=endpoint, user=user)
                     if not force and working_connections:
-                        #TODO add debug flag
                         print("Connection already found with user "+str(user)+" on endpoint "+str(endpoint)+", creds bruteforcing is disabled. Specify creds or use --force.")
                         continue
                 for cred in creds:
@@ -823,8 +877,13 @@ class Workspace():
                 endpoint.tag(add_tag)
         return endpoints
 
-    def host_search(self, field, val, show_all=False):
-        return Host.search(field, val, show_all)
+    def host_search(self, field, val, show_all=False, add_tag=None):
+        hosts = Host.search(field, val, show_all)
+        if add_tag is not None:
+            for host in hosts:
+                for endpoint in host.endpoints:
+                    endpoint.tag(add_tag)
+        return hosts
 
     def search_fields(self, obj):
         if obj == "Endpoint":
