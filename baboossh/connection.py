@@ -11,6 +11,11 @@ except ImportError:
     from six import string_types
 
 def monkey_open_gateway(self):
+    """
+    This is a monkey patch of fabric.Connection.open_gateway which simply
+    forwards the timeout to the call on open_channel
+    """
+
     if isinstance(self.gateway, string_types):
         ssh_conf = SSHConfig()
         dummy = "Host {}\n    ProxyCommand {}"
@@ -48,6 +53,14 @@ class Connection(metaclass=Unique):
 
 
     def __init__(self, endpoint, user, cred):
+        """Create the object and fetches info from database if it has been saved.
+        
+        Args:
+            endpoint (:class:`Endpoint`): The Connection's endpoint
+            user (:class:`User`): The Connection's user
+            cred (:class:`Creds`): The Connection's credentials
+        """
+
         self.endpoint = endpoint
         self.user = user
         self.creds = cred
@@ -68,6 +81,13 @@ class Connection(metaclass=Unique):
 
     @classmethod
     def get_id(cls, endpoint, user, cred):
+        """Generate an ID for unicity
+        
+        Args: See __init__
+
+        Returns:
+            A str corresponding to the Connection hash
+        """
         return hashlib.sha256((str(endpoint)+str(user)+str(cred)).encode()).hexdigest()
 
     @property
@@ -86,7 +106,7 @@ class Connection(metaclass=Unique):
         return self.endpoint.distance
 
     def save(self):
-        """Save the `Connection` to the :class:`Workspace` 's database"""
+        """Save the `Connection` to the :class:`Workspace`'s database"""
 
         if self.user is None or self.creds is None:
             return
@@ -114,7 +134,8 @@ class Connection(metaclass=Unique):
         Db.get().commit()
 
     def delete(self):
-        """Delete the `Connection` from the :class:`Workspace` 's database"""
+        """Delete the `Connection` from the :class:`Workspace`'s database"""
+
         if self.id is None:
             return {}
         cursor = Db.get().cursor()
@@ -126,12 +147,13 @@ class Connection(metaclass=Unique):
 
     @classmethod
     def find_one(cls, connection_id=None, endpoint=None, scope=None, gateway_to=None):
-        """Find a `Connection` by its id or endpoint
+        """Find a `Connection` by its id, endpoint or if it can be used as a gateway to an :class:`Endpoint`
 
         Args:
             connection_id (int): the `Connection` id to search
             endpoint (:class:`Endpoint`): the `Connection` endpoint to search
-            gateway_to (:class:`Endpoint`): the `Connection` to use as a gateway to the endpoint
+            gateway_to (:class:`Endpoint`): the Endpoint to which you want to find a gateway
+            scope (bool): whether to include only in scope Connections (`True`), out of scope Connections (`False`) or both (`None`)
 
         Returns:
             A single `Connection` or `None`.
@@ -173,6 +195,21 @@ class Connection(metaclass=Unique):
 
     @classmethod
     def find_all(cls, endpoint=None, user=None, creds=None, scope=None):
+        """Find all `Connection` matching the criteria
+
+        If two or more arguments are specified, the returned Connections must match each ("AND")
+
+        Args:
+            endpoint (:class:`Endpoint` or :class:`Tag`): the `Connection` endpoint to search or a :class:`Tag` of endpoints to search
+            user (:class:`User`): the `Connection` user to search
+            creds (:class:`Creds`): the `Connection` creds to search
+            scope (bool): whether to include only in scope Connections (`True`), out of scope Connections (`False`) or both (`None`)
+
+        Returns:
+            A list of matching `Connection`.
+        """
+
+
         ret = []
         cursor = Db.get().cursor()
 
