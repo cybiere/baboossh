@@ -10,6 +10,11 @@ list
 
 List hosts in workspace and their endpoints in a tabular view.
 
+Arguments
+---------
+
+ - `-a, -\\-all`: include out of scope hosts
+
 tag
 +++
 

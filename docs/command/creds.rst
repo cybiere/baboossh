@@ -12,6 +12,11 @@ list
 
 List credentials in workspace in a tabular view.
 
+Arguments
+---------
+
+ - `-a, -\\-all`: include out of scope credentials
+
 types
 +++++
 

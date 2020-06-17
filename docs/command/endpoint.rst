@@ -10,6 +10,13 @@ list
 
 List endpoints in workspace in a tabular view.
 
+Arguments
+---------
+
+ - `-a, -\\-all`: include out of scope endpoints
+ - `-r <true|false>`: show only reachable (true, default) or unreachable (false) endpoints
+ - `-c <true|false>`: show only endpoint with (true, default) or without (false) a working connectioN
+
 add
 +++
 

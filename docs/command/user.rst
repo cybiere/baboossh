@@ -10,6 +10,11 @@ list
 
 List users in workspace in a tabular view.
 
+Arguments
+---------
+
+ - `-a, -\\-all`: include out of scope users
+
 add
 +++
 
