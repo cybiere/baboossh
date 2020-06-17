@@ -18,7 +18,7 @@ Arguments
 close
 +++++
 
-Manually close an Connection opened with `connect command` or `run command` or as a gateway by one of those. Recursively closes any :class:`~baboossh.Connection` or :class:`~baboossh.Tunnel` using the connection as a pivot or an output.
+Manually close an Connection opened with :ref:`connect command` or :ref:`run command` or as a gateway by one of those. Recursively closes any :class:`~baboossh.Connection` or :class:`~baboossh.Tunnel` using the connection as a pivot or an output.
 
 Arguments
 ---------

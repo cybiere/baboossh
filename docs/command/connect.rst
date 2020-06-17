@@ -1,4 +1,4 @@
-Connect command
+connect command
 ===============
 
 Test provided parameters validity to establish a connection. If a connection is established, identifies the targeted ~baboossh.Endpoint's ~baboossh.Host.
@@ -47,8 +47,8 @@ Test connecting to endpoint `192.168.4.15:2222` using `192.168.3.254:22` as a ga
 
 BabooSSH will find an existing working [Connection]([Object]-Connection) to `192.168.3.254:22`, connect to it and using it as a gateway will try to connect to `bar:#2@192.168.4.15:2222`
 
-Workspace options
------------------
+Using workspace options
+-----------------------
 
 ```
 set user baz
