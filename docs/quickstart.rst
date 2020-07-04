@@ -3,7 +3,7 @@ Quick start
 
 After installing BabooSSH, you can start it simply by running `baboossh` in a terminal. At its first launch it will create the `.baboossh` folder in your home directory and the default :class:`~baboossh.Workspace`.
 
-The first thing to do is to add an :class:`~baboossh.Endpoint`, using either the :ref:`endpoint command` or one of the :ref:`Importer extensions`::
+The first thing to do is to add an :class:`~baboossh.Endpoint`, using either the :ref:`endpoint command` or one of the :ref:`Importer modules`::
 
    endpoint add 10.0.1.101 22
 
@@ -27,7 +27,7 @@ If the connection is successful, BabooSSH will :func:`~baboossh.Connection.ident
 
 You can list the successful connections with the :ref:`connection command`, and of course the hosts with the :ref:`host command`.
 
-Once you have a valid connection, you can run :ref:`Payloads` on them. For instance, you can get an interactive shell on the target::
+Once you have a valid connection, you can run one of the :ref:`Payload modules` on them. For instance, you can get an interactive shell on the target::
 
    run sga:#1@10.0.1.101:22 shell
 

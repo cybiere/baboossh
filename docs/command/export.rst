@@ -1,7 +1,7 @@
 export command
 ==============
 
-Export workspace data, using one of the :ref:`exporter extensions`.
+Export workspace data, using one of the :ref:`exporter modules`.
 
 Syntax
 ++++++

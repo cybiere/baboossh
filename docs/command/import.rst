@@ -1,7 +1,7 @@
 import command
 ==============
 
-Import data in workspace, using one of the :ref:`importer extensions`. 
+Import data in workspace, using one of the :ref:`importer modules`. 
 
 Syntax
 ++++++

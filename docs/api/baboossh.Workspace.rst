@@ -26,7 +26,6 @@ Workspace
       ~Workspace.endpoint_add
       ~Workspace.endpoint_del
       ~Workspace.endpoint_search
-      ~Workspace.enum_targets
       ~Workspace.get_objects
       ~Workspace.host_del
       ~Workspace.host_search
