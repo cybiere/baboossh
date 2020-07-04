@@ -6,7 +6,7 @@ Run a payload on an open connection.
 Syntax
 ++++++
 
-`run [<target> <payload> [<parameters>...]]`
+`run [-v|-\\-verbose] [<target> <payload> [<parameters>...]]`
 
 Arguments
 ---------
@@ -20,7 +20,7 @@ If `<target>` is not provided, Baboossh will use the current :ref:`Workspace opt
 Options
 -------
 
- - `-v|--verbose`: increase output verbosity
+ - `-v|-\\-verbose`: increase output verbosity
 
 Examples
 ++++++++

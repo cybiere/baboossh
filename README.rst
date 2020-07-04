@@ -21,6 +21,6 @@ It's as easy as a::
 Documentation
 +++++++++++++
 
-Have a look on the `wiki <https://github.com/cybiere/BabooSSH/wiki>`_ .
+The documentation is under redaction and some things might be missing, but you can find it there: `<https://baboossh.cybiere.fr>`_ .
 
 

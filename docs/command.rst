@@ -17,6 +17,7 @@ Command reference
    command/payload
    command/probe
    command/run
+   command/scope
    command/set
    command/shell
    command/tag

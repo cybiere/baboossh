@@ -6,7 +6,7 @@ Test provided parameters validity to establish a connection. If a connection is 
 Syntax
 ++++++
 
-`connect [-v|--verbose] [-f|--force] [-p,--probe] [<connection>]`
+`connect [-v|-\\-verbose] [-f|-\\-force] [-p,-\\-probe] [<connection>]`
 
 Arguments
 ---------
@@ -16,9 +16,9 @@ Arguments
 Options
 -------
 
- - `-v|--verbose`: increase output verbosity
- - `-p|--probe`: if the target endpoint has not been probed (using :ref:`probe command`) yet, connection is refused. Setting this flag will automatically probe the endpoint before connecting to it.
- - `-f|--force`: in order to decrease the noise, connections are not run if they are already know to be working. Setting this flag will force running the connection.
+ - `-v|-\\-verbose`: increase output verbosity
+ - `-p|-\\-probe`: if the target endpoint has not been probed (using :ref:`probe command`) yet, connection is refused. Setting this flag will automatically probe the endpoint before connecting to it.
+ - `-f|-\\-force`: in order to decrease the noise, connections are not run if they are already know to be working. Setting this flag will force running the connection.
 
 If `<connection>` is not provided, Baboossh will use the current :ref:`Workspace options` to determine which :class:`~baboossh.User` and :class:`~baboossh.Creds` to connect to which :class:`~baboossh.Endpoint`. If any of these option is not set, try every object in the scope for the option until a connection is successfully established or all combinations are tested.
 

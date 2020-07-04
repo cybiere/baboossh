@@ -6,7 +6,7 @@ Test if an endpoint is reachable using stored paths or provided gateway, and sav
 Syntax
 ++++++
 
-`probe [-v|--verbose] [-a|--again] [-n|--new] [-g|--gateway <gateway>] [<endpoint>]`
+`probe [-v|-\\-verbose] [-a|-\\-again] [-n|-\\-new] [-g|-\\-gateway <gateway>] [<endpoint>]`
 
 Arguments
 ---------
@@ -17,10 +17,10 @@ Arguments
 Options
 -------
 
- - `-v|--verbose`: increase output verbosity
- - `-g|--gateway <gateway>`: force the use of `<gateway>` as the gateway to connect (instead of automatically calculated path)
- - `-a|--again`: include already probed endpoints
- - `-n|--new`: try finding a new shorter path
+ - `-v|-\\-verbose`: increase output verbosity
+ - `-g|-\\-gateway <gateway>`: force the use of `<gateway>` as the gateway to connect (instead of automatically calculated path)
+ - `-a|-\\-again`: include already probed endpoints
+ - `-n|-\\-new`: try finding a new shorter path
 
 
 If `<endpoint>` is provided, test if it is reachable, eventually forcing specified `<gateway>`. See :ref:`Path finding`.
