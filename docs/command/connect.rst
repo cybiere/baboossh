@@ -1,28 +1,26 @@
 connect command
 ===============
 
-Test provided parameters validity to establish a connection. If a connection is established, identifies the targeted ~baboossh.Endpoint's ~baboossh.Host.
+Test provided parameters validity to establish a connection. If a connection is established, identifies the targeted :class:`~baboossh.Endpoint` 's :class:`~baboossh.Host`.
 
 Syntax
 ++++++
 
-`connect [-v|--verbose] [-g|--gateway <gateway>] [<connection>]`
+`connect [-v|--verbose] [-f|--force] [-p,--probe] [<connection>]`
 
 Arguments
 ---------
 
- - `<connection>`: A [Connection string]([Object]-Connection).
- - `<gateway>`: An [Endpoint]([Object]-Endpoint).
+ - `<connection>`: A :class:`~baboossh.Connection` to target.
 
 Options
 -------
 
- - `-v|--verbose`: print every pivot while connecting
- - `-g|--gateway <gateway>`: force the use of `<gateway>` as the gateway to connect (instead of automatically calculated path)
+ - `-v|--verbose`: increase output verbosity
+ - `-p|--probe`: if the target endpoint has not been probed (using :ref:`probe command`) yet, connection is refused. Setting this flag will automatically probe the endpoint before connecting to it.
+ - `-f|--force`: in order to decrease the noise, connections are not run if they are already know to be working. Setting this flag will force running the connection.
 
-If `<connection>` is provided, test it is working, eventually forcing specified `<gateway>`.
-
-If `<connection>` is not provided, use the current [workspace options]([Object]-Workspace) to determine which [User]([Object]-User) and [Creds]([Object]-Creds) to connect to which [Endpoint]([Object]-Endpoint). If any of these option is not set, try every object in the workspace for the option until a connection is successfully established or all combinations are tested.
+If `<connection>` is not provided, Baboossh will use the current :ref:`Workspace options` to determine which :class:`~baboossh.User` and :class:`~baboossh.Creds` to connect to which :class:`~baboossh.Endpoint`. If any of these option is not set, try every object in the scope for the option until a connection is successfully established or all combinations are tested.
 
 Examples
 ++++++++
@@ -36,17 +34,6 @@ connect -v foo:#1@192.168.1.1:22
 
 Test connecting to Endpoint `192.168.1.1:22` with User `foo` and Creds `#1`, printing every pivot performed.
 
-Gateway
--------
-
-```
-connect -g 192.168.3.254:22 bar:#2@192.168.4.15:2222
-```
-
-Test connecting to endpoint `192.168.4.15:2222` using `192.168.3.254:22` as a gateway.
-
-BabooSSH will find an existing working [Connection]([Object]-Connection) to `192.168.3.254:22`, connect to it and using it as a gateway will try to connect to `bar:#2@192.168.4.15:2222`
-
 Using workspace options
 -----------------------
 
@@ -56,10 +43,10 @@ set endpoint 10.0.15.212:22
 connect
 ```
 
-As no creds have been specified, BabooSSH will sequentially attempt to connect with User `baz` to Endpoint `10.0.15.212:22` using every Creds object in the workspace, until a connection is successfully established or all creds are tested. Be careful as this could imply an important number of connection failures, resulting in locked account and alerts.
+As no creds have been specified, BabooSSH will sequentially attempt to connect with User `baz` to Endpoint `10.0.15.212:22` using every Creds object in scope, until a connection is successfully established or all creds are tested. Be careful as this could imply an important number of connection failures, resulting in locked account and alerts.
 
 Spray
 -----
 
-`connect`: Without specifying any target either as an argument or in the workspace options, BabooSSH will attemp to log every User using every Creds on every Endpoint. Be careful as this could imply an important number of connection failures, resulting in locked account and alerts.
+`connect`: Without specifying any target either as an argument or in the workspace options, BabooSSH will attemp to log every User using every Creds on every Endpoint. Be careful as this could imply an important number of connection failures, resulting in locked accounts and alerts.
 
