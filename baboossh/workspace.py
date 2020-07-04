@@ -1,7 +1,7 @@
 import os
 import re
 from baboossh import User, Creds, Host, Endpoint, Tunnel, Path, Connection, Db, Extensions, WORKSPACES_DIR, Tag
-from baboossh.exceptions import NoPathError, WorkspaceVersionError
+from baboossh.exceptions import NoPathError, WorkspaceVersionError, ConnectionClosedError
 from baboossh.utils import BABOOSSH_VERSION, is_workspace_compat
 
 class Workspace():
@@ -741,7 +741,11 @@ class Workspace():
                 else:
                     host = Host.find_one(name=gateway)
                     gateway = Connection.find_one(endpoint=host.closest_endpoint)
-                working = conn.probe(gateway=gateway, verbose=verbose)
+                try:
+                    working = conn.probe(gateway=gateway, verbose=verbose)
+                except ConnectionClosedError as exc:
+                    print("\nError: "+str(exc))
+                    return
             if not working and not find_new:
                 try:
                     Path.get(endpoint)

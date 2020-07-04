@@ -4,6 +4,7 @@ import fabric
 from baboossh import Db, Endpoint, User, Creds, Path, Host, Tag
 from baboossh.exceptions import *
 from baboossh.utils import Unique
+import socket
 
 try:
     from invoke.vendor.six import string_types
@@ -365,6 +366,11 @@ class Connection(metaclass=Unique):
                 pass
             else:
                 raise exc
+        except socket.timeout:
+            if verbose:
+                print("\033[1;31mKO\033[0m.")
+            return False
+
         if conn is not None:
             conn.close()
 
@@ -420,6 +426,11 @@ class Connection(metaclass=Unique):
                     print("\033[1;31mKO\033[0m. Authentication failed.")
                 return False
             raise exc
+        except socket.timeout:
+            if verbose:
+                print("\033[1;31mKO\033[0m. Could not open socket to "+str(self.endpoint))
+            return False
+
 
         if target:
             print("\033[1;32mOK\033[0m")
