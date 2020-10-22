@@ -937,11 +937,7 @@ class Shell(cmd2.Cmd):
             if not yes_no("This will attempt up to "+str(nb_targets)+" connections. Proceed ?", False, list_val=targets):
                 return
         
-        try:
-            nb_working = self.workspace.connect(targets, verbose, probe_auto)
-        except NoPathError:
-            print("Could not find path to the target, run \"probe\" first.")
-            return
+        nb_working = self.workspace.connect(targets, verbose, probe_auto)
         print("\033[1;32m"+str(nb_working)+"/"+str(nb_targets)+"\033[0m working.")
 
 

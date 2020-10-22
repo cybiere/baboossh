@@ -604,9 +604,11 @@ class Workspace():
                 if probe_auto:
                     self.probe([connection.endpoint], verbose=verbose)
                     if not connection.endpoint.reachable:
-                        raise NoPathError
+                        print("\033[1;31mError\033[0m: could not find path to the target.")
+                        continue
                 else:
-                    raise NoPathError
+                    print("\033[1;31mError\033[0m: could not find path to the target.")
+                    continue
             if connection.open(verbose=verbose, target=True):
                 nb_working = nb_working + 1
         return nb_working
@@ -736,13 +738,13 @@ class Workspace():
                 if verbose:
                     print("\nA gateway was given, trying...")
                 if gateway == "local":
-                    gateway = None
+                    gateway_conn = None
                     host = None
                 else:
                     host = Host.find_one(name=gateway)
-                    gateway = Connection.find_one(endpoint=host.closest_endpoint)
+                    gateway_conn = Connection.find_one(endpoint=host.closest_endpoint)
                 try:
-                    working = conn.probe(gateway=gateway, verbose=verbose)
+                    working = conn.probe(gateway=gateway_conn, verbose=verbose)
                 except ConnectionClosedError as exc:
                     print("\nError: "+str(exc))
                     return
@@ -756,7 +758,7 @@ class Workspace():
                         print("\nThere is an existing path to the Endpoint, trying...")
                     working = conn.probe(verbose=verbose)
                     host = Host.find_one(prev_hop_to=endpoint)
-                    if not working:
+                    if not working and host is not None:
                         self.path_del(host, endpoint)
             if not working:
                 if verbose:

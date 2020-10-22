@@ -299,15 +299,15 @@ class Connection(metaclass=Unique):
     def identify(self, socket):
         """Indentify the host"""
         try:
-            result = socket.run("hostname", hide='both')
+            result = socket.run("hostname", hide='both', warn = True)
             hostname = result.stdout.rstrip()
-            result = socket.run("uname -a", hide='both')
+            result = socket.run("uname -a", hide='both', warn = True)
             uname = result.stdout.rstrip()
-            result = socket.run("cat /etc/issue", hide='both')
+            result = socket.run("cat /etc/issue", hide='both', warn = True)
             issue = result.stdout.rstrip()
-            result = socket.run("cat /etc/machine-id", hide='both')
+            result = socket.run("cat /etc/machine-id", hide='both', warn = True)
             machine_id = result.stdout.rstrip()
-            result = socket.run("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done", hide='both')
+            result = socket.run("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done", hide='both', warn = True)
             mac_str = result.stdout.rstrip()
             macs = mac_str.split()
             new_host = Host(hostname, uname, issue, machine_id, macs)
