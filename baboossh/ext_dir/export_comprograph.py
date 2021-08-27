@@ -21,7 +21,7 @@ class BaboosshExt(object,metaclass=ExtStr):
     @classmethod
     def buildParser(cls,parser):
         parser.add_argument("-f", "--findings", help="List findings",action="store_true")
-        parser.add_argument('output',help='Output file path',completer_method=cmd2.Cmd.path_complete)
+        parser.add_argument('output',help='Output file path',completer=cmd2.Cmd.path_complete)
 
     @classmethod
     def run(cls,stmt,workspace):

@@ -671,7 +671,7 @@ class Workspace():
             print(" > ".join(str(link) for link in chain))
 
     def path_del(self, src, dst):
-        if src.lower() != "local":
+        if str(src).lower() != "local":
             if src not in [host.name for host in Host.find_all()]:
                 print("Not a known Host name.")
                 return False

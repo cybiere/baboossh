@@ -71,7 +71,7 @@ class BaboosshExt():
 
     @classmethod
     def buildParser(cls,parser):
-        parser.add_argument('file',help='Private key file path',completer_method=cmd2.Cmd.path_complete)
+        parser.add_argument('file',help='Private key file path',completer=cmd2.Cmd.path_complete)
         parser.add_argument('passphrase',help='Private key passphrase',nargs="?")
 
     @classmethod

@@ -21,7 +21,7 @@ class BaboosshExt(object,metaclass=ExtStr):
     
     @classmethod
     def buildParser(cls,parser):
-        parser.add_argument('file',help='Path of file to send to target',completer_method=cmd2.Cmd.path_complete)
+        parser.add_argument('file',help='Path of file to send to target',completer=cmd2.Cmd.path_complete)
 
     @classmethod
     def run(cls, connection, wspaceFolder, stmt):

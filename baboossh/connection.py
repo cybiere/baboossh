@@ -358,9 +358,13 @@ class Connection(metaclass=Unique):
                 print("\033[1;31mKO\033[0m.")
             return False
         except paramiko.ssh_exception.SSHException as exc:
-            if "Timeout" in str(exc):
+            if "Timeout" in str(exc) or "Error reading SSH protocol banner" in str(exc):
                 if verbose:
                     print("\033[1;31mKO\033[0m.")
+                return False
+            if "No existing session" in str(exc):
+                if verbose:
+                    print("\033[1;31mKO\033[0m. No matching cipher")
                 return False
             if "No authentication methods available" in str(exc):
                 pass

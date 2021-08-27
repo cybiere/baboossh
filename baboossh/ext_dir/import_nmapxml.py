@@ -31,8 +31,8 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     @classmethod
     def buildParser(cls,parser):
-        parser.add_argument('nmapfile',help='NMAP file path',completer_method=cmd2.Cmd.path_complete)
-        parser.add_argument('from',help='Host from which scan was performed',nargs='?',choices_method=cls.params_parser_from)
+        parser.add_argument('nmapfile',help='NMAP file path',completer=cmd2.Cmd.path_complete)
+        parser.add_argument('from',help='Host from which scan was performed',nargs='?',choices_provider=cls.params_parser_from)
 
     @classmethod
     def run(cls,stmt,workspace):
