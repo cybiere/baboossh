@@ -2,7 +2,7 @@ import os
 import re
 from baboossh import User, Creds, Host, Endpoint, Tunnel, Path, Connection, Db, Extensions, WORKSPACES_DIR, Tag
 from baboossh.exceptions import NoPathError, WorkspaceVersionError, ConnectionClosedError
-from baboossh.utils import BABOOSSH_VERSION, is_workspace_compat
+from baboossh.utils import is_workspace_compat, BABOOSSH_VERSION
 
 class Workspace():
     """A container to hold all related objects

@@ -1,7 +1,7 @@
 import os
 
 WORKSPACES_DIR = os.path.join(os.path.expanduser("~"), ".baboossh")
-BABOOSSH_VERSION = "1.1.0"
+BABOOSSH_VERSION = "1.1.1"
 
 class Unique(type):
     def __call__(cls, *args, **kwargs):

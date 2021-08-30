@@ -19,7 +19,7 @@ import argparse
 import shutil
 import cmd2
 import tabulate
-from baboossh.utils import WORKSPACES_DIR
+from baboossh.utils import WORKSPACES_DIR, BABOOSSH_VERSION
 from baboossh.extensions import Extensions
 from baboossh.workspace import Workspace
 
@@ -88,31 +88,33 @@ class Shell(cmd2.Cmd):
 #################################################################
 
     def __get_option_creds(self):
-        return self.workspace.get_objects(creds=True, scope=True)
+        return [cmd2.CompletionItem("#"+str(creds.id), creds.obj.toList()) for creds in self.workspace.get_objects(creds=True, scope=True)]
 
     def __get_option_host(self):
-        return self.workspace.get_objects(hosts=True, scope=True)
+        return [cmd2.CompletionItem(str(host.name), "; ".join(str(e) for e in host.endpoints)) for host in self.workspace.get_objects(hosts=True, scope=True)]
 
     def __get_arg_workspaces(self):
         return [name for name in os.listdir(WORKSPACES_DIR) if os.path.isdir(os.path.join(WORKSPACES_DIR, name))]
 
     def __get_option_gateway(self):
-        return self.workspace.get_objects(local=True, hosts=True, scope=True)
+        return self.__get_host_or_local()
 
     def __get_option_user(self):
-        return self.workspace.get_objects(users=True, scope=True)
+        return [cmd2.CompletionItem(str(user), str(user)) for user in self.workspace.get_objects(users=True, scope=True)]
 
     def __get_option_endpoint(self):
-        return self.workspace.get_objects(endpoints=True, scope=True)
+        return [cmd2.CompletionItem(str(endpoint), "" if endpoint.host == None else str(endpoint.host)) for endpoint in self.workspace.get_objects(endpoints=True, scope=True)]
 
     def __get_option_endpoint_tag(self):
-        return self.workspace.get_objects(endpoints=True, scope=True, tags=True)
+        endpoints = [cmd2.CompletionItem(str(endpoint), "" if endpoint.host == None else str(endpoint.host)) for endpoint in self.workspace.get_objects(endpoints=True, scope=True)]
+        tags = [cmd2.CompletionItem("!"+str(tag.name), "; ".join(str(e) for e in tag.endpoints)) for tag in self.workspace.get_objects(tags=True, scope=True)]
+        return endpoints+tags
 
     def __get_option_payload(self):
         return Extensions.payloads.keys()
 
     def __get_option_connection(self):
-        return self.workspace.get_objects(connections=True, scope=True)
+        return [cmd2.CompletionItem(str(connection), "" if connection.endpoint.host == None else str(connection.endpoint.host)) for connection in self.workspace.get_objects(connections=True, scope=True)]
 
     def __get_search_fields_endpoint(self):
         return self.workspace.search_fields("Endpoint")
@@ -121,19 +123,21 @@ class Shell(cmd2.Cmd):
         return self.workspace.search_fields("Host")
 
     def __get_open_tunnels(self):
+        #TODO
         return self.workspace.get_objects(tunnels=True)
 
     def __get_run_targets(self):
-        return self.workspace.get_objects(connections=True, hosts=True, endpoints=True, scope=True)
+        return self.__get_option_connection() + self.__get_option_host() + self.__get_option_endpoint()
 
     def __get_host_or_local(self):
-        return self.workspace.get_objects(local=True, hosts=True, scope=True)
+        items = [cmd2.CompletionItem("local","BabooSSH host")]
+        return items+[cmd2.CompletionItem(str(host.name), "; ".join(str(e) for e in host.endpoints)) for host in self.workspace.get_objects(hosts=True, scope=True)]
 
     def __get_endpoint_or_host(self):
-        return self.workspace.get_objects(hosts=True, endpoints=True, scope=True)
+        return self.__get_option_host() + self.__get_option_endpoint()
 
     def __get_tag(self):
-        return self.workspace.get_objects(tags=True)
+        return [cmd2.CompletionItem(str(tag.name), "; ".join(str(e) for e in tag.endpoints)) for tag in self.workspace.get_objects(tags=True, scope=True)]
 
 #################################################################
 ###################         WORKSPACE         ###################
@@ -1193,7 +1197,7 @@ class Shell(cmd2.Cmd):
   %%   %%% %%%%%%%%,  %%   %%(%          %%         %     %%%     %%% *%%    %% 
   %%%%%%  ,%%     %%  %%%%%%   %%      ,%   %#   %%   %%%%%.  %%%%%.  *%%    %%
 
-Welcome to BabooSSH. To start, use "help -v" to list commands.'''
+Welcome to BabooSSH v\033[1;32m'''+BABOOSSH_VERSION+'''\033[0m. To start, use "help -v" to list commands.'''
 
         self.workspace = Workspace("default")
         self.__init_prompt()
