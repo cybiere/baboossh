@@ -19,7 +19,8 @@ import argparse
 import shutil
 import cmd2
 import tabulate
-from baboossh.utils import WORKSPACES_DIR, BABOOSSH_VERSION
+from baboossh.utils import WORKSPACES_DIR
+from baboossh.version import BABOOSSH_VERSION
 from baboossh.extensions import Extensions
 from baboossh.workspace import Workspace
 
