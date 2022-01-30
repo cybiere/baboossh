@@ -90,7 +90,6 @@ class Creds(metaclass=Unique):
 
     def auth(self, username, transport):
         """Authenticated to the Transport using the underlying Creds object"""
-        #TODO bubble exceptions
         return self.obj.auth(username, transport)
 
     @classmethod

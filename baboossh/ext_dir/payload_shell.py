@@ -33,7 +33,6 @@ class BaboosshExt(object,metaclass=ExtStr):
         if connection.transport is None:
             raise ConnectionClosedError
 
-        #TODO : error handling
         chan = connection.transport.open_channel("session",timeout=3)
         chan.get_pty()
         chan.invoke_shell()
