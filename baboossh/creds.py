@@ -88,10 +88,10 @@ class Creds(metaclass=Unique):
         unstore_targets_merge(del_data, {"Creds":[type(self).get_id(self.creds_type, self.creds_content)]})
         return del_data
 
-    @property
-    def kwargs(self):
-        """Return the `Creds` as a dict compatible with `fabric.Connection`"""
-        return self.obj.getKwargs()
+    def auth(self, username, transport):
+        """Authenticated to the Transport using the underlying Creds object"""
+        #TODO bubble exceptions
+        return self.obj.auth(username, transport)
 
     @classmethod
     def find_all(cls, scope=None, found=None):

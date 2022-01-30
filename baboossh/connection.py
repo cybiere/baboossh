@@ -270,47 +270,6 @@ class Connection(metaclass=Unique):
             raise ValueError("No working connection for supplied endpoint")
         return connection
     
-    def open_transport(self, gateway="auto", verbose=False, target=False):
-        #TODO
-        if self.transport is not None and gateway == "auto":
-            if target:
-                print("Connection to \033[1;34m"+str(self)+"\033[0m already open. > \033[1;32mOK\033[0m")
-            return True
-
-        hostname = ""
-        if self.endpoint.host is not None:
-            hostname = " ("+str(self.endpoint.host)+")"
-        if target:
-            print("Connecting to \033[1;34m"+str(self)+"\033[0m"+hostname+" > ", end="", flush=True)
-
-
-        sock = None
-        if gateway is not None:
-            if gateway == "auto":
-                gateway = Connection.find_one(gateway_to=self.endpoint)
-                if gateway is not None:
-                    if not gateway.open(verbose=False):
-                        raise ConnectionClosedError("Could not open gateway "+str(gateway))
-                    sock = gateway.transport.open_channel('direct-tcpip', (self.endpoint.ip, self.endpoint.port), ('', 0));
-                else:
-                    sock = None
-            else:
-                if not gateway.open(verbose=False):
-                    raise ConnectionClosedError("Could not open gateway "+str(gateway))
-                sock = gateway.transport.open_channel('direct-tcpip', (self.endpoint.ip, self.endpoint.port), ('', 0));
-        else:
-            sock = None
-        
-        if sock is None :
-            sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-            sock.connect((self.endpoint.ip,self.endpoint.port))
-
-        transport = paramiko.Transport(sock)
-        transport.start_client()
-        if verbose:
-            print("\033[1;32mOK\033[0m")
-        return (sock,transport,gateway)
-
     def identify(self, socket):
         #TODO
         """Indentify the host"""
@@ -343,10 +302,30 @@ class Connection(metaclass=Unique):
         """
         return True
 
+    def open_transport(self, gateway="auto"):
+        sock = None
+        if gateway == "auto":
+            gateway = Connection.find_one(gateway_to=self.endpoint)
+        if gateway is not None:
+            if not gateway.open(verbose=False):
+                raise ConnectionClosedError("Could not open gateway "+str(gateway))
+            sock = gateway.transport.open_channel('direct-tcpip', (self.endpoint.ip, self.endpoint.port), ('', 0));
+        else:
+            sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+            #TODO error management : OSError (no route to host), ConnectionRefusedError (Connection refused)
+            sock.connect((self.endpoint.ip,self.endpoint.port))
+
+        transport = paramiko.Transport(sock)
+        transport.start_client()
+        return (sock,transport, gateway)
+
     def probe(self, gateway="auto", verbose=True):
         #TODO
-        sock, transport, gateway = self.open_transport(gateway=gateway, verbose=verbose);
+        if gateway is not None:
+            if gateway == "auto":
+                gateway = Connection.find_one(gateway_to=self.endpoint)
 
+        sock, transport, gateway = self.open_transport(gateway=gateway);
         self.endpoint.reachable = True
         new_distance = 1 if gateway is None else gateway.endpoint.distance + 1
         if self.endpoint.distance is None or self.endpoint.distance > new_distance:
@@ -358,21 +337,23 @@ class Connection(metaclass=Unique):
 
     def open(self, verbose=False, target=False):
         #TODO
-
         if self.transport is not None:
+            #TODO check if still active (host could have went down)
             if target:
                 print("Connection to \033[1;34m"+str(self)+"\033[0m already open. > \033[1;32mOK\033[0m")
             return True
 
-        sock, transport, gateway = self.open_transport(verbose=verbose, target=target);
+        #TODO : error handling
+        sock, transport, gateway = self.open_transport();
         """
         if not self.open_transport(verbose=verbose, target=target):
             if verbose:
                 print("\033[1;31mKO\033[0m.")
             return False
         """
-
-        transport.auth_password("ubuntu","ubuntu")
+        
+        #TODO : creds error handling
+        self.creds.auth(username=self.user.name, transport=transport)
 
         """
         try:
@@ -401,7 +382,6 @@ class Connection(metaclass=Unique):
         elif verbose:
             print("\033[2;3m"+str(self)+"\033[22;23m > ", end="", flush=True)
         
-        """
         if gateway is None:
             path_src = None
         else:
@@ -414,7 +394,6 @@ class Connection(metaclass=Unique):
         path.save()
         self.save()
 
-        """
         if target:
             if self.endpoint.host is None:
                 #TODO
