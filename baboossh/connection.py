@@ -312,7 +312,7 @@ class Connection(metaclass=Unique):
             sock = gateway.transport.open_channel('direct-tcpip', (self.endpoint.ip, self.endpoint.port), ('', 0));
         else:
             sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-            #TODO error management : OSError (no route to host), ConnectionRefusedError (Connection refused)
+            sock.settimeout(3)
             sock.connect((self.endpoint.ip,self.endpoint.port))
 
         transport = paramiko.Transport(sock)
@@ -320,12 +320,13 @@ class Connection(metaclass=Unique):
         return (sock,transport, gateway)
 
     def probe(self, gateway="auto", verbose=True):
-        #TODO
         if gateway is not None:
             if gateway == "auto":
                 gateway = Connection.find_one(gateway_to=self.endpoint)
-
-        sock, transport, gateway = self.open_transport(gateway=gateway);
+        try:
+            sock, transport, gateway = self.open_transport(gateway=gateway);
+        except (TimeoutError, OSError, ConnectionRefusedError) as err:
+            return False
         self.endpoint.reachable = True
         new_distance = 1 if gateway is None else gateway.endpoint.distance + 1
         if self.endpoint.distance is None or self.endpoint.distance > new_distance:
@@ -336,46 +337,43 @@ class Connection(metaclass=Unique):
         return True
 
     def open(self, verbose=False, target=False):
-        #TODO
         if self.transport is not None:
-            #TODO check if still active (host could have went down)
-            if target:
-                print("Connection to \033[1;34m"+str(self)+"\033[0m already open. > \033[1;32mOK\033[0m")
-            return True
+            if not self.transport.is_active():
+                print("Connection to \033[1;34m"+str(self)+"\033[0m went inactive, Closing... ", end="", flush=True)
+                self.close()
+            else:
+                if target:
+                    print("Connection to \033[1;34m"+str(self)+"\033[0m already open. > \033[1;32mOK\033[0m")
+                return True
 
-        #TODO : error handling
-        sock, transport, gateway = self.open_transport();
-        """
-        if not self.open_transport(verbose=verbose, target=target):
-            if verbose:
-                print("\033[1;31mKO\033[0m.")
-            return False
-        """
-        
-        #TODO : creds error handling
-        self.creds.auth(username=self.user.name, transport=transport)
-
-        """
+        if target:
+            print("Connecting to \033[1;34m"+str(self)+"\033[0m... ", end="", flush=True)
         try:
-            conn.open()
-        except paramiko.ssh_exception.NoValidConnectionsError:
+            sock, transport, gateway = self.open_transport();
+        except (TimeoutError, OSError, ConnectionRefusedError) as err:
             if target:
                 print("\033[1;31mKO\033[0m. Could not reach destination.")
-            if gw is not None:
-                #TODO remove path
-                pass
             return False
-        except (paramiko.ssh_exception.AuthenticationException, paramiko.ssh_exception.SSHException) as exc:
-            if isinstance(exc, paramiko.ssh_exception.AuthenticationException) or "encountered" in str(exc):
-                if target:
-                    print("\033[1;31mKO\033[0m. Authentication failed.")
-                return False
-            raise exc
-        except socket.timeout:
-            if verbose:
-                print("\033[1;31mKO\033[0m. Could not open socket to "+str(self.endpoint))
+        except ConnectionClosedError as err:
+            if target:
+                print("\033[1;31mKO\033[0m.")
+                print(err, "- Please try probe-ing another path")
             return False
-        """
+        
+        try:
+            self.creds.auth(username=self.user.name, transport=transport)
+        except paramiko.BadAuthenticationType:
+            if target:
+                print("\033[1;31mKO\033[0m. Authentication method not allowed.")
+            return False
+        except paramiko.AuthenticationException:
+            if target:
+                print("\033[1;31mKO\033[0m. Authentication failed.")
+            return False
+        except paramiko.SSHException as err: 
+            if target:
+                print("\033[1;31mKO\033[0m. Network error: ", err)
+            return False
 
         if target:
             print("\033[1;32mOK\033[0m")
@@ -410,17 +408,14 @@ class Connection(metaclass=Unique):
         return True
 
     def close(self):
-        #TODO
         if self.transport is None:
             return
-        """
         nb_tunnels = len(self.used_by_tunnels)
         if nb_tunnels != 0:
             print(str(nb_tunnels)+" tunnel(s) are open using this connection, please close tunnels first.")
             return
         for connection in self.used_by_connections:
             connection.close()
-        """
         self.transport.close()
         self.transport = None
         self.sock.close()
