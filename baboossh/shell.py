@@ -656,7 +656,7 @@ class Shell(cmd2.Cmd):
             if not show_all:
                 if not connection.scope:
                     continue
-            data.append([connection.endpoint, connection.user, connection.creds, "o" if connection.conn is not None else ""])
+            data.append([connection.endpoint, connection.user, connection.creds, "o" if connection.transport is not None else ""])
         print(tabulate.tabulate(data, headers=["Endpoint", "User", "Creds", "Open"]))
         return True
 

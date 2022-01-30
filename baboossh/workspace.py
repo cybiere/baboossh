@@ -910,7 +910,7 @@ class Workspace():
         for tunnel in self.tunnels.values():
             tunnel.close()
         for connection in Connection.find_all():
-            if connection.conn is not None:
+            if connection.transport is not None:
                 connection.close()
         for obj in self.store.values():
             for instance in obj.values():
