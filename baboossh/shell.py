@@ -19,7 +19,8 @@ import argparse
 import shutil
 import cmd2
 import tabulate
-from baboossh.utils import WORKSPACES_DIR, BABOOSSH_VERSION
+from baboossh.utils import WORKSPACES_DIR
+from baboossh.version import BABOOSSH_VERSION
 from baboossh.extensions import Extensions
 from baboossh.workspace import Workspace
 
@@ -654,7 +655,7 @@ class Shell(cmd2.Cmd):
             if not show_all:
                 if not connection.scope:
                     continue
-            data.append([connection.endpoint, connection.user, connection.creds, "o" if connection.conn is not None else ""])
+            data.append([connection.endpoint, connection.user, connection.creds, "o" if connection.transport is not None else ""])
         print(tabulate.tabulate(data, headers=["Endpoint", "User", "Creds", "Open"]))
         return True
 

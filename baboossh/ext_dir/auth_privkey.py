@@ -110,6 +110,7 @@ class BaboosshExt():
         return ser
 
     def getKwargs(self):
+        #TODO replace with auth method
         if self.haspass:
             if self.passphrase == "":
                 raise ValueError("Cannot use this privkey, passphrase is unknown")

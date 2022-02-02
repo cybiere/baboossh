@@ -2,7 +2,8 @@ import os
 import re
 from baboossh import User, Creds, Host, Endpoint, Tunnel, Path, Connection, Db, Extensions, WORKSPACES_DIR, Tag
 from baboossh.exceptions import NoPathError, WorkspaceVersionError, ConnectionClosedError
-from baboossh.utils import is_workspace_compat, BABOOSSH_VERSION
+from baboossh.utils import is_workspace_compat
+from baboossh.version import BABOOSSH_VERSION
 
 class Workspace():
     """A container to hold all related objects
@@ -909,7 +910,7 @@ class Workspace():
         for tunnel in self.tunnels.values():
             tunnel.close()
         for connection in Connection.find_all():
-            if connection.conn is not None:
+            if connection.transport is not None:
                 connection.close()
         for obj in self.store.values():
             for instance in obj.values():

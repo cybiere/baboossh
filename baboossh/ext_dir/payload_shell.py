@@ -1,4 +1,11 @@
 from baboossh.exceptions import ConnectionClosedError
+from paramiko.py3compat import u
+import select
+import termios
+import tty
+import sys
+
+
 
 class ExtStr(type):
     def __str__(self):
@@ -23,15 +30,40 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     @classmethod
     def run(cls, connection,wspaceFolder, stmt):
-        if connection.conn is None:
+        if connection.transport is None:
             raise ConnectionClosedError
 
+        chan = connection.transport.open_channel("session",timeout=3)
+        chan.get_pty()
+        chan.invoke_shell()
+        
+        oldtty = termios.tcgetattr(sys.stdin)
         try:
-            connection.conn.run("sh",pty="vt100")
-        except OSError as e:
-            print(e.errno)
-        except Exception as e:
-            print("Error : "+str(e))
-            return False
+            tty.setraw(sys.stdin.fileno())
+            tty.setcbreak(sys.stdin.fileno())
+            chan.settimeout(0.0)
+        
+            while True:
+                r, w, e = select.select([chan, sys.stdin], [], [])
+                if chan in r:
+                    try:
+                        x = u(chan.recv(1024))
+                        if len(x) == 0:
+                            sys.stdout.write("\r\n*** EOF\r\n")
+                            break
+                        sys.stdout.write(x)
+                        sys.stdout.flush()
+                    except socket.timeout:
+                        pass
+                if sys.stdin in r:
+                    x = sys.stdin.read(1)
+                    if len(x) == 0:
+                        break
+                    chan.send(x)
+        
+        finally:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, oldtty)
+
+        chan.close()
         return True
     

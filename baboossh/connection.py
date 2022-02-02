@@ -1,36 +1,9 @@
 import hashlib
 import paramiko
-import fabric
 from baboossh import Db, Endpoint, User, Creds, Path, Host, Tag
 from baboossh.exceptions import *
 from baboossh.utils import Unique
 import socket
-
-try:
-    from invoke.vendor.six import string_types
-except ImportError:
-    from six import string_types
-
-def monkey_open_gateway(self):
-    """
-    This is a monkey patch of fabric.Connection.open_gateway which simply
-    forwards the timeout to the call on open_channel
-    """
-
-    if isinstance(self.gateway, string_types):
-        ssh_conf = SSHConfig()
-        dummy = "Host {}\n    ProxyCommand {}"
-        ssh_conf.parse(StringIO(dummy.format(self.host, self.gateway)))
-        return ProxyCommand(ssh_conf.lookup(self.host)["proxycommand"])
-    self.gateway.open()
-    return self.gateway.transport.open_channel(
-        kind="direct-tcpip",
-        dest_addr=(self.host, int(self.port)),
-        src_addr=("", 0),
-        timeout=self.connect_timeout
-    )
-
-fabric.Connection.open_gateway = monkey_open_gateway
 
 class Connection(metaclass=Unique):
     """A :class:`User` and :class:`Creds` to authenticate on an :class:`Endpoint`
@@ -67,7 +40,8 @@ class Connection(metaclass=Unique):
         self.creds = cred
         self.id = None
         self.root = False
-        self.conn = None
+        self.sock = None
+        self.transport = None
         self.used_by_connections = []
         self.used_by_tunnels = []
         if user is None or cred is None:
@@ -295,9 +269,11 @@ class Connection(metaclass=Unique):
         if connection is None:
             raise ValueError("No working connection for supplied endpoint")
         return connection
-
+    
     def identify(self, socket):
+        #TODO
         """Indentify the host"""
+        """
         try:
             result = socket.run("hostname", hide='both', warn = True)
             hostname = result.stdout.rstrip()
@@ -323,124 +299,87 @@ class Connection(metaclass=Unique):
         except Exception as exc:
             print("Error : "+str(exc))
             return False
+        """
         return True
 
+    def open_transport(self, gateway="auto"):
+        sock = None
+        if gateway == "auto":
+            gateway = Connection.find_one(gateway_to=self.endpoint)
+        if gateway is not None:
+            if not gateway.open(verbose=False):
+                raise ConnectionClosedError("Could not open gateway "+str(gateway))
+            sock = gateway.transport.open_channel('direct-tcpip', (self.endpoint.ip, self.endpoint.port), ('', 0));
+        else:
+            sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+            sock.settimeout(3)
+            sock.connect((self.endpoint.ip,self.endpoint.port))
+
+        transport = paramiko.Transport(sock)
+        transport.start_client()
+        return (sock,transport, gateway)
+
     def probe(self, gateway="auto", verbose=True):
-        if verbose:
-            print("Reaching \033[1;34m"+str(self.endpoint)+"\033[0m > ", end="", flush=True)
         if gateway is not None:
             if gateway == "auto":
                 gateway = Connection.find_one(gateway_to=self.endpoint)
-                if gateway is not None:
-                    if not gateway.open(verbose=False):
-                        raise ConnectionClosedError("Could not open gateway "+str(gateway))
-                    gw = gateway.conn
-                else:
-                    gw = None
-            else:
-                if not gateway.open(verbose=False):
-                    raise ConnectionClosedError("Could not open gateway "+str(gateway))
-                gw = gateway.conn
-        else:
-            gw = None
-
-        paramiko_args = {'look_for_keys':False, 'allow_agent':False}
-
-        conn = fabric.Connection(host=self.endpoint.ip, port=self.endpoint.port, user="user", connect_kwargs=paramiko_args, gateway=gw, connect_timeout=3)
         try:
-            conn.open()
-        except paramiko.ssh_exception.NoValidConnectionsError:
-            if verbose:
-                print("\033[1;31mKO\033[0m.")
+            sock, transport, gateway = self.open_transport(gateway=gateway);
+        except (TimeoutError, OSError, ConnectionRefusedError) as err:
             return False
-        except paramiko.ssh_exception.ChannelException:
-            if verbose:
-                print("\033[1;31mKO\033[0m.")
-            return False
-        except paramiko.ssh_exception.SSHException as exc:
-            if "Timeout" in str(exc) or "Error reading SSH protocol banner" in str(exc):
-                if verbose:
-                    print("\033[1;31mKO\033[0m.")
-                return False
-            if "No existing session" in str(exc):
-                if verbose:
-                    print("\033[1;31mKO\033[0m. No matching cipher")
-                return False
-            if "No authentication methods available" in str(exc):
-                pass
-            else:
-                raise exc
-        except socket.timeout:
-            if verbose:
-                print("\033[1;31mKO\033[0m.")
-            return False
-
-        if conn is not None:
-            conn.close()
-
-        if verbose:
-            print("\033[1;32mOK\033[0m")
-
         self.endpoint.reachable = True
-        new_distance = 1 if gw is None else gateway.endpoint.distance + 1
+        new_distance = 1 if gateway is None else gateway.endpoint.distance + 1
         if self.endpoint.distance is None or self.endpoint.distance > new_distance:
             self.endpoint.distance = new_distance
         self.endpoint.save()
+        transport.close()
+        sock.close()
         return True
 
     def open(self, verbose=False, target=False):
-        if self.conn is not None:
-            if target:
-                print("Connection to \033[1;34m"+str(self)+"\033[0m already open. > \033[1;32mOK\033[0m")
-            return True
+        if self.transport is not None:
+            if not self.transport.is_active():
+                print("Connection to \033[1;34m"+str(self)+"\033[0m went inactive, Closing... ", end="", flush=True)
+                self.close()
+            else:
+                if target:
+                    print("Connection to \033[1;34m"+str(self)+"\033[0m already open. > \033[1;32mOK\033[0m")
+                return True
 
-        hostname = ""
-        if self.endpoint.host is not None:
-            hostname = " ("+str(self.endpoint.host)+")"
         if target:
-            print("Connecting to \033[1;34m"+str(self)+"\033[0m"+hostname+" > ", end="", flush=True)
-
-        gateway = Connection.find_one(gateway_to=self.endpoint)
-        if gateway is not None:
-            if not gateway.open(verbose=verbose):
-                raise ConnectionClosedError("Could not open gateway "+str(gateway))
-            gw = gateway.conn
-        else:
-            gw = None
-
+            print("Connecting to \033[1;34m"+str(self)+"\033[0m... ", end="", flush=True)
         try:
-            paramiko_args = {**self.creds.kwargs, 'look_for_keys':False, 'allow_agent':False}
-        except ValueError as exc:
-            if target:
-                print("\033[1;31mKO\033[0m. "+str(exc))
-            return False
-        conn = fabric.Connection(host=self.endpoint.ip, port=self.endpoint.port, user=self.user.name, connect_kwargs=paramiko_args, gateway=gw, connect_timeout=3)
-        try:
-            conn.open()
-        except paramiko.ssh_exception.NoValidConnectionsError:
+            sock, transport, gateway = self.open_transport();
+        except (TimeoutError, OSError, ConnectionRefusedError) as err:
             if target:
                 print("\033[1;31mKO\033[0m. Could not reach destination.")
-            if gw is not None:
-                #TODO remove path
-                pass
             return False
-        except (paramiko.ssh_exception.AuthenticationException, paramiko.ssh_exception.SSHException) as exc:
-            if isinstance(exc, paramiko.ssh_exception.AuthenticationException) or "encountered" in str(exc):
-                if target:
-                    print("\033[1;31mKO\033[0m. Authentication failed.")
-                return False
-            raise exc
-        except socket.timeout:
-            if verbose:
-                print("\033[1;31mKO\033[0m. Could not open socket to "+str(self.endpoint))
+        except ConnectionClosedError as err:
+            if target:
+                print("\033[1;31mKO\033[0m.")
+                print(err, "- Please try probe-ing another path")
             return False
-
+        
+        try:
+            self.creds.auth(username=self.user.name, transport=transport)
+        except paramiko.BadAuthenticationType:
+            if target:
+                print("\033[1;31mKO\033[0m. Authentication method not allowed.")
+            return False
+        except paramiko.AuthenticationException:
+            if target:
+                print("\033[1;31mKO\033[0m. Authentication failed.")
+            return False
+        except paramiko.SSHException as err: 
+            if target:
+                print("\033[1;31mKO\033[0m. Network error: ", err)
+            return False
 
         if target:
             print("\033[1;32mOK\033[0m")
         elif verbose:
             print("\033[2;3m"+str(self)+"\033[22;23m > ", end="", flush=True)
-
+        
         if gateway is None:
             path_src = None
         else:
@@ -455,10 +394,11 @@ class Connection(metaclass=Unique):
 
         if target:
             if self.endpoint.host is None:
-                self.identify(conn)
-
-        self.conn = conn
-
+                #TODO
+#                self.identify(conn)
+                pass
+        self.transport = transport
+        self.sock = sock
         return True
 
     def run(self, payload, current_workspace_directory, stmt, verbose=False):
@@ -468,7 +408,7 @@ class Connection(metaclass=Unique):
         return True
 
     def close(self):
-        if self.conn is None:
+        if self.transport is None:
             return
         nb_tunnels = len(self.used_by_tunnels)
         if nb_tunnels != 0:
@@ -476,8 +416,10 @@ class Connection(metaclass=Unique):
             return
         for connection in self.used_by_connections:
             connection.close()
-        self.conn.close()
-        self.conn = None
+        self.transport.close()
+        self.transport = None
+        self.sock.close()
+        self.sock = None
         print("Closed "+str(self))
 
     def __str__(self):

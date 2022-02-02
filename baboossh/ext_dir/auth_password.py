@@ -25,8 +25,10 @@ class BaboosshExt():
     def serialize(self):
         return self.creds
 
-    def getKwargs(self):
-        return {"password":self.creds}
+    def auth(self, username, transport):
+        #TODO error handling
+        transport.auth_password(username, self.creds)
+        return True
 
     @property
     def identifier(self):

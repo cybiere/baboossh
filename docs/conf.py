@@ -14,7 +14,9 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../'))
 sys.path.insert(0, os.path.abspath('../baboossh'))
-from baboossh.utils import BABOOSSH_VERSION
+
+with open("../baboossh/version.py", "r") as fv:
+    version = fv.read().split('"')[1];
 
 
 # -- Project information -----------------------------------------------------
@@ -24,7 +26,7 @@ copyright = '2020, Cybiere'
 author = 'Cybiere'
 
 # The full version, including alpha/beta/rc tags
-release = BABOOSSH_VERSION
+release = version
 
 master_doc = 'index'
 

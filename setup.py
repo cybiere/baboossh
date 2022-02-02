@@ -1,12 +1,14 @@
 from setuptools import setup, find_namespace_packages
-from baboossh.utils import BABOOSSH_VERSION
 
 with open("README.rst", "r") as fh:
     long_description = fh.read()
 
+with open("baboossh/version.py", "r") as fv:
+    version = fv.read().split('"')[1];
+
 setup(
     name="baboossh",
-    version=BABOOSSH_VERSION,
+    version=version,
     packages=find_namespace_packages(include=['baboossh*']),
     scripts=['bin/baboossh'],
 
