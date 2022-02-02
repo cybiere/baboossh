@@ -123,8 +123,7 @@ class Shell(cmd2.Cmd):
         return self.workspace.search_fields("Host")
 
     def __get_open_tunnels(self):
-        #TODO
-        return self.workspace.get_objects(tunnels=True)
+        return [cmd2.CompletionItem(str(tunnel.port), str(tunnel.connection)) for tunnel in self.workspace.get_objects(tunnels=True)]
 
     def __get_run_targets(self):
         return self.__get_option_connection() + self.__get_option_host() + self.__get_option_endpoint()

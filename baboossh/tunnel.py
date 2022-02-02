@@ -38,8 +38,12 @@ class SocksProxy(StreamRequestHandler):
         if address_type == 1:  # IPv4
             address = socket.inet_ntoa(self.connection.recv(4))
         elif address_type == 3:  # Domain name
-            domain_length = ord(self.connection.recv(1)[0])
-            address = self.connection.recv(domain_length)
+            domlen = self.connection.recv(1);
+            domain_length = domlen[0]
+            address = self.connection.recv(domain_length).decode("utf-8")
+        else:
+            print("IPv6 addresses not supported yet")
+            return
 
         port = struct.unpack('!H', self.connection.recv(2))[0]
 
