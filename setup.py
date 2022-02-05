@@ -12,7 +12,7 @@ setup(
     packages=find_namespace_packages(include=['baboossh*']),
     scripts=['bin/baboossh'],
 
-    install_requires=['cmd2','tabulate','fabric','paramiko','python-libnmap'],
+    install_requires=['cmd2','tabulate','paramiko','python-libnmap'],
 
     package_data={
         # If any package contains *.txt or *.rst files, include them:
