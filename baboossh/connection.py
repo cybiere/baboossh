@@ -3,6 +3,7 @@ import paramiko
 from baboossh import Db, Endpoint, User, Creds, Path, Host, Tag
 from baboossh.exceptions import *
 from baboossh.utils import Unique
+from paramiko.py3compat import u
 import socket
 
 class Connection(metaclass=Unique):
@@ -270,22 +271,75 @@ class Connection(metaclass=Unique):
             raise ValueError("No working connection for supplied endpoint")
         return connection
     
-    def identify(self, socket):
+    def identify(self):
         #TODO
         """Indentify the host"""
-        """
+        if self.transport is None:
+            raise ConnectionClosedError
         try:
-            result = socket.run("hostname", hide='both', warn = True)
-            hostname = result.stdout.rstrip()
-            result = socket.run("uname -a", hide='both', warn = True)
-            uname = result.stdout.rstrip()
-            result = socket.run("cat /etc/issue", hide='both', warn = True)
-            issue = result.stdout.rstrip()
-            result = socket.run("cat /etc/machine-id", hide='both', warn = True)
-            machine_id = result.stdout.rstrip()
-            result = socket.run("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done", hide='both', warn = True)
-            mac_str = result.stdout.rstrip()
+            ######## hostname ########
+            chan = self.transport.open_channel("session",timeout=3)
+            hostname=""
+            chan.exec_command("hostname")
+            try:
+                x = u(chan.recv(1024))
+                while len(x) != 0:
+                    hostname = hostname + x
+                    x = u(chan.recv(1024))
+            except socket.timeout:
+                pass
+            chan.close()
+            ######## uname ########
+            chan = self.transport.open_channel("session",timeout=3)
+            uname=""
+            chan.exec_command("uname -a")
+            try:
+                x = u(chan.recv(1024))
+                while len(x) != 0:
+                    uname = uname + x
+                    x = u(chan.recv(1024))
+            except socket.timeout:
+                pass
+            chan.close()
+            ######## issue ########
+            chan = self.transport.open_channel("session",timeout=3)
+            issue=""
+            chan.exec_command("cat /etc/issue")
+            try:
+                x = u(chan.recv(1024))
+                while len(x) != 0:
+                    issue = issue + x
+                    x = u(chan.recv(1024))
+            except socket.timeout:
+                pass
+            chan.close()
+            ######## machineid ########
+            chan = self.transport.open_channel("session",timeout=3)
+            machine_id=""
+            chan.exec_command("cat /etc/machine-id")
+            try:
+                x = u(chan.recv(1024))
+                while len(x) != 0:
+                    machine_id = machine_id + x
+                    x = u(chan.recv(1024))
+            except socket.timeout:
+                pass
+            chan.close()
+            ######## macs ########
+            chan = self.transport.open_channel("session",timeout=3)
+            mac_str=""
+            chan.exec_command("uname -a")
+            try:
+                x = u(chan.recv(1024))
+                while len(x) != 0:
+                    mac_str = mac_str + x
+                    x = u(chan.recv(1024))
+            except socket.timeout:
+                pass
             macs = mac_str.split()
+            chan.close()
+
+            ######## host ########
             new_host = Host(hostname, uname, issue, machine_id, macs)
             if new_host.id is None:
                 print("\t"+str(self)+" is a new host: " + new_host.name)
@@ -299,7 +353,6 @@ class Connection(metaclass=Unique):
         except Exception as exc:
             print("Error : "+str(exc))
             return False
-        """
         return True
 
     def open_transport(self, gateway="auto"):
@@ -393,13 +446,13 @@ class Connection(metaclass=Unique):
         path.save()
         self.save()
 
-        if target:
-            if self.endpoint.host is None:
-                #TODO
-#                self.identify(conn)
-                pass
         self.transport = transport
         self.sock = sock
+
+        if target:
+            if self.endpoint.host is None:
+                self.identify()
+                pass
         return True
 
     def run(self, payload, current_workspace_directory, stmt, verbose=False):
