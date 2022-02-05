@@ -1,6 +1,7 @@
 from os.path import basename
 import sys,cmd2
 from baboossh.exceptions import ConnectionClosedError
+from paramiko import SFTPClient
 
 class ExtStr(type):
     def __str__(self):
@@ -25,23 +26,25 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     @classmethod
     def run(cls, connection, wspaceFolder, stmt):
-        if connection.conn is None:
+        if connection.transport is None:
             raise ConnectionClosedError
 
         filepath = getattr(stmt,'file',None)
         if filepath is None:
             print("You must specify a path")
             return False
+        filename = basename(filepath)
+
+        #TODO err management
+        sftp = SFTPClient.from_transport(connection.transport)
         print("Pushing file "+filepath+"... ",end="")
         sys.stdout.flush()
-        filename = basename(filepath)
         try:
-            connection.conn.put(filepath,filename)
+            sftp.put(filepath,filename)
         except Exception as e:
             print("Error "+str(type(e))+": "+str(e))
             return False
         print("Done")
         print("File pushed as ~/"+filename)
-
 
 

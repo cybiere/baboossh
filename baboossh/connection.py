@@ -303,6 +303,7 @@ class Connection(metaclass=Unique):
         return True
 
     def open_transport(self, gateway="auto"):
+        #TODO check verbosity levels
         sock = None
         if gateway == "auto":
             gateway = Connection.find_one(gateway_to=self.endpoint)
