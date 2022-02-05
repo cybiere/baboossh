@@ -289,6 +289,7 @@ class Connection(metaclass=Unique):
             except socket.timeout:
                 pass
             chan.close()
+            hostname = hostname.rstrip()
             ######## uname ########
             chan = self.transport.open_channel("session",timeout=3)
             uname=""
@@ -301,6 +302,7 @@ class Connection(metaclass=Unique):
             except socket.timeout:
                 pass
             chan.close()
+            uname = uname.rstrip()
             ######## issue ########
             chan = self.transport.open_channel("session",timeout=3)
             issue=""
@@ -313,6 +315,7 @@ class Connection(metaclass=Unique):
             except socket.timeout:
                 pass
             chan.close()
+            issue = issue.rstrip()
             ######## machineid ########
             chan = self.transport.open_channel("session",timeout=3)
             machine_id=""
@@ -325,10 +328,11 @@ class Connection(metaclass=Unique):
             except socket.timeout:
                 pass
             chan.close()
+            machine_id = machine_id.rstrip()
             ######## macs ########
             chan = self.transport.open_channel("session",timeout=3)
             mac_str=""
-            chan.exec_command("uname -a")
+            chan.exec_command("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done")
             try:
                 x = u(chan.recv(1024))
                 while len(x) != 0:
@@ -336,6 +340,7 @@ class Connection(metaclass=Unique):
                     x = u(chan.recv(1024))
             except socket.timeout:
                 pass
+            mac_str = mac_str.rstrip()
             macs = mac_str.split()
             chan.close()
 

@@ -529,9 +529,7 @@ class Workspace():
                 if len(creds) != 1:
                     working_connections = Connection.find_all(endpoint=endpoint, user=user)
                     if not force and working_connections:
-                        print("Connection already found with user "+str(user)+" on endpoint \
-                                "+str(endpoint)+", creds bruteforcing is disabled. \
-                                Specify creds or use --force.")
+                        print("Connection already found with user "+str(user)+" on endpoint "+str(endpoint)+", creds bruteforcing is disabled. Specify creds or use --force.")
                         continue
                 for cred in creds:
                     conn = Connection(endpoint, user, cred)
@@ -789,11 +787,9 @@ class Workspace():
                 path = Path(host, endpoint)
                 path.save()
                 if host is None:
-                    print("\033[1;32mOK\033[0m: reached \
-                            directly from \033[1;34mlocal\033[0m.")
+                    print("\033[1;32mOK\033[0m: reached directly from \033[1;34mlocal\033[0m.")
                 else:
-                    print("\033[1;32mOK\033[0m: reached \
-                            using \033[1;34m"+str(host)+"\033[0m as gateway")
+                    print("\033[1;32mOK\033[0m: reached using \033[1;34m"+str(host)+"\033[0m as gateway")
             else:
                 print("\033[1;31mKO\033[0m: could not reach the endpoint.")
             if verbose:

