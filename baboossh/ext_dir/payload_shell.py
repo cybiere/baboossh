@@ -4,6 +4,7 @@ import select
 import termios
 import tty
 import sys
+import socket
 
 
 
