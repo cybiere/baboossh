@@ -870,7 +870,7 @@ class Workspace():
         if creds:
             ret = ret + Creds.find_all(scope=scope)
         if tunnels:
-            ret = ret + list(self.tunnels.keys())
+            ret = ret + list(self.tunnels.values())
         if paths:
             ret = ret + Path.find_all()
         if tags:
