@@ -38,7 +38,7 @@ class SocksProxy(StreamRequestHandler):
         if address_type == 1:  # IPv4
             address = socket.inet_ntoa(self.connection.recv(4))
         elif address_type == 3:  # Domain name
-            domlen = self.connection.recv(1);
+            domlen = self.connection.recv(1)
             domain_length = domlen[0]
             address = self.connection.recv(domain_length).decode("utf-8")
         else:

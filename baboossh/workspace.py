@@ -1,6 +1,7 @@
 import os
 import re
-from baboossh import User, Creds, Host, Endpoint, Tunnel, Path, Connection, Db, Extensions, WORKSPACES_DIR, Tag
+from baboossh import User, Creds, Host, Endpoint, Tunnel
+from baboossh import Path, Connection, Db, Extensions, WORKSPACES_DIR, Tag
 from baboossh.exceptions import NoPathError, WorkspaceVersionError, ConnectionClosedError
 from baboossh.utils import is_workspace_compat
 from baboossh.version import BABOOSSH_VERSION
@@ -33,7 +34,8 @@ class Workspace():
             print("Cannot use workspace with empty name")
             raise ValueError
         if re.match(r'^[\w_\.-]+$', name) is None:
-            print('Invalid characters in workspace name. Allowed characters are letters, numbers and ._-')
+            print('Invalid characters in workspace name. \
+                    Allowed characters are letters, numbers and ._-')
             raise ValueError
         workspace_folder = os.path.join(WORKSPACES_DIR, name)
         if not os.path.exists(workspace_folder):
@@ -41,10 +43,10 @@ class Workspace():
                 os.mkdir(workspace_folder)
                 os.mkdir(os.path.join(workspace_folder, "loot"))
                 os.mkdir(os.path.join(workspace_folder, "keys"))
-                with open(os.path.join(workspace_folder, "workspace.version"), "w") as f:
-                    f.write(BABOOSSH_VERSION)
+                with open(os.path.join(workspace_folder, "workspace.version"), "w") as file:
+                    file.write(BABOOSSH_VERSION)
             except OSError:
-                print("Creation of the directory %s failed" % workspace_folder)
+                print("Creation of the directory " + workspace_folder + " failed")
                 raise OSError
             print("Workspace "+name+" created")
         else:
@@ -58,7 +60,8 @@ class Workspace():
         if name == "":
             raise ValueError("Cannot use workspace with empty name")
         if re.match(r'^[\w_\.-]+$', name) is None:
-            print('Invalid characters in workspace name. Allowed characters are letters, numbers and ._-')
+            print('Invalid characters in workspace name. \
+                    Allowed characters are letters, numbers and ._-')
             raise ValueError
         self.workspace_folder = os.path.join(WORKSPACES_DIR, name)
         if not os.path.exists(self.workspace_folder):
@@ -526,7 +529,9 @@ class Workspace():
                 if len(creds) != 1:
                     working_connections = Connection.find_all(endpoint=endpoint, user=user)
                     if not force and working_connections:
-                        print("Connection already found with user "+str(user)+" on endpoint "+str(endpoint)+", creds bruteforcing is disabled. Specify creds or use --force.")
+                        print("Connection already found with user "+str(user)+" on endpoint \
+                                "+str(endpoint)+", creds bruteforcing is disabled. \
+                                Specify creds or use --force.")
                         continue
                 for cred in creds:
                     conn = Connection(endpoint, user, cred)
@@ -667,7 +672,8 @@ class Workspace():
         if chain[0] is None:
             chain[0] = "local"
         if as_ip:
-            print(" > ".join(str(link.closest_endpoint) if isinstance(link, Host) else str(link) for link in chain))
+            print(" > ".join(str(link.closest_endpoint) \
+                    if isinstance(link, Host) else str(link) for link in chain))
         else:
             print(" > ".join(str(link) for link in chain))
 
@@ -783,9 +789,11 @@ class Workspace():
                 path = Path(host, endpoint)
                 path.save()
                 if host is None:
-                    print("\033[1;32mOK\033[0m: reached directly from \033[1;34mlocal\033[0m.")
+                    print("\033[1;32mOK\033[0m: reached \
+                            directly from \033[1;34mlocal\033[0m.")
                 else:
-                    print("\033[1;32mOK\033[0m: reached using \033[1;34m"+str(host)+"\033[0m as gateway")
+                    print("\033[1;32mOK\033[0m: reached \
+                            using \033[1;34m"+str(host)+"\033[0m as gateway")
             else:
                 print("\033[1;31mKO\033[0m: could not reach the endpoint.")
             if verbose:
@@ -855,7 +863,8 @@ class Workspace():
 ###################          GETTERS          ###################
 #################################################################
 
-    def get_objects(self, local=False, hosts=False, connections=False, endpoints=False, users=False, creds=False, tunnels=False, paths=False, scope=None, tags=None):
+    def get_objects(self, local=False, hosts=False, connections=False, endpoints=False, \
+            users=False, creds=False, tunnels=False, paths=False, scope=None, tags=None):
         ret = []
         if local:
             ret.append("local")

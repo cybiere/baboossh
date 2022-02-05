@@ -49,12 +49,14 @@ class User(metaclass=Unique):
                     scope = ?,
                     found = ?
                 WHERE id = ?''',
-                           (self.name, self.scope, self.found.id if self.found is not None else None, self.id))
+                           (self.name, self.scope, self.found.id \
+                                   if self.found is not None else None, self.id))
         else:
             #The user doesn't exists in database : INSERT
             cursor.execute('''INSERT INTO users(username, scope, found)
                 VALUES (?, ?, ?) ''',
-                           (self.name, self.scope, self.found.id if self.found is not None else None))
+                           (self.name, self.scope, self.found.id \
+                                   if self.found is not None else None))
             cursor.close()
             cursor = Db.get().cursor()
             cursor.execute('SELECT id FROM users WHERE username=?', (self.name, ))
@@ -102,9 +104,11 @@ class User(metaclass=Unique):
                 req = cursor.execute('SELECT username FROM users WHERE scope=?', (scope, ))
         else:
             if scope is None:
-                req = cursor.execute('SELECT username FROM users WHERE found=?', (found.id if found is not None else None, ))
+                req = cursor.execute('SELECT username FROM users WHERE found=?', \
+                        (found.id if found is not None else None, ))
             else:
-                req = cursor.execute('SELECT username FROM users WHERE found=? AND scope=?', (found.id if found is not None else None, scope))
+                req = cursor.execute('SELECT username FROM users WHERE found=? AND scope=?', \
+                        (found.id if found is not None else None, scope))
         for row in req:
             ret.append(User(row[0]))
         cursor.close()
