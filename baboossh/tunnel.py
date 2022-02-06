@@ -50,7 +50,7 @@ class SocksProxy(StreamRequestHandler):
         # reply
         try:
             if cmd == 1:  # CONNECT
-                remote = self.server.output.transport.open_channel(
+                remote = self.server.output.open_channel(
                     kind="direct-tcpip",
                     dest_addr=(address, port),
                     src_addr=("", 0)
@@ -119,7 +119,7 @@ class Tunnel():
         self.connection.open()
         self.connection.used_by_tunnels.append(self)
         self.server = ThreadingTCPServer(('127.0.0.1', port), SocksProxy)
-        self.server.output = self.connection.conn
+        self.server.output = self.connection.transport
         ip, newport = self.server.server_address
         self.port = newport
         self.thread = threading.Thread(target=self.server.serve_forever)
