@@ -4,6 +4,7 @@ from baboossh import Db, Endpoint, User, Creds, Path, Host, Tag
 from baboossh.exceptions import *
 from baboossh.utils import Unique
 import socket
+import select
 
 class Connection(metaclass=Unique):
     """A :class:`User` and :class:`Creds` to authenticate on an :class:`Endpoint`
@@ -270,22 +271,24 @@ class Connection(metaclass=Unique):
             raise ValueError("No working connection for supplied endpoint")
         return connection
     
-    def identify(self, socket):
-        #TODO
-        """Indentify the host"""
-        """
+    def identify(self):
+        """Identify the host"""
         try:
-            result = socket.run("hostname", hide='both', warn = True)
-            hostname = result.stdout.rstrip()
-            result = socket.run("uname -a", hide='both', warn = True)
-            uname = result.stdout.rstrip()
-            result = socket.run("cat /etc/issue", hide='both', warn = True)
-            issue = result.stdout.rstrip()
-            result = socket.run("cat /etc/machine-id", hide='both', warn = True)
-            machine_id = result.stdout.rstrip()
-            result = socket.run("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done", hide='both', warn = True)
-            mac_str = result.stdout.rstrip()
+            result = self.exec_command("hostname")
+            hostname = result.rstrip()
+            result = self.exec_command("uname -a")
+            uname = result.rstrip()
+            result = self.exec_command("cat /etc/issue")
+            issue = result.rstrip()
+            result = self.exec_command("cat /etc/machine-id")
+            machine_id = result.rstrip()
+            result = self.exec_command("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done")
+            mac_str = result.rstrip()
             macs = mac_str.split()
+        except Exception as exc:
+            print("Error trying to identify: "+str(exc))
+            return False
+        try:
             new_host = Host(hostname, uname, issue, machine_id, macs)
             if new_host.id is None:
                 print("\t"+str(self)+" is a new host: " + new_host.name)
@@ -297,9 +300,8 @@ class Connection(metaclass=Unique):
             self.endpoint.host = new_host
             self.endpoint.save()
         except Exception as exc:
-            print("Error : "+str(exc))
+            print("Error creating host : "+str(exc))
             return False
-        """
         return True
 
     def open_transport(self, gateway="auto"):
@@ -335,6 +337,26 @@ class Connection(metaclass=Unique):
         transport.close()
         sock.close()
         return True
+
+    def exec_command(self, command):
+        if self.transport is None:
+            raise ConnectionClosedError
+        try:
+            chan = self.transport.open_session()
+            chan.get_pty()
+            chan.exec_command(command)
+            output = ""
+            while True:
+                if chan.exit_status_ready():
+                    output = output+chan.recv(1024).decode("utf-8")
+                    break
+                rl, wl, xl = select.select([chan], [], [], 0.0)
+                if len(rl) > 0:
+                    output = output+chan.recv(1024).decode("utf-8")
+        except Exception as e:
+            raise
+        return output
+
 
     def open(self, verbose=False, target=False):
         if self.transport is not None:
@@ -392,13 +414,13 @@ class Connection(metaclass=Unique):
         path.save()
         self.save()
 
-        if target:
-            if self.endpoint.host is None:
-                #TODO
-#                self.identify(conn)
-                pass
         self.transport = transport
         self.sock = sock
+
+        if target:
+            if self.endpoint.host is None:
+                self.identify()
+                pass
         return True
 
     def run(self, payload, current_workspace_directory, stmt, verbose=False):
