@@ -1,4 +1,9 @@
 from baboossh.exceptions import ConnectionClosedError
+from paramiko.py3compat import u
+from paramiko import SSHException
+import socket
+
+
 
 class ExtStr(type):
     def __str__(self):
@@ -15,8 +20,8 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     @classmethod
     def descr(cls):
-        return "Exec command on target"
-
+        return "Execute a command on target"
+    
     @classmethod
     def buildParser(cls,parser):
         parser.add_argument('cmd',nargs="+",help='Command to execute on target')
@@ -26,6 +31,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         if connection.transport is None:
             raise ConnectionClosedError
         command = " ".join(getattr(stmt,"cmd",["hostname"]))
+
         try:
             output = connection.exec_command(command)
             print(output)

@@ -38,7 +38,7 @@ class SocksProxy(StreamRequestHandler):
         if address_type == 1:  # IPv4
             address = socket.inet_ntoa(self.connection.recv(4))
         elif address_type == 3:  # Domain name
-            domlen = self.connection.recv(1);
+            domlen = self.connection.recv(1)
             domain_length = domlen[0]
             address = self.connection.recv(domain_length).decode("utf-8")
         else:
@@ -50,7 +50,7 @@ class SocksProxy(StreamRequestHandler):
         # reply
         try:
             if cmd == 1:  # CONNECT
-                remote = self.server.output.transport.open_channel(
+                remote = self.server.output.open_channel(
                     kind="direct-tcpip",
                     dest_addr=(address, port),
                     src_addr=("", 0)
@@ -119,7 +119,7 @@ class Tunnel():
         self.connection.open()
         self.connection.used_by_tunnels.append(self)
         self.server = ThreadingTCPServer(('127.0.0.1', port), SocksProxy)
-        self.server.output = self.connection.conn
+        self.server.output = self.connection.transport
         ip, newport = self.server.server_address
         self.port = newport
         self.thread = threading.Thread(target=self.server.serve_forever)

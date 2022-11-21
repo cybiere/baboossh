@@ -1,5 +1,5 @@
 import json
-from os import remove
+from os import remove, path
 import cmd2
 import paramiko
 
@@ -18,6 +18,13 @@ class BaboosshExt():
 
     @classmethod
     def checkKeyfile(cls,filepath):
+        try:
+            if path.getsize(filepath) == 0:
+                print("Warning : empty file "+filepath+". Ignoring.")
+                return False,False
+        except OSError:
+            print("Warning : could not open "+filepath+". Ignoring.")
+
         haspass = False
 
         #Check haspass
@@ -109,13 +116,28 @@ class BaboosshExt():
         ser = json.dumps({'passphrase':self.passphrase,'keypath':self.keypath,'haspass':self.haspass})
         return ser
 
-    def getKwargs(self):
-        #TODO replace with auth method
+    def auth(self, username, transport):
+        #TODO err handling
         if self.haspass:
             if self.passphrase == "":
                 raise ValueError("Cannot use this privkey, passphrase is unknown")
-            return {"key_filename":self.keypath,"passphrase":self.passphrase}
-        return {"key_filename":[self.keypath]}
+            passphrase = self.passphrase
+        else:
+            passphrase = None
+
+        try:
+           key = paramiko.RSAKey.from_private_key_file(self.keypath,password=passphrase)
+        except paramiko.ssh_exception.SSHException as e: 
+            try:
+                key = paramiko.DSSKey.from_private_key_file(self.keypath,password=passphrase)
+            except paramiko.ssh_exception.SSHException as e:
+                try:
+                    key = paramiko.ECDSAKey.from_private_key_file(self.keypath,password=passphrase)
+                except paramiko.ssh_exception.SSHException as e:
+                    return False
+
+        transport.auth_publickey(username, key)
+        return True
     
     @property
     def identifier(self):

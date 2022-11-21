@@ -2,6 +2,7 @@ from os.path import join,exists
 from os import mkdir
 import sys
 from baboossh.exceptions import ConnectionClosedError
+from paramiko import SFTPClient
 
 class ExtStr(type):
     def __str__(self):
@@ -26,7 +27,7 @@ class BaboosshExt(object,metaclass=ExtStr):
 
     @classmethod
     def run(cls, connection, wspaceFolder, stmt):
-        if connection.conn is None:
+        if connection.transport is None:
             raise ConnectionClosedError
 
         lootFolder = join(wspaceFolder,"loot",str(connection.endpoint).replace(':','-'),"")
@@ -36,15 +37,20 @@ class BaboosshExt(object,metaclass=ExtStr):
         if filepath is None:
             print("You must specify a path")
             return False
-        #TODO check if file or folder
+
+        filedest=join(lootFolder,filepath.replace('/','_'))
+        
+        #TODO err management
+        sftp = SFTPClient.from_transport(connection.transport)
         print("Retreiving file "+filepath+"... ",end="")
         sys.stdout.flush()
-        filedest=join(lootFolder,filepath.replace('/','_'))
         try:
-            connection.conn.get(filepath,filedest)
+            sftp.get(filepath,filedest)
         except Exception as e:
             print("Error "+str(type(e))+": "+str(e))
             return False
         print("Done")
         print("File saved as "+filedest)
+
+        #sftp.put(localpath,filepath)
 

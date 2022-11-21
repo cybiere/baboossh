@@ -28,7 +28,8 @@ class Path(metaclass=Unique):
         self.dst = dst
         self.id = None
         cursor = Db.get().cursor()
-        cursor.execute('SELECT id FROM paths WHERE src=? AND dst=?', (self.src.id if self.src is not None else 0, self.dst.id))
+        cursor.execute('SELECT id FROM paths WHERE src=? AND dst=?', \
+                (self.src.id if self.src is not None else 0, self.dst.id))
         saved_path = cursor.fetchone()
         cursor.close()
         if saved_path is not None:
@@ -68,7 +69,8 @@ class Path(metaclass=Unique):
                            (self.src.id if self.src is not None else 0, self.dst.id))
             cursor.close()
             cursor = Db.get().cursor()
-            cursor.execute('SELECT id FROM paths WHERE src=? AND dst=?', (self.src.id if self.src is not None else 0, self.dst.id))
+            cursor.execute('SELECT id FROM paths WHERE src=? AND dst=?', \
+                    (self.src.id if self.src is not None else 0, self.dst.id))
             self.id = cursor.fetchone()[0]
         cursor.close()
         Db.get().commit()
@@ -111,7 +113,8 @@ class Path(metaclass=Unique):
             if dst is None:
                 req = cursor.execute('SELECT src, dst FROM paths WHERE src=?', (src_id, ))
             else:
-                req = cursor.execute('SELECT src, dst FROM paths WHERE src=? AND dst=?', (src_id, dst.id))
+                req = cursor.execute('SELECT src, dst FROM paths WHERE src=? AND dst=?', \
+                        (src_id, dst.id))
         for row in req:
             ret.append(Path(Host.find_one(host_id=row[0]), Endpoint.find_one(endpoint_id=row[1])))
         cursor.close()

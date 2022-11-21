@@ -3,6 +3,7 @@ import paramiko
 from baboossh import Db, Endpoint, User, Creds, Path, Host, Tag
 from baboossh.exceptions import *
 from baboossh.utils import Unique
+from paramiko.py3compat import u
 import socket
 import select
 
@@ -305,6 +306,7 @@ class Connection(metaclass=Unique):
         return True
 
     def open_transport(self, gateway="auto"):
+        #TODO check verbosity levels
         sock = None
         if gateway == "auto":
             gateway = Connection.find_one(gateway_to=self.endpoint)
