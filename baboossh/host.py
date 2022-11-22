@@ -91,7 +91,7 @@ class Host(metaclass=Unique):
         """Returns the `Host` 's number of hops from `"Local"`"""
 
         cursor = Db.get().cursor()
-        cursor.execute('SELECT distance FROM endpoints WHERE host=? ORDER BY distance DESC', (self.id, ))
+        cursor.execute('SELECT distance FROM endpoints WHERE host=? ORDER BY distance ASC', (self.id, ))
         row = cursor.fetchone()
         cursor.close()
         return row[0]
@@ -101,7 +101,7 @@ class Host(metaclass=Unique):
         """Returns the `Host` 's closest :class:`Endpoint`"""
 
         cursor = Db.get().cursor()
-        cursor.execute('SELECT ip, port FROM endpoints WHERE host=? ORDER BY distance DESC', (self.id, ))
+        cursor.execute('SELECT ip, port FROM endpoints WHERE host=? ORDER BY distance ASC', (self.id, ))
         row = cursor.fetchone()
         cursor.close()
         from baboossh import Endpoint
