@@ -1018,7 +1018,7 @@ class Shell(cmd2.Cmd):
     __subparser_tunnel = __parser_tunnel.add_subparsers(title='Actions', help='Available actions')
     __parser_tunnel_list = __subparser_tunnel.add_parser("list", help='List tunnels')
     __parser_tunnel_open = __subparser_tunnel.add_parser("open", help='Open tunnel')
-    __parser_tunnel_open.add_argument('connection', help='Connection string', choices_provider=__get_option_connection)
+    __parser_tunnel_open.add_argument('connection', help='Connection string', choices_provider=__get_run_targets)
     __parser_tunnel_open.add_argument('port', help='Tunnel entry port', type=int, nargs='?')
     __parser_tunnel_close = __subparser_tunnel.add_parser("close", help='Close tunnel')
     __parser_tunnel_close.add_argument('port', help='Tunnel entry port', type=int, choices_provider=__get_open_tunnels)

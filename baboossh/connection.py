@@ -261,8 +261,10 @@ class Connection(metaclass=Unique):
             if cred is None:
                 raise ValueError("Supplied credentials aren't in workspace")
             return Connection(endpoint, user, cred)
-
         if ':' not in arg:
+            host = Host.find_one(name=arg)
+            if host is not None:
+                return Connection.find_one(endpoint=host.closest_endpoint)
             arg = arg+':22'
         endpoint = Endpoint.find_one(ip_port=arg)
         if endpoint is None:
