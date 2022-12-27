@@ -277,15 +277,15 @@ class Connection(metaclass=Unique):
     def identify(self):
         """Identify the host"""
         try:
-            result = self.exec_command("hostname")
+            c,result = self.exec_command("hostname")
             hostname = result.rstrip()
-            result = self.exec_command("uname -a")
+            c,result = self.exec_command("uname -a")
             uname = result.rstrip()
-            result = self.exec_command("cat /etc/issue")
+            c,result = self.exec_command("cat /etc/issue")
             issue = result.rstrip()
-            result = self.exec_command("cat /etc/machine-id")
+            c,result = self.exec_command("cat /etc/machine-id")
             machine_id = result.rstrip()
-            result = self.exec_command("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done")
+            c,result = self.exec_command("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done")
             mac_str = result.rstrip()
             macs = mac_str.split()
         except Exception as exc:
@@ -351,6 +351,7 @@ class Connection(metaclass=Unique):
             chan.exec_command(command)
             output = ""
             while True:
+                returnCode = chan.recv_exit_status()
                 if chan.exit_status_ready():
                     output = output+chan.recv(1024).decode("utf-8")
                     break
@@ -359,7 +360,7 @@ class Connection(metaclass=Unique):
                     output = output+chan.recv(1024).decode("utf-8")
         except Exception as e:
             raise
-        return output
+        return (returnCode,output)
 
 
     def open(self, verbose=False, target=False):

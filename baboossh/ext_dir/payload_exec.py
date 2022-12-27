@@ -33,7 +33,8 @@ class BaboosshExt(object,metaclass=ExtStr):
         command = " ".join(getattr(stmt,"cmd",["hostname"]))
 
         try:
-            output = connection.exec_command(command)
+            c,output = connection.exec_command(command)
+            print("<Return code: "+str(c)+">");
             print(output)
         except Exception as e:
             print("Error : "+str(e))
