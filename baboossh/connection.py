@@ -277,8 +277,17 @@ class Connection(metaclass=Unique):
     def identify(self):
         """Identify the host"""
         try:
+            serverKey = self.transport.get_remote_server_key()
+            print(serverKey.asbytes())
             c,result = self.exec_command("hostname")
-            hostname = result.rstrip()
+            if c != 0:
+                nextId = Host.getNextId()
+                name = "host"+str(nextId)
+                print("\t>Unable to get hostname - using \""+name+"\". You can change it using \"host edit "+name+"\".")
+                hostname = ""
+            else:
+                name = result.rstrip()
+                hostname = name
             c,result = self.exec_command("uname -a")
             uname = result.rstrip()
             c,result = self.exec_command("cat /etc/issue")
@@ -351,7 +360,7 @@ class Connection(metaclass=Unique):
             chan.exec_command(command)
             output = ""
             while True:
-                returnCode = chan.recv_exit_status()
+                return_code = chan.recv_exit_status()
                 if chan.exit_status_ready():
                     output = output+chan.recv(1024).decode("utf-8")
                     break
@@ -360,7 +369,7 @@ class Connection(metaclass=Unique):
                     output = output+chan.recv(1024).decode("utf-8")
         except Exception as e:
             raise
-        return (returnCode,output)
+        return (return_code,output)
 
 
     def open(self, verbose=False, target=False):

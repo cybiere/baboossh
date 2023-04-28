@@ -18,7 +18,8 @@ class Host(metaclass=Unique):
     existing Host, the endpoint is considered to belong to it and is added.
 
     Attributes:
-        name (str): the hostname of the Host as returned by the command `hostname`
+        name (str): the hostname of the Host as returned by the command `hostname`, or a random name if not available
+        hostname (str): the output of the command `hostname`
         id (int): the id of the Host
         uname (str): the output of the command `uname -a` on the Host
         issue (str): the content of the file `/etc/issue` on the Host
@@ -242,6 +243,17 @@ class Host(metaclass=Unique):
         if row is None:
             return None
         return Host(row[0], row[1], row[2], row[3], json.loads(row[4]))
+
+    @classmethod
+    def getNextId(cls):
+        cursor = Db.get().cursor()
+        cursor.execute('''SELECT MAX(id) FROM hosts''')
+        row = cursor.fetchone()
+        cursor.close()
+        if row[0] is None:
+            return 1
+        return row[0] + 1;
+
 
     @classmethod
     def search(cls, field, val, show_all=False):
