@@ -1,5 +1,5 @@
 from baboossh.exceptions import ConnectionClosedError
-from paramiko.py3compat import u
+from paramiko.util import u
 import select
 import termios
 import tty

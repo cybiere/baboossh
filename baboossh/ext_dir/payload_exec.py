@@ -1,5 +1,4 @@
 from baboossh.exceptions import ConnectionClosedError
-from paramiko.py3compat import u
 from paramiko import SSHException
 import socket
 
