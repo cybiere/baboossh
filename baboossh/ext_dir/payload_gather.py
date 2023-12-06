@@ -11,7 +11,7 @@ from baboossh.user import User
 from baboossh.path import Path
 from baboossh.creds import Creds
 from baboossh.exceptions import ConnectionClosedError
-from paramiko.py3compat import u
+from paramiko.util import u
 from paramiko import SSHException
 from paramiko import SFTPClient
 import socket
