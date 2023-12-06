@@ -56,6 +56,9 @@ class BaboosshExt(object,metaclass=ExtStr):
                         sys.stdout.flush()
                     except socket.timeout:
                         pass
+                    except UnicodeDecodeError as e:
+                        sys.stdout.write(u"\N{REPLACEMENT CHARACTER}")
+                        sys.stdout.flush()
                 if sys.stdin in r:
                     x = sys.stdin.read(1)
                     if len(x) == 0:
