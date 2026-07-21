@@ -9,7 +9,7 @@ class Host(metaclass=Unique):
     """A machine with one or several :class:`Endpoint`
 
     This is used to aggregate endpoints as a single machine can have several
-    interfaces with SSH listening on them. In order to prevent unecessary pivots,
+    interfaces with SSH listening on them. In order to prevent unnecessary pivots,
     :class:`Path` s are calculated using the `Host` as sources as it might be
     longer to reach a `Host` from one endpoint rather than the other.
 
