@@ -130,7 +130,7 @@ class Tunnel():
         """Close a previously opened port"""
         try:
             self.connection.used_by_tunnels.remove(self)
-        except:
+        except ValueError:
             pass
         self.server.shutdown()
         print("Tunnel port "+str(self.port)+" closed")

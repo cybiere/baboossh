@@ -762,7 +762,7 @@ class Shell(cmd2.Cmd):
                 value = " ".join(vars(stmt)['params'])
             try:
                 self.workspace.set_option(option, value)
-            except:
+            except (ValueError, IndexError, KeyError):
                 print("Invalid value for "+option)
 
         else:

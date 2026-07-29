@@ -653,7 +653,7 @@ class Workspace():
         else:
             try:
                 dst = Endpoint.find_one(ip_port=dst)
-            except:
+            except ValueError:
                 print("Please specify a valid endpoint in the IP:PORT form")
                 return
         if dst is None:
@@ -688,8 +688,9 @@ class Workspace():
             src = None
         try:
             dst = Endpoint.find_one(ip_port=dst)
-        except:
+        except ValueError:
             print("Please specify valid destination endpoint in the IP:PORT form")
+            return False
         if dst is None:
             print("The destination endpoint provided doesn't exist in this workspace")
             return False
@@ -713,8 +714,9 @@ class Workspace():
             src = None
         try:
             dst = Endpoint.find_one(ip_port=dst)
-        except:
+        except ValueError:
             print("Please specify valid destination endpoint in the IP:PORT form")
+            return
         if dst is None:
             print("The destination endpoint provided doesn't exist in this workspace")
             return
@@ -814,7 +816,7 @@ class Workspace():
             dst = Endpoint.find_one(ip_port=target)
             if dst is not None:
                 return dst
-        except:
+        except ValueError:
             pass
         host = Host.find_one(name=target)
         if host is not None:
