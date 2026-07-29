@@ -15,8 +15,7 @@ import sys
 sys.path.insert(0, os.path.abspath('../'))
 sys.path.insert(0, os.path.abspath('../baboossh'))
 
-with open("../baboossh/version.py", "r") as fv:
-    version = fv.read().split('"')[1];
+from baboossh.version import BABOOSSH_VERSION as version
 
 
 # -- Project information -----------------------------------------------------

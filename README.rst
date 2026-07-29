@@ -25,6 +25,15 @@ It's as easy as a::
    pip install baboossh
 
 
+Development
++++++++++++
+
+The project uses `uv <https://docs.astral.sh/uv/>`_ for dependency management. To set up a dev environment::
+
+   uv sync
+   uv run baboossh
+
+
 Documentation
 +++++++++++++
 

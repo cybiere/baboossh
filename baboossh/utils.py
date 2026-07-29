@@ -1,7 +1,8 @@
 import os
 
+from baboossh.version import BABOOSSH_VERSION
+
 WORKSPACES_DIR = os.path.join(os.path.expanduser("~"), ".baboossh")
-BABOOSSH_VERSION = "1.1.1"
 
 class Unique(type):
     def __call__(cls, *args, **kwargs):
@@ -32,10 +33,7 @@ def is_workspace_compat(workspace_version):
 
     b_major, b_minor, b_patch = BABOOSSH_VERSION.split(".")
     w_major, w_minor, w_patch = workspace_version.split(".")
-    if b_major == "1":
-        if w_major != "1":
-            return False
-        if b_minor == "1":
-            if w_minor in ["1", "2"]:
-                return True
+    if b_major == w_major:
+        if b_minor == w_minor:
+            return True
     return False

@@ -1212,3 +1212,6 @@ Welcome to BabooSSH v\033[1;32m'''+BABOOSSH_VERSION+'''\033[0m. To start, use "h
         self.quit_on_sigint = False
         #TODO remove debug
         self.debug = True
+
+def main():
+    Shell().cmdloop()
