@@ -24,8 +24,8 @@ class Db():
             An open :class:`sqlite3.Connection`
         """
 
-        main_thread_name = threading.main_thread().getName()
-        current_thread_name = threading.currentThread().getName()
+        main_thread_name = threading.main_thread().name
+        current_thread_name = threading.current_thread().name
         if current_thread_name != main_thread_name:
             if current_thread_name in cls.__threadsConn.keys():
                 return cls.__threadsConn[current_thread_name]
@@ -125,8 +125,8 @@ class Db():
         """
 
         db_path = os.path.join(WORKSPACES_DIR, workspace, "workspace.db")
-        main_thread_name = threading.main_thread().getName()
-        current_thread_name = threading.currentThread().getName()
+        main_thread_name = threading.main_thread().name
+        current_thread_name = threading.current_thread().name
         if current_thread_name != main_thread_name:
             if current_thread_name in cls.__threadsConn.keys():
                 return
@@ -143,8 +143,8 @@ class Db():
     def close(cls):
         """Closes the connection for the current Thread"""
 
-        main_thread_name = threading.main_thread().getName()
-        current_thread_name = threading.currentThread().getName()
+        main_thread_name = threading.main_thread().name
+        current_thread_name = threading.current_thread().name
         if current_thread_name != main_thread_name:
             if current_thread_name in cls.__threadsConn.keys():
                 cls.__threadsConn[current_thread_name].close()
