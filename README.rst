@@ -8,9 +8,16 @@ BabooSSH allows you, from a simple SSH connection to a compromised host, to quic
 Licence
 +++++++
 
-BabooSSH is developped by `Cybiere <https://infosec.exchange/@cybiere>`_ and `Akerva <https://akerva.com/>`_ and provided for free under the GNU/GPLv3 licence.
+BabooSSH is developped by `Cybiere <https://infosec.exchange/@cybiere>`_ and provided for free under the GNU/GPLv3 licence.
 
-Install 
+Note on AI assisted development
++++++++++++++++++++++++++++++++
+
+Up until this commit, no AI has been used in this project. From now on I'll try to spend some time on this project and I will use Claude Code. Code will be reviewed and the AI tool will have small, defined, iterative instructions. If you do not want to have AI-written code, feel free to fork this repo or to contribute to the code :)
+
+| Last version without AI assisted dev : v1.2.1
+
+Install
 +++++++
 
 It's as easy as a::
@@ -22,5 +29,3 @@ Documentation
 +++++++++++++
 
 The documentation is under redaction and some things might be missing, but you can find it there: `<https://baboossh.cybiere.fr>`_ .
-
-
