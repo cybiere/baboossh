@@ -1,5 +1,8 @@
 .. image:: https://raw.githubusercontent.com/cybiere/baboossh/master/logo.png
 
+.. image:: https://github.com/cybiere/BabooSSH/actions/workflows/test.yml/badge.svg
+   :target: https://github.com/cybiere/BabooSSH/actions/workflows/test.yml
+
 SSH spreading made easy for red teams in a hurry.
 
 
@@ -32,6 +35,16 @@ The project uses `uv <https://docs.astral.sh/uv/>`_ for dependency management. T
 
    uv sync
    uv run baboossh
+
+Tests
++++++
+
+Tests are written with `pytest <https://docs.pytest.org/>`_ and live under ``tests/``. Run them with::
+
+   uv sync --group dev
+   uv run pytest
+
+Tests run automatically on every push and pull request via `GitHub Actions <https://github.com/cybiere/BabooSSH/actions/workflows/test.yml>`_. See ``todo.md`` for known gaps in current test coverage.
 
 
 Documentation

@@ -1,7 +1,6 @@
 .venv/
-baboossh/__pycache__
-baboossh/ext_dir/__pycache__
+__pycache__/
 baboossh.egg-info/
-baboossh/tests
 build/
 dist/
+.pytest_cache/
