@@ -18,3 +18,4 @@ API Reference
    Extensions
    Db
    Unique
+   Tag
