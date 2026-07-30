@@ -1,7 +1,10 @@
 import hashlib
+from typing import Self
 from baboossh.exceptions import NoPathError
 from baboossh import Db, Endpoint, Host
 from baboossh.utils import Unique
+
+__all__ = ["Path"]
 
 class Path(metaclass=Unique):
     """Indicates an endpoint is reachable from a host
@@ -21,7 +24,7 @@ class Path(metaclass=Unique):
         id (int): The path id
     """
 
-    def __init__(self, src, dst):
+    def __init__(self, src: Host | None, dst: Endpoint) -> None:
         if str(src) == str(dst):
             raise ValueError("Can't create path to self")
         self.src = src
@@ -36,18 +39,18 @@ class Path(metaclass=Unique):
             self.id = saved_path[0]
 
     @classmethod
-    def get_id(cls, src, dst):
+    def get_id(cls, src: Host | None, dst: Endpoint) -> str:
         return hashlib.sha256((str(src)+str(dst)).encode()).hexdigest()
 
     @property
-    def scope(self):
+    def scope(self) -> bool:
         if not self.dst.scope:
             return False
         if self.src is None:
             return True
         return self.src.scope
 
-    def save(self):
+    def save(self) -> None:
         """Save the Path in database
 
         If the Path object has an id it means it is already stored in database,
@@ -75,7 +78,7 @@ class Path(metaclass=Unique):
         cursor.close()
         Db.get().commit()
 
-    def delete(self):
+    def delete(self) -> dict[str, list[str]]:
         """Delete an Path from the :class:`.Workspace`"""
 
         if self.id is None:
@@ -87,7 +90,7 @@ class Path(metaclass=Unique):
         return {"Path":[type(self).get_id(self.src, self.dst)]}
 
     @classmethod
-    def find_all(cls, src=None, dst=None):
+    def find_all(cls, src: "Host | int | None" = None, dst: Endpoint | None = None) -> list[Self]:
         """Find all Paths
 
         Args:
@@ -98,11 +101,10 @@ class Path(metaclass=Unique):
             A list of all `Path` s in the :class:`.Workspace`
         """
 
-        if src is not None and src == 0:
-            src_id = 0
-        elif src is not None:
+        src_id = 0
+        if isinstance(src, Host):
             src_id = src.id
-        ret = []
+        ret: list[Self] = []
         cursor = Db.get().cursor()
         if src is None:
             if dst is None:
@@ -116,12 +118,14 @@ class Path(metaclass=Unique):
                 req = cursor.execute('SELECT src, dst FROM paths WHERE src=? AND dst=?', \
                         (src_id, dst.id))
         for row in req:
-            ret.append(Path(Host.find_one(host_id=row[0]), Endpoint.find_one(endpoint_id=row[1])))
+            dst_endpoint = Endpoint.find_one(endpoint_id=row[1])
+            assert dst_endpoint is not None
+            ret.append(cls(Host.find_one(host_id=row[0]), dst_endpoint))
         cursor.close()
         return ret
 
     @classmethod
-    def find_one(cls, path_id=None):
+    def find_one(cls, path_id: int | None = None) -> Self | None:
         """Find an path by its id
 
         Args:
@@ -139,10 +143,12 @@ class Path(metaclass=Unique):
         cursor.close()
         if row is None:
             return None
-        return Path(Host.find_one(host_id=row[0]), Endpoint.find_one(endpoint_id=row[1]))
+        dst_endpoint = Endpoint.find_one(endpoint_id=row[1])
+        assert dst_endpoint is not None
+        return cls(Host.find_one(host_id=row[0]), dst_endpoint)
 
     @classmethod
-    def direct(cls, dst):
+    def direct(cls, dst: Endpoint) -> bool:
         """Check if there is a direct Path from `"Local"` to an Endpoint
 
         Args:
@@ -159,7 +165,7 @@ class Path(metaclass=Unique):
         return row is not None
 
     @classmethod
-    def get(cls, dst, first=True):
+    def get(cls, dst: Endpoint, first: bool = True) -> "list[Host | Endpoint | None]":
         """Get the chain of paths from `"Local"` to an `Endpoint`
 
         Args:
@@ -185,7 +191,7 @@ class Path(metaclass=Unique):
         chain.append(dst.host)
         return chain
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.src is not None:
             src = str(self.src)
         else:

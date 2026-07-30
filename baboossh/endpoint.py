@@ -1,10 +1,16 @@
 import ipaddress
 import hashlib
 import sqlite3
+from typing import Self, TYPE_CHECKING
 from baboossh import Db
 from baboossh import Host
 from baboossh.utils import Unique
 from baboossh.tag import Tag
+
+if TYPE_CHECKING:
+    from baboossh import Connection
+
+__all__ = ["Endpoint"]
 
 class Endpoint(metaclass=Unique):
     """A SSH endpoint
@@ -25,7 +31,7 @@ class Endpoint(metaclass=Unique):
 
     search_fields = ['ip', 'port']
 
-    def __init__(self, ip, port):
+    def __init__(self, ip: str, port: "int | str") -> None:
         #check if ip is actually an IP
         ipaddress.ip_address(ip)
         if not isinstance(port, int) and not port.isdigit():
@@ -60,23 +66,23 @@ class Endpoint(metaclass=Unique):
         cursor.close()
 
     @classmethod
-    def get_id(cls, ip, port):
+    def get_id(cls, ip: str, port: "int | str") -> str:
         return hashlib.sha256((ip+str(port)).encode()).hexdigest()
 
     @property
-    def port(self):
+    def port(self) -> int:
         return int(self.__port)
 
     @port.setter
-    def port(self, port):
+    def port(self, port: "int | str") -> None:
         self.__port = int(port)
 
     @property
-    def connection(self):
+    def connection(self) -> "Connection | None":
         from baboossh import Connection
         return Connection.find_one(endpoint=self)
 
-    def save(self):
+    def save(self) -> None:
         """Save the Endpoint in database
 
         If the Endpoint object has an id it means it is already stored in database,
@@ -110,7 +116,7 @@ class Endpoint(metaclass=Unique):
         cursor.close()
         Db.get().commit()
 
-    def delete(self):
+    def delete(self) -> dict[str, list[str]]:
         """Delete an Endpoint from the :class:`.Workspace`"""
 
         from baboossh import Path
@@ -118,7 +124,7 @@ class Endpoint(metaclass=Unique):
         if self.id is None:
             return {}
         from baboossh.utils import unstore_targets_merge
-        del_data = {}
+        del_data: dict[str, list[str]] = {}
         if self.host is not None:
             endpoints = self.host.endpoints
             if len(endpoints) == 1:
@@ -136,7 +142,7 @@ class Endpoint(metaclass=Unique):
         return del_data
 
     @classmethod
-    def find_all(cls, scope=None, found=None):
+    def find_all(cls, scope: bool | None = None, found: "Endpoint | None" = None) -> list[Self]:
         """Find all Endpoints matching the criteria
 
         Args:
@@ -162,11 +168,11 @@ class Endpoint(metaclass=Unique):
             else:
                 req = cursor.execute('SELECT ip, port FROM endpoints WHERE scope=? and found=?', (scope, found.id))
         for row in req:
-            ret.append(Endpoint(row[0], row[1]))
+            ret.append(cls(row[0], row[1]))
         return ret
 
     @classmethod
-    def find_one(cls, endpoint_id=None, ip_port=None):
+    def find_one(cls, endpoint_id: int | None = None, ip_port: str | None = None) -> Self | None:
         """Find an `Endpoint` by its id or it's IP address:Port
 
         Args:
@@ -197,9 +203,9 @@ class Endpoint(metaclass=Unique):
         cursor.close()
         if row is None:
             return None
-        return Endpoint(row[0], row[1])
-    
-    def tag(self, tagname):
+        return cls(row[0], row[1])
+
+    def tag(self, tagname: str) -> None:
         cursor = Db.get().cursor()
         try:
             cursor.execute('''INSERT INTO tags (name, endpoint) VALUES (?, ?)''', (tagname, self.id))
@@ -209,7 +215,7 @@ class Endpoint(metaclass=Unique):
         Db.get().commit()
         self.tags.add(tagname)
 
-    def untag(self, tagname):
+    def untag(self, tagname: str) -> None:
         cursor = Db.get().cursor()
         cursor.execute('DELETE FROM tags WHERE name = ? and endpoint = ?', (tagname, self.id))
         cursor.close()
@@ -220,11 +226,11 @@ class Endpoint(metaclass=Unique):
             pass
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.ip+":"+str(self.port)
 
     @classmethod
-    def search(cls, field, val, show_all=False):
+    def search(cls, field: str, val: str, show_all: bool = False) -> list[Self]:
         """Search in the workspace for an `Endpoint`
 
         Args:
@@ -247,5 +253,5 @@ class Endpoint(metaclass=Unique):
         else:
             cursor.execute('SELECT ip, port FROM endpoints WHERE scope=? and {} LIKE ?'.format(field), (True, val))
         for row in cursor:
-            ret.append(Endpoint(row[0], row[1]))
+            ret.append(cls(row[0], row[1]))
         return ret

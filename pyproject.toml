@@ -7,7 +7,7 @@ name = "baboossh"
 dynamic = ["version"]
 description = "SSH spreading made easy for red teams in a hurry"
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 license = "GPL-3.0-only"
 authors = [
     { name = "Cybiere - Akerva", email = "cybiere@tutanota.com" },

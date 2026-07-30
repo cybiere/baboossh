@@ -1,6 +1,12 @@
 import hashlib
+from typing import Self, TYPE_CHECKING
 from baboossh import Db
 from baboossh.utils import Unique
+
+if TYPE_CHECKING:
+    from baboossh import Endpoint
+
+__all__ = ["User"]
 
 class User(metaclass=Unique):
 
@@ -13,7 +19,7 @@ class User(metaclass=Unique):
         found (:class:`.Endpoint`): the endpoint the user was discovered on
     """
 
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         self.name = name
         self.id = None
         self.scope = True
@@ -30,10 +36,10 @@ class User(metaclass=Unique):
                 self.found = Endpoint.find_one(endpoint_id=saved_user[2])
 
     @classmethod
-    def get_id(cls, name):
+    def get_id(cls, name: str) -> str:
         return hashlib.sha256(name.encode()).hexdigest()
 
-    def save(self):
+    def save(self) -> None:
         """Save the user in database
 
         If the User object has an id it means it is already stored in database,
@@ -64,14 +70,14 @@ class User(metaclass=Unique):
         cursor.close()
         Db.get().commit()
 
-    def delete(self):
+    def delete(self) -> dict[str, list[str]]:
         """Delete a User from the :class:`.Workspace`"""
 
         from baboossh import Connection
         if self.id is None:
             return {}
         from baboossh.utils import unstore_targets_merge
-        del_data = {}
+        del_data: dict[str, list[str]] = {}
         for connection in Connection.find_all(user=self):
             unstore_targets_merge(del_data, connection.delete())
         cursor = Db.get().cursor()
@@ -82,7 +88,7 @@ class User(metaclass=Unique):
         return del_data
 
     @classmethod
-    def find_all(cls, scope=None, found=None):
+    def find_all(cls, scope: bool | None = None, found: "Endpoint | None" = None) -> list[Self]:
         """Find all Users corresponding to criteria
 
         Args:
@@ -110,12 +116,12 @@ class User(metaclass=Unique):
                 req = cursor.execute('SELECT username FROM users WHERE found=? AND scope=?', \
                         (found.id if found is not None else None, scope))
         for row in req:
-            ret.append(User(row[0]))
+            ret.append(cls(row[0]))
         cursor.close()
         return ret
 
     @classmethod
-    def find_one(cls, user_id=None, name=None):
+    def find_one(cls, user_id: int | None = None, name: str | None = None) -> Self | None:
         """Find a user matching the criteria
 
         Args:
@@ -138,7 +144,7 @@ class User(metaclass=Unique):
         cursor.close()
         if row is None:
             return None
-        return User(row[0])
+        return cls(row[0])
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name

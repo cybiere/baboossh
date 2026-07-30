@@ -24,6 +24,8 @@ from baboossh.version import BABOOSSH_VERSION
 from baboossh.extensions import Extensions
 from baboossh.workspace import Workspace
 
+__all__ = ["Shell", "main"]
+
 def yes_no(prompt, default=None, list_val=None):
     """Simple Yes/No prompt to ask questions
 

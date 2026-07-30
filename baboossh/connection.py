@@ -1,10 +1,13 @@
 import hashlib
+import socket
+from typing import Literal, Self
 import paramiko
-from baboossh import Db, Endpoint, User, Creds, Path, Host, Tag
+from baboossh import Db, Endpoint, User, Creds, Path, Host, Tag, Tunnel
 from baboossh.exceptions import *
 from baboossh.utils import Unique
-import socket
 import select
+
+__all__ = ["Connection"]
 
 class Connection(metaclass=Unique):
     """A :class:`User` and :class:`Creds` to authenticate on an :class:`Endpoint`
@@ -27,7 +30,7 @@ class Connection(metaclass=Unique):
     """
 
 
-    def __init__(self, endpoint, user, cred):
+    def __init__(self, endpoint: Endpoint, user: "User | None", cred: "Creds | None") -> None:
         """Create the object and fetches info from database if it has been saved.
         
         Args:
@@ -41,14 +44,14 @@ class Connection(metaclass=Unique):
         self.creds = cred
         self.id = None
         self.root = False
-        self.sock = None
-        self.transport = None
-        self.used_by_connections = []
-        self.used_by_tunnels = []
+        self.sock: socket.socket | paramiko.Channel | None = None
+        self.transport: paramiko.Transport | None = None
+        self.used_by_connections: list[Self] = []
+        self.used_by_tunnels: list[Tunnel] = []
         if user is None or cred is None:
             return
         cursor = Db.get().cursor()
-        cursor.execute('SELECT id, root FROM connections WHERE endpoint=? AND user=? AND cred=?', (self.endpoint.id, self.user.id, self.creds.id))
+        cursor.execute('SELECT id, root FROM connections WHERE endpoint=? AND user=? AND cred=?', (self.endpoint.id, user.id, cred.id))
         saved_connection = cursor.fetchone()
         cursor.close()
         if saved_connection is not None:
@@ -56,9 +59,9 @@ class Connection(metaclass=Unique):
             self.root = saved_connection[1] != 0
 
     @classmethod
-    def get_id(cls, endpoint, user, cred):
+    def get_id(cls, endpoint: Endpoint, user: "User | None", cred: "Creds | None") -> str:
         """Generate an ID for unicity
-        
+
         Args: See __init__
 
         Returns:
@@ -67,21 +70,23 @@ class Connection(metaclass=Unique):
         return hashlib.sha256((str(endpoint)+str(user)+str(cred)).encode()).hexdigest()
 
     @property
-    def scope(self):
+    def scope(self) -> bool:
         """Returns whether the `Connection` is in scope
 
         The `Connection` is in scope if its :class:`User`, its :class:`Creds`
         AND it :class:`Endpoint` are all in scope
         """
 
+        if self.user is None or self.creds is None:
+            return False
         return self.user.scope and self.endpoint.scope and self.creds.scope
 
     @property
-    def distance(self):
+    def distance(self) -> int | None:
         """Returns the number of hops between `"Local"` and the :class:`Endpoint`"""
         return self.endpoint.distance
 
-    def save(self):
+    def save(self) -> None:
         """Save the `Connection` to the :class:`Workspace`'s database"""
 
         if self.user is None or self.creds is None:
@@ -109,7 +114,7 @@ class Connection(metaclass=Unique):
         cursor.close()
         Db.get().commit()
 
-    def delete(self):
+    def delete(self) -> dict[str, list[str]]:
         """Delete the `Connection` from the :class:`Workspace`'s database"""
 
         if self.id is None:
@@ -122,7 +127,7 @@ class Connection(metaclass=Unique):
 
 
     @classmethod
-    def find_one(cls, connection_id=None, endpoint=None, scope=None, gateway_to=None):
+    def find_one(cls, connection_id: int | None = None, endpoint: "Endpoint | None" = None, scope: bool | None = None, gateway_to: "Endpoint | None" = None) -> Self | None:
         """Find a `Connection` by its id, endpoint or if it can be used as a gateway to an :class:`Endpoint`
 
         Args:
@@ -159,9 +164,13 @@ class Connection(metaclass=Unique):
             cursor.close()
             if row is None:
                 return None
-            return Connection(Endpoint.find_one(endpoint_id=row[0]), User.find_one(user_id=row[1]), Creds.find_one(creds_id=row[2]))
+            row_endpoint = Endpoint.find_one(endpoint_id=row[0])
+            assert row_endpoint is not None
+            return cls(row_endpoint, User.find_one(user_id=row[1]), Creds.find_one(creds_id=row[2]))
         for row in req:
-            conn = Connection(Endpoint.find_one(endpoint_id=row[0]), User.find_one(user_id=row[1]), Creds.find_one(creds_id=row[2]))
+            row_endpoint = Endpoint.find_one(endpoint_id=row[0])
+            assert row_endpoint is not None
+            conn = cls(row_endpoint, User.find_one(user_id=row[1]), Creds.find_one(creds_id=row[2]))
             if scope == conn.scope:
                 cursor.close()
                 return conn
@@ -170,7 +179,7 @@ class Connection(metaclass=Unique):
 
 
     @classmethod
-    def find_all(cls, endpoint=None, user=None, creds=None, scope=None):
+    def find_all(cls, endpoint: "Endpoint | Tag | None" = None, user: "User | None" = None, creds: "Creds | None" = None, scope: bool | None = None) -> list[Self]:
         """Find all `Connection` matching the criteria
 
         If two or more arguments are specified, the returned Connections must match each ("AND")
@@ -186,7 +195,7 @@ class Connection(metaclass=Unique):
         """
 
 
-        ret = []
+        ret: list[Self] = []
         cursor = Db.get().cursor()
 
         query = 'SELECT endpoint, user, cred FROM connections'
@@ -208,6 +217,8 @@ class Connection(metaclass=Unique):
                 query = query + ' AND ('
             first_endpoint = True
             for end in endpoint.endpoints:
+                if end is None:
+                    continue
                 if not first_endpoint:
                     query = query + ' OR '
                 else:
@@ -235,35 +246,37 @@ class Connection(metaclass=Unique):
         req = cursor.execute(query, tuple(params))
 
         for row in req:
-            conn = Connection(Endpoint.find_one(endpoint_id=row[0]), User.find_one(user_id=row[1]), Creds.find_one(creds_id=row[2]))
+            row_endpoint = Endpoint.find_one(endpoint_id=row[0])
+            assert row_endpoint is not None
+            conn = cls(row_endpoint, User.find_one(user_id=row[1]), Creds.find_one(creds_id=row[2]))
             if scope is None or conn.scope == scope:
                 ret.append(conn)
         cursor.close()
         return ret
 
     @classmethod
-    def from_target(cls, arg):
+    def from_target(cls, arg: str) -> Self | None:
         if '@' in arg and ':' in arg:
-            auth, sep, endpoint = arg.partition('@')
-            endpoint = Endpoint.find_one(ip_port=endpoint)
+            auth, sep, endpoint_str = arg.partition('@')
+            endpoint = Endpoint.find_one(ip_port=endpoint_str)
             if endpoint is None:
                 raise ValueError("Supplied endpoint isn't in workspace")
-            user, sep, cred = auth.partition(":")
+            user_str, sep, cred_str = auth.partition(":")
             if sep == "":
                 raise ValueError("No credentials supplied")
-            user = User.find_one(name=user)
+            user = User.find_one(name=user_str)
             if user is None:
                 raise ValueError("Supplied user isn't in workspace")
-            if cred[0] == "#":
-                cred = cred[1:]
-            cred = Creds.find_one(creds_id=cred)
+            if cred_str[0] == "#":
+                cred_str = cred_str[1:]
+            cred = Creds.find_one(creds_id=cred_str)
             if cred is None:
                 raise ValueError("Supplied credentials aren't in workspace")
-            return Connection(endpoint, user, cred)
+            return cls(endpoint, user, cred)
         if ':' not in arg:
             host = Host.find_one(name=arg)
             if host is not None:
-                return Connection.find_one(endpoint=host.closest_endpoint)
+                return cls.find_one(endpoint=host.closest_endpoint)
             arg = arg+':22'
         endpoint = Endpoint.find_one(ip_port=arg)
         if endpoint is None:
@@ -273,8 +286,9 @@ class Connection(metaclass=Unique):
             raise ValueError("No working connection for supplied endpoint")
         return connection
     
-    def identify(self):
+    def identify(self) -> bool:
         """Identify the host"""
+        assert self.transport is not None
         try:
             serverKey = self.transport.get_remote_server_key()
             print(serverKey.asbytes())
@@ -315,14 +329,14 @@ class Connection(metaclass=Unique):
             return False
         return True
 
-    def open_transport(self, gateway="auto"):
+    def open_transport(self, gateway: "Literal['auto'] | Connection | None" = "auto") -> "tuple[socket.socket | paramiko.Channel, paramiko.Transport, Connection | None]":
         #TODO check verbosity levels
-        sock = None
         if gateway == "auto":
             gateway = Connection.find_one(gateway_to=self.endpoint)
         if gateway is not None:
             if not gateway.open(verbose=False):
                 raise ConnectionClosedError("Could not open gateway "+str(gateway))
+            assert gateway.transport is not None
             sock = gateway.transport.open_channel('direct-tcpip', (self.endpoint.ip, self.endpoint.port), ('', 0));
         else:
             sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -333,7 +347,7 @@ class Connection(metaclass=Unique):
         transport.start_client()
         return (sock,transport, gateway)
 
-    def probe(self, gateway="auto", verbose=True):
+    def probe(self, gateway: "Literal['auto'] | Connection | None" = "auto", verbose: bool = True) -> bool:
         if gateway is not None:
             if gateway == "auto":
                 gateway = Connection.find_one(gateway_to=self.endpoint)
@@ -350,7 +364,7 @@ class Connection(metaclass=Unique):
         sock.close()
         return True
 
-    def exec_command(self, command):
+    def exec_command(self, command: str) -> tuple[int, str]:
         if self.transport is None:
             raise ConnectionClosedError
         try:
@@ -371,7 +385,7 @@ class Connection(metaclass=Unique):
         return (return_code,output)
 
 
-    def open(self, verbose=False, target=False):
+    def open(self, verbose: bool = False, target: bool = False) -> bool:
         if self.transport is not None:
             if not self.transport.is_active():
                 print("Connection to \033[1;34m"+str(self)+"\033[0m went inactive, Closing... ", end="", flush=True)
@@ -395,6 +409,7 @@ class Connection(metaclass=Unique):
                 print(err, "- Please try probe-ing another path")
             return False
         
+        assert self.user is not None and self.creds is not None
         try:
             self.creds.auth(username=self.user.name, transport=transport)
         except paramiko.BadAuthenticationType:
@@ -436,13 +451,13 @@ class Connection(metaclass=Unique):
                 pass
         return True
 
-    def run(self, payload, current_workspace_directory, stmt, verbose=False):
+    def run(self, payload, current_workspace_directory: str, stmt, verbose: bool = False) -> bool:
         if not self.open(target=True, verbose=verbose):
             return False
         payload.run(self, current_workspace_directory, stmt)
         return True
 
-    def close(self):
+    def close(self) -> None:
         if self.transport is None:
             return
         nb_tunnels = len(self.used_by_tunnels)
@@ -453,9 +468,10 @@ class Connection(metaclass=Unique):
             connection.close()
         self.transport.close()
         self.transport = None
+        assert self.sock is not None
         self.sock.close()
         self.sock = None
         print("Closed "+str(self))
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.user)+":"+str(self.creds)+"@"+str(self.endpoint)

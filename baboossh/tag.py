@@ -1,4 +1,11 @@
+from typing import Self, TYPE_CHECKING
+
 from baboossh import Db
+
+if TYPE_CHECKING:
+    from baboossh import Endpoint
+
+__all__ = ["Tag"]
 
 class Tag():
 
@@ -9,7 +16,7 @@ class Tag():
         endpoints ([:class:`.Endpoint`,...]): the Endpoints tagged with the tag.
     """
 
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         from baboossh import Endpoint
         self.name = name
         self.endpoints = []
@@ -17,14 +24,15 @@ class Tag():
         for row in cursor.execute('SELECT endpoint FROM tags WHERE name=?', (self.name, )):
             self.endpoints.append(Endpoint.find_one(endpoint_id=row[0]))
 
-    def delete(self):
+    def delete(self) -> None:
         """Delete a Tag from the :class:`.Workspace`"""
 
         for endpoint in self.endpoints:
-            endpoint.untag(self.name)
+            if endpoint is not None:
+                endpoint.untag(self.name)
 
     @classmethod
-    def find_all(cls, endpoint=None):
+    def find_all(cls, endpoint: "Endpoint | None" = None) -> list[Self]:
         """Find all Tags corresponding to criteria
 
         Args:
@@ -42,12 +50,12 @@ class Tag():
         else:
             req = cursor.execute('SELECT DISTINCT(name) FROM tags WHERE endpoint=?', (endpoint.id,))
         for row in req:
-            ret.append(Tag(row[0]))
+            ret.append(cls(row[0]))
         cursor.close()
         return ret
 
     @classmethod
-    def find_one(cls, name=None):
+    def find_one(cls, name: str | None = None) -> Self | None:
         """Find a tag matching the criteria
 
         Args:
@@ -66,7 +74,7 @@ class Tag():
         cursor.close()
         if row is None:
             return None
-        return Tag(row[0])
+        return cls(row[0])
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "!"+self.name

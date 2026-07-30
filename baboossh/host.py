@@ -1,8 +1,14 @@
 import json
 import hashlib
+from typing import Self, TYPE_CHECKING
 from baboossh import Db
 from baboossh.exceptions import NoPathError
 from baboossh.utils import Unique
+
+if TYPE_CHECKING:
+    from baboossh import Endpoint
+
+__all__ = ["Host"]
 
 
 class Host(metaclass=Unique):
@@ -29,7 +35,7 @@ class Host(metaclass=Unique):
 
     search_fields = ['name', 'uname']
 
-    def __init__(self, hostname, uname, issue, machine_id, macs):
+    def __init__(self, hostname: str, uname: str, issue: str, machine_id: str, macs: list[str]) -> None:
         self.hostname = hostname
         self.id = None
         self.uname = uname
@@ -66,11 +72,11 @@ class Host(metaclass=Unique):
 
 
     @classmethod
-    def get_id(cls, hostname, uname, issue, machine_id, macs):
+    def get_id(cls, hostname: str, uname: str, issue: str, machine_id: str, macs: list[str]) -> str:
         return hashlib.sha256((hostname+uname+issue+machine_id+json.dumps(macs)).encode()).hexdigest()
 
     @property
-    def scope(self):
+    def scope(self) -> bool:
         """Returns whether the `Host` is in scope
 
         A `Host` is in scope if all its :class:`Endpoint` s are in scope
@@ -82,13 +88,13 @@ class Host(metaclass=Unique):
         return True
 
     @scope.setter
-    def scope(self, scope):
+    def scope(self, scope: bool) -> None:
         for endpoint in self.endpoints:
             endpoint.scope = scope
             endpoint.save()
 
     @property
-    def distance(self):
+    def distance(self) -> int:
         """Returns the `Host` 's number of hops from `"Local"`"""
 
         cursor = Db.get().cursor()
@@ -98,7 +104,7 @@ class Host(metaclass=Unique):
         return row[0]
 
     @property
-    def closest_endpoint(self):
+    def closest_endpoint(self) -> "Endpoint":
         """Returns the `Host` 's closest :class:`Endpoint`"""
 
         cursor = Db.get().cursor()
@@ -109,7 +115,7 @@ class Host(metaclass=Unique):
         return Endpoint(row[0], row[1])
 
     @property
-    def endpoints(self):
+    def endpoints(self) -> "list[Endpoint]":
         """Returns a `List` of the `Host` 's :class:`Endpoint` s"""
         from baboossh import Endpoint
         endpoints = []
@@ -119,7 +125,7 @@ class Host(metaclass=Unique):
         cursor.close()
         return endpoints
 
-    def save(self):
+    def save(self) -> None:
         """Saves the `Host` in the :class:`Workspace` 's database"""
         cursor = Db.get().cursor()
         if self.id is not None:
@@ -146,7 +152,7 @@ class Host(metaclass=Unique):
         cursor.close()
         Db.get().commit()
 
-    def delete(self):
+    def delete(self) -> dict[str, list[str]]:
         """Removes the `Host` from the :class:`Workspace`
 
         Recursively removes all :class:`Path` s starting from this `Host`
@@ -156,7 +162,7 @@ class Host(metaclass=Unique):
         if self.id is None:
             return {}
         from baboossh.utils import unstore_targets_merge
-        del_data = {}
+        del_data: dict[str, list[str]] = {}
         for path in Path.find_all(src=self):
             unstore_targets_merge(del_data, path.delete())
         for endpoint in self.endpoints:
@@ -170,7 +176,7 @@ class Host(metaclass=Unique):
         return del_data
 
     @classmethod
-    def find_all(cls, scope=None):
+    def find_all(cls, scope: bool | None = None) -> list[Self]:
         """Returns a `List` of all `Host` s in the :class:`Workspace` matching the criteria
 
         Args:
@@ -188,7 +194,7 @@ class Host(metaclass=Unique):
         req = cursor.execute('SELECT hostname, uname, issue, machine_id, macs FROM hosts')
 
         for row in req:
-            host = Host(row[0], row[1], row[2], row[3], json.loads(row[4]))
+            host = cls(row[0], row[1], row[2], row[3], json.loads(row[4]))
             if scope is None:
                 ret.append(host)
             elif host.scope == scope:
@@ -197,7 +203,7 @@ class Host(metaclass=Unique):
         return ret
 
     @classmethod
-    def find_one(cls, host_id=None, name=None, prev_hop_to=None):
+    def find_one(cls, host_id: int | None = None, name: str | None = None, prev_hop_to: "Endpoint | None" = None) -> "Host | None":
         """Find a `Host` by its id
 
         Args:
@@ -211,20 +217,15 @@ class Host(metaclass=Unique):
         if prev_hop_to is not None:
             from baboossh import Path
             paths = Path.find_all(dst=prev_hop_to)
-            smallest_distance = None
-            closest = None
+            closest: Host | None = None
+            smallest_distance: int | None = None
             for path in paths:
                 if path.src is None:
                     #Direct path found, we can stop here
                     return None
-                if closest is None:
+                if smallest_distance is None or path.src.distance < smallest_distance:
                     closest = path.src
                     smallest_distance = path.src.distance
-                    continue
-                if path.src.distance < smallest_distance:
-                    closest = path.src
-                    smallest_distance = path.src.distance
-                    continue
             if closest is None:
                 raise NoPathError
             return closest
@@ -242,10 +243,10 @@ class Host(metaclass=Unique):
         cursor.close()
         if row is None:
             return None
-        return Host(row[0], row[1], row[2], row[3], json.loads(row[4]))
+        return cls(row[0], row[1], row[2], row[3], json.loads(row[4]))
 
     @classmethod
-    def getNextId(cls):
+    def getNextId(cls) -> int:
         cursor = Db.get().cursor()
         cursor.execute('''SELECT MAX(id) FROM hosts''')
         row = cursor.fetchone()
@@ -256,7 +257,7 @@ class Host(metaclass=Unique):
 
 
     @classmethod
-    def search(cls, field, val, show_all=False):
+    def search(cls, field: str, val: str, show_all: bool = False) -> list[Self]:
         """Search in the workspace for a `Host`
 
         Args:
@@ -275,10 +276,10 @@ class Host(metaclass=Unique):
         val = "%"+val+"%"
         #Ok this sounds fugly, but there seems to be no way to set a column name in a parameter. The SQL injection risk is mitigated as field must be in allowed fields, but if you find something better I take it
         for row in cursor.execute('SELECT hostname, uname, issue, machine_id, macs FROM hosts WHERE {} LIKE ?'.format(field), (val, )):
-            ret.append(Host(row[0], row[1], row[2], row[3], json.loads(row[4])))
+            ret.append(cls(row[0], row[1], row[2], row[3], json.loads(row[4])))
         if not show_all:
             ret = [host for host in ret if host.scope]
         return ret
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name

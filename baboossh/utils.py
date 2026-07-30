@@ -20,14 +20,14 @@ class Unique(type):
     def __init__(cls, name, bases, attributes):
         super().__init__(name, bases, attributes)
 
-def unstore_targets_merge(original, new_data):
+def unstore_targets_merge(original: dict[str, list[str]], new_data: dict[str, list[str]]) -> None:
     for obj_type, obj_list in new_data.items():
         if obj_type in original:
             original[obj_type] = [*original[obj_type], *obj_list]
         else:
             original[obj_type] = obj_list
 
-def is_workspace_compat(workspace_version):
+def is_workspace_compat(workspace_version: str) -> bool:
     if BABOOSSH_VERSION == workspace_version:
         return True
 

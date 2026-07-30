@@ -1,3 +1,5 @@
+__all__ = ["NoPathError", "NoHostError", "ConnectionClosedError", "WorkspaceVersionError"]
+
 class NoPathError(Exception):
     """Raised when no path could be found to the target"""
 

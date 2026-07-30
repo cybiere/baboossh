@@ -3,6 +3,12 @@ import socket
 import struct
 from socketserver import StreamRequestHandler, ThreadingTCPServer
 import threading
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from baboossh import Connection
+
+__all__ = ["Tunnel"]
 
 class SocksProxy(StreamRequestHandler):
     SOCKS_VERSION = 5
@@ -112,7 +118,7 @@ class Tunnel():
             none is provided.
     """
 
-    def __init__(self, connection, port=None):
+    def __init__(self, connection: "Connection", port: int | None = None) -> None:
         self.connection = connection
         if port is None:
             port = 0
@@ -126,7 +132,7 @@ class Tunnel():
         self.thread.start()
         print("Tunnel to "+str(self.connection)+" open on port "+str(self.port))
 
-    def close(self):
+    def close(self) -> None:
         """Close a previously opened port"""
         try:
             self.connection.used_by_tunnels.remove(self)
@@ -135,5 +141,5 @@ class Tunnel():
         self.server.shutdown()
         print("Tunnel port "+str(self.port)+" closed")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.port)+"->"+str(self.connection)

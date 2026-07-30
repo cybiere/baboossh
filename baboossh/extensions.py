@@ -2,16 +2,18 @@ import importlib
 import inspect
 import os
 
+__all__ = ["Extensions"]
+
 class Extensions():
     """Load and access available extensions"""
 
-    auths = {}
-    payloads = {}
-    exports = {}
-    imports = {}
+    auths: dict[str, type] = {}
+    payloads: dict[str, type] = {}
+    exports: dict[str, type] = {}
+    imports: dict[str, type] = {}
 
     @classmethod
-    def load(cls):
+    def load(cls) -> None:
         """Load extensions from the dedicated folder
 
         Load extensions and sort them according to their type:

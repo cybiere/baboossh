@@ -6,6 +6,8 @@ from baboossh.exceptions import NoPathError, WorkspaceVersionError, ConnectionCl
 from baboossh.utils import is_workspace_compat
 from baboossh.version import BABOOSSH_VERSION
 
+__all__ = ["Workspace"]
+
 class Workspace():
     """A container to hold all related objects
 

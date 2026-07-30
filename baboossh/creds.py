@@ -1,6 +1,12 @@
 import hashlib
+from typing import Self, TYPE_CHECKING
 from baboossh import Db, Extensions
 from baboossh.utils import Unique
+
+if TYPE_CHECKING:
+    from baboossh import Endpoint
+
+__all__ = ["Creds"]
 
 
 class Creds(metaclass=Unique):
@@ -22,7 +28,7 @@ class Creds(metaclass=Unique):
         found (:class:`.Endpoint`): The Endpoint on which the `Creds` was discovered
     """
 
-    def __init__(self, creds_type, creds_content):
+    def __init__(self, creds_type: str, creds_content: str) -> None:
         self.creds_type = creds_type
         self.creds_content = creds_content
         self.obj = Extensions.auths[creds_type](creds_content)
@@ -41,11 +47,11 @@ class Creds(metaclass=Unique):
                 self.found = Endpoint.find_one(endpoint_id=saved_creds[2])
 
     @classmethod
-    def get_id(cls, creds_type, creds_content):
+    def get_id(cls, creds_type: str, creds_content: str) -> str:
         obj = Extensions.auths[creds_type](creds_content)
         return hashlib.sha256((creds_type+obj.identifier).encode()).hexdigest()
 
-    def save(self):
+    def save(self) -> None:
         """Save the `Creds` to the :class:`Workspace` 's database"""
         cursor = Db.get().cursor()
         if self.id is not None:
@@ -71,13 +77,13 @@ class Creds(metaclass=Unique):
         cursor.close()
         Db.get().commit()
 
-    def delete(self):
+    def delete(self) -> dict[str, list[str]]:
         """Delete a `Creds` from the :class:`.Workspace`"""
         from baboossh import Connection
         if self.id is None:
             return {}
         from baboossh.utils import unstore_targets_merge
-        del_data = {}
+        del_data: dict[str, list[str]] = {}
         for connection in Connection.find_all(creds=self):
             unstore_targets_merge(del_data, connection.delete())
         self.obj.delete()
@@ -88,12 +94,12 @@ class Creds(metaclass=Unique):
         unstore_targets_merge(del_data, {"Creds":[type(self).get_id(self.creds_type, self.creds_content)]})
         return del_data
 
-    def auth(self, username, transport):
+    def auth(self, username: str, transport):
         """Authenticated to the Transport using the underlying Creds object"""
         return self.obj.auth(username, transport)
 
     @classmethod
-    def find_all(cls, scope=None, found=None):
+    def find_all(cls, scope: bool | None = None, found: "Endpoint | None" = None) -> list[Self]:
         """Find all `Creds`
 
         Args:
@@ -119,11 +125,11 @@ class Creds(metaclass=Unique):
             else:
                 req = cursor.execute('SELECT type, content FROM creds WHERE found=? AND scope=?', (found.id, scope))
         for row in req:
-            ret.append(Creds(row[0], row[1]))
+            ret.append(cls(row[0], row[1]))
         return ret
 
     @classmethod
-    def find_one(cls, creds_id):
+    def find_one(cls, creds_id: int | str) -> Self | None:
         """Find a `Creds` by its id
 
         Args:
@@ -139,17 +145,17 @@ class Creds(metaclass=Unique):
         cursor.close()
         if row is None:
             return None
-        return Creds(row[0], row[1])
+        return cls(row[0], row[1])
 
-    def show(self):
+    def show(self) -> None:
         """Show the `Creds` object and its parameters"""
         self.obj.show()
 
-    def edit(self):
+    def edit(self) -> None:
         """Edit the `Creds` object parameters"""
         self.obj.edit()
         self.creds_content = self.obj.serialize()
         self.save()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "#"+str(self.id)

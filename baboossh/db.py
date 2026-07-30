@@ -3,18 +3,20 @@ import threading
 import os
 from baboossh.utils import WORKSPACES_DIR
 
+__all__ = ["Db"]
+
 class Db():
     """A singleton handling the database connection
 
     This class allows the use of a single sqlite connection for earch thread
     """
 
-    __conn = None
-    __threadsConn = {}
-    __workspace = None
+    __conn: sqlite3.Connection | None = None
+    __threadsConn: dict[str, sqlite3.Connection] = {}
+    __workspace: str | None = None
 
     @classmethod
-    def get(cls):
+    def get(cls) -> sqlite3.Connection:
         """Returns the database connection for the current thread
 
         If the current thread isn't the main and no connection is already
@@ -29,6 +31,7 @@ class Db():
         if current_thread_name != main_thread_name:
             if current_thread_name in cls.__threadsConn.keys():
                 return cls.__threadsConn[current_thread_name]
+            assert cls.__workspace is not None
             cls.connect(cls.__workspace)
             return cls.__threadsConn[current_thread_name]
         if cls.__conn is None:
@@ -36,7 +39,7 @@ class Db():
         return cls.__conn
 
     @classmethod
-    def build(cls, workspace):
+    def build(cls, workspace: str) -> None:
         """Create the databases and the tables for a new :class:`Workspace`
 
         Args:
@@ -110,7 +113,7 @@ class Db():
         connection.close()
 
     @classmethod
-    def connect(cls, workspace):
+    def connect(cls, workspace: str) -> None:
         """Open the connection to the database for a :class:`Workspace`
 
         If this function is called from the main thread, it closes existing
@@ -140,7 +143,7 @@ class Db():
         cls.__conn = sqlite3.connect(db_path)
 
     @classmethod
-    def close(cls):
+    def close(cls) -> None:
         """Closes the connection for the current Thread"""
 
         main_thread_name = threading.main_thread().name
@@ -150,5 +153,6 @@ class Db():
                 cls.__threadsConn[current_thread_name].close()
                 del cls.__threadsConn[current_thread_name]
             return
-        cls.__conn.close()
+        if cls.__conn is not None:
+            cls.__conn.close()
         cls.__conn = None
