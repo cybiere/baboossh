@@ -4,6 +4,8 @@ import cmd2
 import paramiko
 
 class BaboosshExt():
+    _KEY_CLASSES = (paramiko.RSAKey, paramiko.ECDSAKey, paramiko.Ed25519Key)
+
     @classmethod
     def getModType(cls):
         return "auth"
@@ -24,57 +26,33 @@ class BaboosshExt():
                 return False,False
         except OSError:
             print("Warning : could not open "+filepath+". Ignoring.")
+            return False, False
 
-        haspass = False
-
-        #Check haspass
-        try:
-           k = paramiko.RSAKey.from_private_key_file(filepath)
-        except  paramiko.ssh_exception.PasswordRequiredException:
-            haspass = True
-        except:
-            pass
-        else:
-            #RSA, no pass
-            return True,False
-
-        #random string to check the exception raised
-        randpass = "cy2fFwHriD" if haspass else None
-        try:
-           k = paramiko.RSAKey.from_private_key_file(filepath,password=randpass)
-        except paramiko.ssh_exception.SSHException as e:
-            if "encountered" not in str(e) and "not a valid" not in str(e):
-                return True, True
+        #Try loading the file with no password against each supported key type.
+        #A PasswordRequiredException means the file is a valid (encrypted) key of some
+        #type, even if we haven't pinned down which one yet - the exact type gets
+        #resolved later once the real passphrase is known (see checkPassphrase/auth).
+        for keyClass in cls._KEY_CLASSES:
             try:
-                k = paramiko.DSSKey.from_private_key_file(filepath,password=randpass)
-            except paramiko.ssh_exception.SSHException as e:
-                if "encountered" not in str(e) and "not a valid" not in str(e):
-                    return True, True
-                try:
-                    k = paramiko.ECDSAKey.from_private_key_file(filepath,password=randpass)
-                except paramiko.ssh_exception.SSHException as e:
-                    if "encountered" not in str(e) and "not a valid" not in str(e):
-                        return True, True
-                    return False, False
-                return True, haspass
-            return True, haspass
-        return True,haspass
+                k = keyClass.from_private_key_file(filepath)
+            except paramiko.ssh_exception.PasswordRequiredException:
+                return True, True
+            except paramiko.ssh_exception.SSHException:
+                continue
+            else:
+                return True, False
+        return False, False
 
     @classmethod
     def checkPassphrase(cls,filepath,passphrase):
-        try:
-           k = paramiko.RSAKey.from_private_key_file(filepath,password=passphrase)
-        except paramiko.ssh_exception.SSHException as e: 
+        for keyClass in cls._KEY_CLASSES:
             try:
-                k = paramiko.DSSKey.from_private_key_file(filepath,password=passphrase)
-            except paramiko.ssh_exception.SSHException as e:
-                try:
-                    k = paramiko.ECDSAKey.from_private_key_file(filepath,password=passphrase)
-                except paramiko.ssh_exception.SSHException as e:
-                    return False
+                k = keyClass.from_private_key_file(filepath,password=passphrase)
+            except paramiko.ssh_exception.SSHException:
+                continue
+            else:
                 return True
-            return True
-        return True
+        return False
 
     @classmethod
     def buildParser(cls,parser):
@@ -125,20 +103,21 @@ class BaboosshExt():
         else:
             passphrase = None
 
-        try:
-           key = paramiko.RSAKey.from_private_key_file(self.keypath,password=passphrase)
-        except paramiko.ssh_exception.SSHException as e: 
+        key = None
+        for keyClass in self._KEY_CLASSES:
             try:
-                key = paramiko.DSSKey.from_private_key_file(self.keypath,password=passphrase)
-            except paramiko.ssh_exception.SSHException as e:
-                try:
-                    key = paramiko.ECDSAKey.from_private_key_file(self.keypath,password=passphrase)
-                except paramiko.ssh_exception.SSHException as e:
-                    return False
+                key = keyClass.from_private_key_file(self.keypath,password=passphrase)
+            except paramiko.ssh_exception.SSHException:
+                continue
+            else:
+                break
+
+        if key is None:
+            return False
 
         transport.auth_publickey(username, key)
         return True
-    
+
     @property
     def identifier(self):
         return self.keypath
@@ -181,4 +160,3 @@ class BaboosshExt():
         #TODO flag for key file removal ?
         #remove(self.keypath)
         return
-

@@ -196,7 +196,7 @@ class Shell(cmd2.Cmd):
         shutil.rmtree(os.path.join(WORKSPACES_DIR, name))
         print("Workspace deleted !")
 
-    __parser_wspace = argparse.ArgumentParser(prog="workspace")
+    __parser_wspace = cmd2.Cmd2ArgumentParser(prog="workspace")
     __subparser_wspace = __parser_wspace.add_subparsers(title='Actions', help='Available actions')
     __parser_wspace_list = __subparser_wspace.add_parser("list", help='List workspaces')
     __parser_wspace_add = __subparser_wspace.add_parser("add", help='Add a new workspace')
@@ -284,7 +284,7 @@ class Shell(cmd2.Cmd):
         tagname = vars(stmt)['tagname']
         self.workspace.host_untag(host, tagname)
 
-    __parser_host = argparse.ArgumentParser(prog="host")
+    __parser_host = cmd2.Cmd2ArgumentParser(prog="host")
     __subparser_host = __parser_host.add_subparsers(title='Actions', help='Available actions')
     __parser_host_list = __subparser_host.add_parser("list", help='List hosts')
     __parser_host_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
@@ -419,7 +419,7 @@ class Shell(cmd2.Cmd):
         self.__endpoint_print(endpoints)
 
 
-    __parser_endpoint = argparse.ArgumentParser(prog="endpoint")
+    __parser_endpoint = cmd2.Cmd2ArgumentParser(prog="endpoint")
     __subparser_endpoint = __parser_endpoint.add_subparsers(title='Actions', help='Available actions')
     __parser_endpoint_list = __subparser_endpoint.add_parser("list", help='List endpoints')
     __parser_endpoint_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
@@ -495,7 +495,7 @@ class Shell(cmd2.Cmd):
         name = vars(stmt)['name']
         self.workspace.user_del(name)
 
-    __parser_user = argparse.ArgumentParser(prog="user")
+    __parser_user = cmd2.Cmd2ArgumentParser(prog="user")
     __subparser_user = __parser_user.add_subparsers(title='Actions', help='Available actions')
     __parser_user_list = __subparser_user.add_parser("list", help='List users')
     __parser_user_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
@@ -567,7 +567,7 @@ class Shell(cmd2.Cmd):
         else:
             print("Credentials #"+str(creds_id)+" added.")
 
-    __parser_creds = argparse.ArgumentParser(prog="creds")
+    __parser_creds = cmd2.Cmd2ArgumentParser(prog="creds")
     __subparser_creds = __parser_creds.add_subparsers(title='Actions', help='Available actions')
     __parser_creds_list = __subparser_creds.add_parser("list", help='List saved credentials')
     __parser_creds_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
@@ -622,7 +622,7 @@ class Shell(cmd2.Cmd):
             data.append([key, Extensions.payloads[key].descr()])
         print(tabulate.tabulate(data, headers=["Key", "Description"]))
 
-    __parser_payload = argparse.ArgumentParser(prog="payload")
+    __parser_payload = cmd2.Cmd2ArgumentParser(prog="payload")
     __subparser_payload = __parser_payload.add_subparsers(title='Actions', help='Available actions')
     __parser_payload_list = __subparser_payload.add_parser("list", help='List payloads')
 
@@ -668,7 +668,7 @@ class Shell(cmd2.Cmd):
         connection = getattr(stmt, "connection", None)
         return self.workspace.connection_del(connection)
 
-    __parser_connection = argparse.ArgumentParser(prog="connection")
+    __parser_connection = cmd2.Cmd2ArgumentParser(prog="connection")
     __subparser_connection = __parser_connection.add_subparsers(title='Actions', help='Available actions')
     __parser_connection_list = __subparser_connection.add_parser("list", help='List connections')
     __parser_connection_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
@@ -707,7 +707,7 @@ class Shell(cmd2.Cmd):
         for key, val in self.workspace.options.items():
             print("    - "+key+": "+str(val))
 
-    __parser_option = argparse.ArgumentParser(prog="option")
+    __parser_option = cmd2.Cmd2ArgumentParser(prog="option")
     __subparser_option = __parser_option.add_subparsers(title='Actions', help='Available actions')
     __parser_option_list = __subparser_option.add_parser("list", help='List options')
     __parser_option_user = __subparser_option.add_parser("user", help='Set target user')
@@ -791,7 +791,7 @@ class Shell(cmd2.Cmd):
         name = vars(stmt)['tagname']
         self.workspace.tag_del(name)
 
-    __parser_tag = argparse.ArgumentParser(prog="tag")
+    __parser_tag = cmd2.Cmd2ArgumentParser(prog="tag")
     __subparser_tag = __parser_tag.add_subparsers(title='Actions', help='Available actions')
     __parser_tag_list = __subparser_tag.add_parser("list", help='List tags')
     __parser_tag_show = __subparser_tag.add_parser("show", help='Show endpoints with tag')
@@ -851,7 +851,7 @@ class Shell(cmd2.Cmd):
         dst = vars(stmt)['dst']
         self.workspace.path_del(src, dst)
 
-    __parser_path = argparse.ArgumentParser(prog="path")
+    __parser_path = cmd2.Cmd2ArgumentParser(prog="path")
     __subparser_path = __parser_path.add_subparsers(title='Actions', help='Available actions')
     __parser_path_list = __subparser_path.add_parser("list", help='List paths')
     __parser_path_list.add_argument("-a", "--all", help="Show out of scope objects", action="store_true")
@@ -885,7 +885,7 @@ class Shell(cmd2.Cmd):
 ###################           PROBE           ###################
 #################################################################
 
-    __parser_probe = argparse.ArgumentParser(prog="probe")
+    __parser_probe = cmd2.Cmd2ArgumentParser(prog="probe")
     __parser_probe.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     __parser_probe.add_argument("-a", "--again", help="include already probed endpoints", action="store_true")
     __parser_probe.add_argument("-n", "--new", help="try finding new shorter path", action="store_true")
@@ -920,7 +920,7 @@ class Shell(cmd2.Cmd):
 ###################          CONNECT          ###################
 #################################################################
 
-    __parser_connect = argparse.ArgumentParser(prog="connect")
+    __parser_connect = cmd2.Cmd2ArgumentParser(prog="connect")
     __parser_connect.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     __parser_connect.add_argument("-f", "--force", help="force connection even if already existing", action="store_true")
     __parser_connect.add_argument("-p", "--probe", help="Automatically probe the endpoint if it wasn't yet", action="store_true")
@@ -945,7 +945,7 @@ class Shell(cmd2.Cmd):
         print("\033[1;32m"+str(nb_working)+"/"+str(nb_targets)+"\033[0m working.")
 
 
-    __parser_run = argparse.ArgumentParser(prog="run")
+    __parser_run = cmd2.Cmd2ArgumentParser(prog="run")
     __parser_run.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     __parser_run.add_argument('connection', help='Connection string', nargs="?", choices_provider=__get_run_targets)
     __subparser_run = __parser_run.add_subparsers(title='Actions', help='Available actions')
@@ -1014,7 +1014,7 @@ class Shell(cmd2.Cmd):
         port = getattr(stmt, 'port', None)
         self.workspace.tunnel_close(port)
 
-    __parser_tunnel = argparse.ArgumentParser(prog="tunnel")
+    __parser_tunnel = cmd2.Cmd2ArgumentParser(prog="tunnel")
     __subparser_tunnel = __parser_tunnel.add_subparsers(title='Actions', help='Available actions')
     __parser_tunnel_list = __subparser_tunnel.add_parser("list", help='List tunnels')
     __parser_tunnel_open = __subparser_tunnel.add_parser("open", help='Open tunnel')
@@ -1043,7 +1043,7 @@ class Shell(cmd2.Cmd):
 #################################################################
 
 
-    __parser_export = argparse.ArgumentParser(prog="export")
+    __parser_export = cmd2.Cmd2ArgumentParser(prog="export")
     __subparser_export = __parser_export.add_subparsers(title='Actions', help='Available exporters')
     __parser_method = __subparser_export.add_parser('list', help='List available exporters')
     for __key in Extensions.exports:
@@ -1075,7 +1075,7 @@ class Shell(cmd2.Cmd):
 ###################          IMPORTS          ###################
 #################################################################
 
-    __parser_import = argparse.ArgumentParser(prog="import")
+    __parser_import = cmd2.Cmd2ArgumentParser(prog="import")
     __subparser_import = __parser_import.add_subparsers(title='Actions', help='Available importers')
     __parser_method = __subparser_import.add_parser('list', help='List available importers')
     for __key in Extensions.imports:
@@ -1110,7 +1110,7 @@ class Shell(cmd2.Cmd):
     def __get_all_objects(self):
         return self.workspace.get_objects(endpoints=True, creds=True, users=True, hosts=True)
 
-    __parser_scope = argparse.ArgumentParser(prog="scope")
+    __parser_scope = cmd2.Cmd2ArgumentParser(prog="scope")
     __parser_scope.add_argument('target', help='Object to scope', choices_provider=__get_all_objects)
     @cmd2.with_argparser(__parser_scope)
     @cmd2.with_category(__CMD_CAT_WSP)
@@ -1139,6 +1139,11 @@ class Shell(cmd2.Cmd):
         print("Bye !")
         return True
 
+    def do__eof(self, _):
+        'Exit Baboossh on EOF (Ctrl-D or end of piped input)'
+
+        return self.do_exit("")
+
     def __init_prompt(self):
         'Build prompt to output currect workspace & active options'
 
@@ -1166,10 +1171,6 @@ class Shell(cmd2.Cmd):
         if payload:
             new_prompt = new_prompt+"\033[1;31m("+str(payload)+")\033[0m"
         self.prompt = new_prompt+"\033[1;33m>\033[0m "
-
-    def emptyline(self):
-        'Don\'t output empty line after command'
-
 
     def postcmd(self, stop, line):
         'Refresh promt after each command to reflect parameters changes'
