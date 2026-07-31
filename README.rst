@@ -16,9 +16,9 @@ BabooSSH is developped by `Cybiere <https://infosec.exchange/@cybiere>`_ and pro
 Note on AI assisted development
 +++++++++++++++++++++++++++++++
 
-Up until this commit, no AI has been used in this project. From now on I'll try to spend some time on this project and I will use Claude Code. Code will be reviewed and the AI tool will have small, defined, iterative instructions. If you do not want to have AI-written code, feel free to fork this repo or to contribute to the code :)
+Up until commit `cde5130`, no AI has been used in this project. From now on I'll try to spend some time on this project and I will use Claude Code. Code will be reviewed and the AI tool will have small, defined, iterative instructions. If you do not want to have AI-written code, feel free to fork this repo or to contribute to the code :)
 
-| Last version without AI assisted dev : v1.2.1
+Last version without AI assisted dev : `v1.2.1`
 
 Install
 +++++++
