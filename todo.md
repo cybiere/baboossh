@@ -9,10 +9,6 @@ The initial test suite (`tests/`) covers `Db`, `Workspace` lifecycle, `Path` add
 - **`workspace/` mixins' remaining public methods** — `enum_probe`, `enum_connect`, `enum_run`, `probe`, `connect`, `run`, `tunnel_open`/`tunnel_close`, `identify_object`, `scope`, `get_objects` (in `baboossh/workspace/*.py`) are untested. Several of these depend on live SSH connections or tunnels and will need mocking similar to `connection.py`.
 - **CI matrix** — the workflow currently runs a single Python version (whatever `uv sync` resolves by default). Consider a version matrix once the suite is established, especially since `requires-python = ">=3.11"` claims broader support than is currently verified.
 
-# Known bug: tab-completion is broken for most fields (pre-existing, found during the shell.py split)
-
-`cmd2.CompletionItem.__init__` in the currently-pinned `cmd2` version only accepts one positional argument (`value`, plus keyword-only `text`/`display`/etc.) — but 9 of the 16 completion providers in `baboossh/shell/helpers.py` (`get_option_host`, `get_option_creds`, `get_option_user`, `get_option_endpoint`, `get_option_endpoint_tag`, `get_option_connection`, `get_open_tunnels`, `get_host_or_local`, `get_tag`) still call it with two positional args (`cmd2.CompletionItem(str(x), description)`), matching the exact pattern that existed in the original monolithic `shell.py` before the mixin split. This means tab-completion for hosts, endpoints, users, creds, connections, tunnels, and tags currently raises `TypeError` instead of completing — confirmed pre-existing (identical call pattern in the pre-split file), not introduced by the split. `cmd2` does not catch generic exceptions from `choices_provider` (only its own `CompletionError`), so this isn't silently swallowed. Fix: update the 9 call sites to `cmd2.CompletionItem(value, display=description)`.
-
 # Type hints follow-up
 
 `__all__` was added to every wildcard-imported module, and type hints were added to the 7 model classes (`Tag`, `Path`, `Endpoint`, `Host`, `User`, `Creds`, `Connection`) plus `Db`/`Extensions`/`Tunnel`/`utils.py`'s plain functions. Deliberately out of scope for that pass:
