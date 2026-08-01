@@ -1,0 +1,79 @@
+# baboossh test range — see README.md for topology, credentials, and a
+# worked walkthrough of adding these hosts to a baboossh workspace.
+#
+#   hostnet (10.10.0.0/24)      pivotnet (10.10.1.0/24, internal)   deadnet (10.10.2.0/24, internal)
+#   ---------------------       ----------------------------------  ---------------------------------
+#   A  10.10.0.2  openssh        B  10.10.1.3  dropbear (gateway)    D  10.10.2.2  openssh (unreachable)
+#   B  10.10.0.3  dropbear       C  10.10.1.4  openssh (pivot-only)
+#   E  10.10.0.4  tinysshd (paramiko-incompatible, deliberately)
+
+services:
+  a-openssh-debian:
+    build:
+      context: .
+      dockerfile: a-openssh-debian/Dockerfile
+    hostname: a-openssh-debian
+    networks:
+      hostnet:
+        ipv4_address: 10.10.0.2
+
+  b-dropbear-alpine:
+    build:
+      context: .
+      dockerfile: b-dropbear-alpine/Dockerfile
+    hostname: b-dropbear-alpine
+    networks:
+      hostnet:
+        ipv4_address: 10.10.0.3
+      pivotnet:
+        ipv4_address: 10.10.1.3
+
+  c-openssh-devuan:
+    build:
+      context: .
+      dockerfile: c-openssh-devuan/Dockerfile
+    hostname: c-openssh-devuan
+    cap_add:
+      - NET_ADMIN  # needed for the container's own iptables rule — see entrypoint.sh
+    networks:
+      pivotnet:
+        ipv4_address: 10.10.1.4
+
+  d-unreachable:
+    build:
+      context: .
+      dockerfile: d-unreachable/Dockerfile
+    hostname: d-unreachable
+    cap_add:
+      - NET_ADMIN  # needed for the container's own iptables rule — see entrypoint.sh
+    networks:
+      deadnet:
+        ipv4_address: 10.10.2.2
+
+  e-tinyssh-incompatible:
+    build:
+      context: .
+      dockerfile: e-tinyssh-incompatible/Dockerfile
+    hostname: e-tinyssh-incompatible
+    networks:
+      hostnet:
+        ipv4_address: 10.10.0.4
+
+networks:
+  hostnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.0.0/24
+  pivotnet:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.10.1.0/24
+  deadnet:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.10.2.0/24
