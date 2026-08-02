@@ -1,6 +1,6 @@
 # baboossh test range
 
-A small Docker Compose SSH range for manually exercising `baboossh`'s pivoting, multiple SSH server implementations, multiple auth methods, and `identify()`'s robustness when expected commands/files aren't present on the target. Not wired into the automated test suite (`tests/test_*.py`) — see `todo.md` for why, and for what's still untested.
+A small Docker Compose SSH range for exercising `baboossh`'s pivoting, multiple SSH server implementations, multiple auth methods, and `identify()`'s robustness when expected commands/files aren't present on the target. Wired into the automated test suite as an opt-in group — see "Automated tests" below — and see `todo.md` for what's still untested.
 
 ## Topology
 
@@ -109,6 +109,16 @@ connect tester:#2@10.10.0.4:22
 ```
 
 Then exercise payloads (`exec`, `shell`, `getfile`, `putfile`, `gather`) against whichever connections succeeded, to confirm they work correctly under the non-root `tester` account.
+
+## Automated tests
+
+The scenarios in the walkthrough above are also covered by `tests/test_docker_range.py`. They're opt-in — not part of the default `uv run pytest` / CI run — since they need Docker and take real wall-clock time to build images and perform live SSH handshakes:
+
+```sh
+uv run pytest --run-docker -v tests/test_docker_range.py
+```
+
+This builds and tears down the whole range itself (session-scoped fixture), so `docker compose up` beforehand isn't required. Without `--run-docker`, these tests are skipped and the rest of the suite is unaffected.
 
 ## SFTP subsystem support
 

@@ -52,3 +52,6 @@ dev = ["pytest", "pytest-cov"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "docker: requires Docker and the tests/docker/ compose range; opt-in via --run-docker",
+]
