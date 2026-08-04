@@ -1,10 +1,18 @@
+from typing import TYPE_CHECKING, Protocol
+
 from baboossh import Creds, Endpoint, Host, User
+
+__all__ = ["ScopeMixin"]
+
+if TYPE_CHECKING:
+    class _Workspace(Protocol):
+        def identify_object(self, target: str) -> "Creds | User | Endpoint | Host | None": ...
 
 
 class ScopeMixin:
     """`Workspace` methods for identifying objects and toggling scope."""
 
-    def identify_object(self, target):
+    def identify_object(self, target: str) -> "Creds | User | Endpoint | Host | None":
         if target[0] == "#":
             creds_id = target[1:]
         else:
@@ -27,7 +35,7 @@ class ScopeMixin:
         print("Could not identify object.")
         return None
 
-    def scope(self, target):
+    def scope(self: "_Workspace", target: str) -> None:
         obj = self.identify_object(target)
         if obj is None:
             return

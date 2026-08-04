@@ -47,3 +47,39 @@ def test_path_del_removes_existing_path(workspace):
 def test_path_find_existing_invalid_format_returns_none(workspace):
     result = workspace.path_find_existing("badformat")
     assert result is None
+
+
+def test_path_find_existing_unknown_host_name_returns_none(workspace):
+    result = workspace.path_find_existing("doesnotexist")
+    assert result is None
+
+
+def make_pivoted_chain(workspace):
+    h1 = make_host(workspace, name="h1")
+    e1 = make_endpoint(workspace, ip="1.1.1.1", port="22")
+    e1.host = h1
+    e1.save()
+    workspace.path_add("local", "1.1.1.1:22")
+
+    h2 = make_host(workspace, name="h2")
+    e2 = make_endpoint(workspace, ip="2.2.2.2", port="22")
+    e2.host = h2
+    e2.save()
+    workspace.path_add("h1", "2.2.2.2:22")
+    return h1, e1, h2, e2
+
+
+def test_path_find_existing_local_source_prints_local_chain(workspace, capsys):
+    make_pivoted_chain(workspace)
+    capsys.readouterr()
+    workspace.path_find_existing("h2")
+    out = capsys.readouterr().out
+    assert out.strip() == "local > h1 > 2.2.2.2:22"
+
+
+def test_path_find_existing_as_ip_true_prints_ip_chain(workspace, capsys):
+    make_pivoted_chain(workspace)
+    capsys.readouterr()
+    workspace.path_find_existing("h2", as_ip=True)
+    out = capsys.readouterr().out
+    assert out.strip() == "local > 1.1.1.1:22 > 2.2.2.2:22"

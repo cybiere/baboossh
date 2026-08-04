@@ -1,11 +1,23 @@
+from typing import TYPE_CHECKING, Protocol
+
 from baboossh import Connection, Creds, Endpoint, Host, Tag, User
 from baboossh.exceptions import NoPathError
+
+if TYPE_CHECKING:
+    class _Workspace(Protocol):
+        options: dict[str, object]
+        workspace_folder: str
+        def unstore(self, data: dict[str, list[str]]) -> None: ...
+        def probe(self, targets: "list[Endpoint]", gateway: str = ...,
+                verbose: bool = ..., find_new: bool = ...) -> None: ...
+
+__all__ = ["ConnectionsMixin"]
 
 
 class ConnectionsMixin:
     """`Workspace` methods for managing `Connection` objects, and enumerating targets."""
 
-    def connection_close(self, target):
+    def connection_close(self: "_Workspace", target: str) -> "bool | None":
         """Close a :class:`Connection` and any connection or tunnel using it
 
         Args:
@@ -18,7 +30,7 @@ class ConnectionsMixin:
             return False
         return connection.close()
 
-    def connection_del(self, target):
+    def connection_del(self: "_Workspace", target: str) -> bool:
         """Remove a :class:`Connection` from the workspace
 
         Args:
@@ -32,7 +44,7 @@ class ConnectionsMixin:
         self.unstore(connection.delete())
         return True
 
-    def enum_probe(self, target=None, again=False):
+    def enum_probe(self: "_Workspace", target: str | None = None, again: bool = False) -> "list[Endpoint]":
         if target is not None:
             if target == "*":
                 endpoints = Endpoint.find_all(scope=True)
@@ -45,9 +57,12 @@ class ConnectionsMixin:
                     raise ValueError("Supplied endpoint isn't in workspace")
                 return [endpoint]
         elif self.options["endpoint"] is not None:
-            if isinstance(self.options["endpoint"], Tag):
-                return self.options["endpoint"].endpoints
-            return [self.options["endpoint"]]
+            option_endpoint = self.options["endpoint"]
+            if isinstance(option_endpoint, Tag):
+                return option_endpoint.endpoints
+            if isinstance(option_endpoint, Endpoint):
+                return [option_endpoint]
+            raise ValueError("Invalid endpoint option")
         else:
             endpoints = Endpoint.find_all(scope=True)
 
@@ -56,7 +71,8 @@ class ConnectionsMixin:
 
         return endpoints
 
-    def enum_connect(self, target=None, force=False, unprobed=False):
+    def enum_connect(self: "_Workspace", target: str | None = None, force: bool = False,
+            unprobed: bool = False) -> "list[Connection]":
         if target is not None:
             if '@' not in target:
                 host = Host.find_one(name=target)
@@ -66,57 +82,63 @@ class ConnectionsMixin:
                         return [conn]
                 raise ValueError("Supplied value doesn't match a known host or a connection string")
 
-            auth, sep, endpoint = target.partition('@')
-            if endpoint == "*":
+            auth, sep, endpoint_str = target.partition('@')
+            if endpoint_str == "*":
                 endpoints = Endpoint.find_all(scope=True)
-            elif endpoint[0] == "!":
-                tag = Tag(endpoint[1:])
+            elif endpoint_str[0] == "!":
+                tag = Tag(endpoint_str[1:])
                 endpoints = tag.endpoints
             else:
-                endpoint = Endpoint.find_one(ip_port=endpoint)
-                if endpoint is None:
+                found_endpoint = Endpoint.find_one(ip_port=endpoint_str)
+                if found_endpoint is None:
                     raise ValueError("Supplied endpoint isn't in workspace")
-                endpoints = [endpoint]
+                endpoints = [found_endpoint]
 
-            user, sep, cred = auth.partition(":")
+            user_str, sep, cred_str = auth.partition(":")
             if sep == "":
                 raise ValueError("No credentials supplied")
-            if user == "*":
+            if user_str == "*":
                 users = User.find_all(scope=True)
             else:
-                user = User.find_one(name=user)
-                if user is None:
+                found_user = User.find_one(name=user_str)
+                if found_user is None:
                     raise ValueError("Supplied user isn't in workspace")
-                users = [user]
-            if cred == "*":
+                users = [found_user]
+            if cred_str == "*":
                 creds = Creds.find_all(scope=True)
             else:
-                if cred[0] == "#":
-                    cred = cred[1:]
-                cred = Creds.find_one(creds_id=cred)
-                if cred is None:
+                if cred_str[0] == "#":
+                    cred_str = cred_str[1:]
+                found_cred = Creds.find_one(creds_id=cred_str)
+                if found_cred is None:
                     raise ValueError("Supplied credentials aren't in workspace")
-                creds = [cred]
+                creds = [found_cred]
             if len(endpoints)*len(users)*len(creds) == 1:
                 return [Connection(endpoints[0], users[0], creds[0])]
         else:
-            user = self.options["user"]
-            if user is None:
+            option_user = self.options["user"]
+            if option_user is None:
                 users = User.find_all(scope=True)
+            elif isinstance(option_user, User):
+                users = [option_user]
             else:
-                users = [user]
-            endpoint = self.options["endpoint"]
-            if isinstance(endpoint, Tag):
-                endpoints = endpoint.endpoints
-            elif endpoint is None:
+                raise ValueError("Invalid user option")
+            option_endpoint = self.options["endpoint"]
+            if isinstance(option_endpoint, Tag):
+                endpoints = option_endpoint.endpoints
+            elif option_endpoint is None:
                 endpoints = Endpoint.find_all(scope=True)
+            elif isinstance(option_endpoint, Endpoint):
+                endpoints = [option_endpoint]
             else:
-                endpoints = [endpoint]
-            cred = self.options["creds"]
-            if cred is None:
+                raise ValueError("Invalid endpoint option")
+            option_creds = self.options["creds"]
+            if option_creds is None:
                 creds = Creds.find_all(scope=True)
+            elif isinstance(option_creds, Creds):
+                creds = [option_creds]
             else:
-                creds = [cred]
+                raise ValueError("Invalid creds option")
             if len(endpoints)*len(users)*len(creds) == 1:
                 return [Connection(endpoints[0], users[0], creds[0])]
 
@@ -139,7 +161,7 @@ class ConnectionsMixin:
                             ret.append(conn)
         return ret
 
-    def enum_run(self, target=None):
+    def enum_run(self: "_Workspace", target: str | None = None) -> "list[Connection]":
         if target is not None:
             if '@' not in target:
                 host = Host.find_one(name=target)
@@ -149,43 +171,55 @@ class ConnectionsMixin:
                         return [conn]
                 raise ValueError("Supplied value doesn't match a known host or a connection string")
 
-            auth, sep, endpoint = target.partition('@')
-            if endpoint == "*":
+            auth, sep, endpoint_str = target.partition('@')
+            endpoint: "Endpoint | Tag | None"
+            if endpoint_str == "*":
                 endpoint = None
-            elif endpoint[0] == "!":
-                tag = Tag(endpoint[1:])
-                endpoints = tag.endpoints
+            elif endpoint_str[0] == "!":
+                endpoint = Tag(endpoint_str[1:])
             else:
-                endpoint = Endpoint.find_one(ip_port=endpoint)
+                endpoint = Endpoint.find_one(ip_port=endpoint_str)
                 if endpoint is None:
                     raise ValueError("Supplied endpoint isn't in workspace")
 
-            user, sep, cred = auth.partition(":")
+            user_str, sep, cred_str = auth.partition(":")
             if sep == "":
                 raise ValueError("No credentials supplied")
-            if user == "*":
+            user: "User | None"
+            if user_str == "*":
                 user = None
             else:
-                user = User.find_one(name=user)
+                user = User.find_one(name=user_str)
                 if user is None:
                     raise ValueError("Supplied user isn't in workspace")
-            if cred == "*":
+            cred: "Creds | None"
+            if cred_str == "*":
                 cred = None
             else:
-                if cred[0] == "#":
-                    cred = cred[1:]
-                cred = Creds.find_one(creds_id=cred)
+                if cred_str[0] == "#":
+                    cred_str = cred_str[1:]
+                cred = Creds.find_one(creds_id=cred_str)
                 if cred is None:
                     raise ValueError("Supplied credentials aren't in workspace")
         else:
-            user = self.options["user"]
-            endpoint = self.options["endpoint"]
-            cred = self.options["creds"]
+            option_user = self.options["user"]
+            if not isinstance(option_user, User) and option_user is not None:
+                raise ValueError("Invalid user option")
+            user = option_user
+            option_endpoint = self.options["endpoint"]
+            if not isinstance(option_endpoint, (Endpoint, Tag)) and option_endpoint is not None:
+                raise ValueError("Invalid endpoint option")
+            endpoint = option_endpoint
+            option_creds = self.options["creds"]
+            if not isinstance(option_creds, Creds) and option_creds is not None:
+                raise ValueError("Invalid creds option")
+            cred = option_creds
 
         return Connection.find_all(endpoint=endpoint, user=user, creds=cred)
 
 
-    def run(self, targets, payload, stmt, verbose=False):
+    def run(self: "_Workspace", targets: "list[Connection]", payload: object, stmt: object,
+            verbose: bool = False) -> None:
         """Run a payload on a list of :class:`Connection`
 
         Args:
@@ -200,7 +234,8 @@ class ConnectionsMixin:
 
             connection.run(payload, self.workspace_folder, stmt, verbose=verbose)
 
-    def connect(self, targets, verbose=False, probe_auto=False):
+    def connect(self: "_Workspace", targets: "list[Connection]", verbose: bool = False,
+            probe_auto: bool = False) -> int:
         nb_working = 0
         for connection in targets:
             if not connection.endpoint.reachable:

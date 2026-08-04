@@ -1,24 +1,35 @@
+from typing import TYPE_CHECKING, Protocol
+
 from baboossh import Host
+
+if TYPE_CHECKING:
+    class _Workspace(Protocol):
+        def unstore(self, data: dict[str, list[str]]) -> None: ...
+
+__all__ = ["HostsMixin"]
 
 
 class HostsMixin:
     """`Workspace` methods for managing `Host` objects."""
 
-    def host_del(self, host):
+    def host_del(self: "_Workspace", host: str) -> bool:
         """Remove a :class:`Host` from the workspace
 
         Args:
             name (str): The `Host` 's username
         """
 
-        if host not in [host.name for host in Host.find_all()]:
+        if host not in [h.name for h in Host.find_all()]:
             print("Not a known Host name.")
             return False
-        host = Host.find_one(name=host)
-        self.unstore(host.delete())
+        found_host = Host.find_one(name=host)
+        if found_host is None:
+            print("Could not find host.")
+            return False
+        self.unstore(found_host.delete())
         return True
 
-    def host_tag(self, host, tagname):
+    def host_tag(self: "_Workspace", host: str, tagname: str) -> bool:
         """Add a :class:`Tag` to an :class:`Host`
 
         Args:
@@ -29,18 +40,18 @@ class HostsMixin:
         if tagname[0] == "!":
             tagname = tagname[1:]
         try:
-            host = Host.find_one(name=host)
+            found_host = Host.find_one(name=host)
         except ValueError:
             print("Could not find host.")
             return False
-        if host is None:
+        if found_host is None:
             print("Could not find host.")
             return False
-        for endpoint in host.endpoints:
+        for endpoint in found_host.endpoints:
             endpoint.tag(tagname)
         return True
 
-    def host_untag(self, host, tagname):
+    def host_untag(self: "_Workspace", host: str, tagname: str) -> bool:
         """Remove a :class:`Tag` from an :class:`Host`
 
         Args:
@@ -51,13 +62,13 @@ class HostsMixin:
         if tagname[0] == "!":
             tagname = tagname[1:]
         try:
-            host = Host.find_one(name=host)
+            found_host = Host.find_one(name=host)
         except ValueError:
             print("Could not find host.")
             return False
-        if host is None:
+        if found_host is None:
             print("Could not find host.")
             return False
-        for endpoint in host.endpoints:
+        for endpoint in found_host.endpoints:
             endpoint.untag(tagname)
         return True

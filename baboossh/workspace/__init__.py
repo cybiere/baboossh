@@ -1,5 +1,7 @@
 import os
 import re
+from typing import Self
+
 from baboossh import User, Creds, Host, Endpoint, Tunnel
 from baboossh import Path, Connection, Db, Extensions, WORKSPACES_DIR, Tag
 from baboossh.exceptions import NoPathError, WorkspaceVersionError, ConnectionClosedError
@@ -45,14 +47,14 @@ class Workspace(
     shared across every domain (`GETTERS` section below).
     """
 
-    active = None
+    active: "Workspace | None" = None
 
 #################################################################
 ###################           INIT            ###################
 #################################################################
 
     @classmethod
-    def create(cls, name: str):
+    def create(cls, name: str) -> Self:
         """Create a new workspace
 
         Create a new workspace with its dedicated folder (in `$HOME/.baboossh` by
@@ -84,9 +86,9 @@ class Workspace(
             raise ValueError
         #create database
         Db.build(name)
-        return Workspace(name)
+        return cls(name)
 
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         if name == "":
             raise ValueError("Cannot use workspace with empty name")
         if re.match(r'^[\w_\.-]+$', name) is None:
@@ -105,8 +107,8 @@ class Workspace(
             raise WorkspaceVersionError(BABOOSSH_VERSION, self.version)
         Db.connect(name)
         self.name = name
-        self.tunnels = {}
-        self.options = {
+        self.tunnels: dict[int, Tunnel] = {}
+        self.options: dict[str, object] = {
             "endpoint":None,
             "user":None,
             "creds":None,
@@ -114,7 +116,7 @@ class Workspace(
             "params":None,
                 }
         type(self).active = self
-        self.store = {
+        self.store: dict[str, dict[str, object]] = {
             "Connection": {},
             "Creds": {},
             "Endpoint": {},
@@ -127,9 +129,11 @@ class Workspace(
 ###################          GETTERS          ###################
 #################################################################
 
-    def get_objects(self, local=False, hosts=False, connections=False, endpoints=False, \
-            users=False, creds=False, tunnels=False, paths=False, scope=None, tags=None):
-        ret = []
+    def get_objects(self, local: bool = False, hosts: bool = False, connections: bool = False,
+            endpoints: bool = False, users: bool = False, creds: bool = False,
+            tunnels: bool = False, paths: bool = False, scope: bool | None = None,
+            tags: bool | None = None) -> list[object]:
+        ret: list[object] = []
         if local:
             ret.append("local")
         if hosts:
@@ -150,14 +154,16 @@ class Workspace(
             ret = ret + Tag.find_all()
         return ret
 
-    def endpoint_search(self, field, val, show_all=False, add_tag=None):
+    def endpoint_search(self, field: str, val: str, show_all: bool = False,
+            add_tag: str | None = None) -> "list[Endpoint]":
         endpoints = Endpoint.search(field, val, show_all)
         if add_tag is not None:
             for endpoint in endpoints:
                 endpoint.tag(add_tag)
         return endpoints
 
-    def host_search(self, field, val, show_all=False, add_tag=None):
+    def host_search(self, field: str, val: str, show_all: bool = False,
+            add_tag: str | None = None) -> "list[Host]":
         hosts = Host.search(field, val, show_all)
         if add_tag is not None:
             for host in hosts:
@@ -165,21 +171,21 @@ class Workspace(
                     endpoint.tag(add_tag)
         return hosts
 
-    def search_fields(self, obj):
+    def search_fields(self, obj: str) -> list[str]:
         if obj == "Endpoint":
             return Endpoint.search_fields
         if obj == "Host":
             return Host.search_fields
         return []
 
-    def unstore(self, data):
+    def unstore(self, data: dict[str, list[str]]) -> None:
         for obj_type, objects in data.items():
             for item in objects:
                 obj = self.store[obj_type].pop(item, None)
                 if obj is not None:
                     print('Removed '+str(obj)+' from '+obj_type)
 
-    def close(self):
+    def close(self) -> None:
         for tunnel in self.tunnels.values():
             tunnel.close()
         for connection in Connection.find_all():

@@ -1,10 +1,12 @@
 from baboossh import Tag
 
+__all__ = ["TagsMixin"]
+
 
 class TagsMixin:
     """`Workspace` methods for managing `Tag` objects."""
 
-    def tag_show(self, name):
+    def tag_show(self, name: str) -> None:
         if name[0] == "!":
             name = name[1:]
         tag = Tag.find_one(name=name)
@@ -15,7 +17,7 @@ class TagsMixin:
         for endpoint in tag.endpoints:
             print(" - "+str(endpoint))
 
-    def tag_del(self, name):
+    def tag_del(self, name: str) -> None:
         if name[0] == "!":
             name = name[1:]
         tag = Tag.find_one(name=name)

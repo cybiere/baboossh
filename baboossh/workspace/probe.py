@@ -1,11 +1,20 @@
-from baboossh import Connection, Host, Path
+from typing import TYPE_CHECKING, Protocol
+
+from baboossh import Connection, Endpoint, Host, Path
 from baboossh.exceptions import ConnectionClosedError, NoPathError
+
+if TYPE_CHECKING:
+    class _Workspace(Protocol):
+        def path_del(self, src: "Host | None", dst: Endpoint) -> bool: ...
+
+__all__ = ["ProbeMixin"]
 
 
 class ProbeMixin:
     """`Workspace` methods for probing endpoints and establishing paths."""
 
-    def probe(self, targets, gateway="auto", verbose=False, find_new=False):
+    def probe(self: "_Workspace", targets: "list[Endpoint]", gateway: str = "auto",
+            verbose: bool = False, find_new: bool = False) -> None:
         for endpoint in targets:
             print("Probing \033[1;34m"+str(endpoint)+"\033[0m > ", end="", flush=True)
             if verbose:
@@ -13,6 +22,7 @@ class ProbeMixin:
 
             conn = Connection(endpoint, None, None)
             working = False
+            host: "Host | None" = None
             if not find_new and endpoint.reachable and str(gateway) == "auto":
                 if verbose:
                     print("\nEndpoint is supposed to be reachable, trying...")
@@ -26,6 +36,9 @@ class ProbeMixin:
                     host = None
                 else:
                     host = Host.find_one(name=gateway)
+                    if host is None:
+                        print("\nError: unknown gateway host "+str(gateway))
+                        return
                     gateway_conn = Connection.find_one(endpoint=host.closest_endpoint)
                 try:
                     working = conn.probe(gateway=gateway_conn, verbose=verbose)
