@@ -1,4 +1,5 @@
 import cmd2
+
 from baboossh.shell.helpers import CMD_CAT_WSP, get_all_objects
 
 
@@ -8,9 +9,9 @@ class ScopeCommands:
     __parser_scope = cmd2.Cmd2ArgumentParser(prog="scope")
     __parser_scope.add_argument('target', help='Object to scope', choices_provider=get_all_objects)
 
-    @cmd2.with_argparser(__parser_scope)
+    @cmd2.with_argparser(__parser_scope)  # pyright: ignore[reportArgumentType]  # self isn't cmd2.Cmd on a mixin, see plan
     @cmd2.with_category(CMD_CAT_WSP)
     def do_scope(self, stmt):
         '''Toggle object in/out of scope'''
         key = getattr(stmt, 'target', None)
-        self.workspace.scope(key)
+        self.workspace.scope(key)  # pyright: ignore[reportAttributeAccessIssue]  # self isn't _Shell on a mixin, see plan

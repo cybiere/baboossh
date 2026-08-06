@@ -2,16 +2,23 @@ import os
 import re
 import shutil
 import argparse
+from typing import TYPE_CHECKING, Protocol
+
 import cmd2
+
 from baboossh.utils import WORKSPACES_DIR
 from baboossh.workspace import Workspace
 from baboossh.shell.helpers import CMD_CAT_WSP, get_arg_workspaces
+
+if TYPE_CHECKING:
+    class _Shell(Protocol):
+        workspace: Workspace
 
 
 class WorkspaceCommands:
     """`Shell` commands for creating, listing, using and deleting workspaces."""
 
-    def __workspace_list(self, stmt):
+    def __workspace_list(self: "_Shell", stmt: argparse.Namespace) -> None:
         print("Existing workspaces :")
         workspaces = [name for name in os.listdir(WORKSPACES_DIR) if os.path.isdir(os.path.join(WORKSPACES_DIR, name))]
         for workspace in workspaces:
@@ -20,7 +27,7 @@ class WorkspaceCommands:
             else:
                 print(" - "+workspace)
 
-    def __workspace_add(self, stmt):
+    def __workspace_add(self: "_Shell", stmt: argparse.Namespace) -> None:
         name = vars(stmt)['name']
         #Check if name was given
         if re.match(r'^[\w_\.-]+$', name) is None:
@@ -37,7 +44,7 @@ class WorkspaceCommands:
         else:
             self.workspace = new_workspace
 
-    def __workspace_use(self, stmt):
+    def __workspace_use(self: "_Shell", stmt: argparse.Namespace) -> None:
         name = vars(stmt)['name']
         #Check if workspace already exists
         if not os.path.exists(os.path.join(WORKSPACES_DIR, name)):
@@ -50,7 +57,7 @@ class WorkspaceCommands:
         else:
             self.workspace = new_workspace
 
-    def __workspace_del(self, stmt):
+    def __workspace_del(self: "_Shell", stmt: argparse.Namespace) -> None:
         from baboossh.shell import yes_no
         name = vars(stmt)['name']
         #Check if workspace already exists
@@ -80,7 +87,7 @@ class WorkspaceCommands:
     __parser_wspace_use.set_defaults(func=__workspace_use)
     __parser_wspace_del.set_defaults(func=__workspace_del)
 
-    @cmd2.with_argparser(__parser_wspace)
+    @cmd2.with_argparser(__parser_wspace)  # pyright: ignore[reportArgumentType]  # self isn't cmd2.Cmd on a mixin, see plan
     @cmd2.with_category(CMD_CAT_WSP)
     def do_workspace(self, stmt: argparse.Namespace):
         '''Create, list, delete and use workspaces.

@@ -1,4 +1,7 @@
+from typing import TYPE_CHECKING, Protocol
+
 import cmd2
+
 from baboossh.shell.helpers import (
     CMD_CAT_WSP,
     get_option_creds,
@@ -8,11 +11,17 @@ from baboossh.shell.helpers import (
     get_option_user,
 )
 
+if TYPE_CHECKING:
+    from baboossh.workspace import Workspace
+
+    class _Shell(Protocol):
+        workspace: Workspace
+
 
 class OptionsCommands:
     """`Shell` commands for setting the workspace's active target options."""
 
-    def __options_list(self):
+    def __options_list(self: "_Shell") -> None:
         print("Current options:")
         for key, val in self.workspace.options.items():
             print("    - "+key+": "+str(val))
@@ -41,7 +50,7 @@ class OptionsCommands:
     __parser_option_connection.set_defaults(option="connection")
     __parser_option_params.set_defaults(option="params")
 
-    @cmd2.with_argparser(__parser_option)
+    @cmd2.with_argparser(__parser_option)  # pyright: ignore[reportArgumentType]  # self isn't cmd2.Cmd on a mixin, see plan
     @cmd2.with_category(CMD_CAT_WSP)
     def do_set(self, stmt):
         '''Set the workspace active options.
@@ -51,12 +60,12 @@ class OptionsCommands:
         which payload to run with which options.
         '''
         if 'option' not in vars(stmt):
-            self.__options_list()
+            self.__options_list()  # pyright: ignore[reportAttributeAccessIssue]  # self isn't _Shell on a mixin, see plan
             return
         option = vars(stmt)['option']
         if option is not None:
             if option == "list":
-                self.__options_list()
+                self.__options_list()  # pyright: ignore[reportAttributeAccessIssue]  # self isn't _Shell on a mixin, see plan
                 return
             if option == "user":
                 value = vars(stmt)['username']
@@ -70,10 +79,13 @@ class OptionsCommands:
                 value = vars(stmt)['connection']
             elif option == "params":
                 value = " ".join(vars(stmt)['params'])
+            else:
+                print("Unknown option "+str(option))
+                return
             try:
-                self.workspace.set_option(option, value)
+                self.workspace.set_option(option, value)  # pyright: ignore[reportAttributeAccessIssue]  # self isn't _Shell on a mixin, see plan
             except (ValueError, IndexError, KeyError):
                 print("Invalid value for "+option)
 
         else:
-            self.__options_list()
+            self.__options_list()  # pyright: ignore[reportAttributeAccessIssue]  # self isn't _Shell on a mixin, see plan

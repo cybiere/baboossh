@@ -1,15 +1,26 @@
+import argparse
+from typing import TYPE_CHECKING, Protocol, cast
+
 import tabulate
 import cmd2
+
+from baboossh import User
 from baboossh.shell.helpers import CMD_CAT_OBJ, get_option_user
+
+if TYPE_CHECKING:
+    from baboossh.workspace import Workspace
+
+    class _Shell(Protocol):
+        workspace: Workspace
 
 
 class UsersCommands:
     """`Shell` commands for creating, listing and deleting users."""
 
-    def __user_list(self, stmt):
+    def __user_list(self: "_Shell", stmt: argparse.Namespace) -> None:
         print("Current users in workspace:")
         show_all = getattr(stmt, 'all', False)
-        users = self.workspace.get_objects(users=True, scope=None if show_all else True)
+        users = cast("list[User]", self.workspace.get_objects(users=True, scope=None if show_all else True))
         if not users:
             print("No users in current workspace")
             return
@@ -19,7 +30,7 @@ class UsersCommands:
             data.append([scope, user])
         print(tabulate.tabulate(data, headers=["", "Username"]))
 
-    def __user_add(self, stmt):
+    def __user_add(self: "_Shell", stmt: argparse.Namespace) -> None:
         name = vars(stmt)['name']
         try:
             self.workspace.user_add(name)
@@ -28,7 +39,7 @@ class UsersCommands:
         else:
             print("User "+name+" added.")
 
-    def __user_del(self, stmt):
+    def __user_del(self: "_Shell", stmt: argparse.Namespace) -> None:
         name = vars(stmt)['name']
         self.workspace.user_del(name)
 
@@ -45,7 +56,7 @@ class UsersCommands:
     __parser_user_add.set_defaults(func=__user_add)
     __parser_user_del.set_defaults(func=__user_del)
 
-    @cmd2.with_argparser(__parser_user)
+    @cmd2.with_argparser(__parser_user)  # pyright: ignore[reportArgumentType]  # self isn't cmd2.Cmd on a mixin, see plan
     @cmd2.with_category(CMD_CAT_OBJ)
     def do_user(self, stmt):
         '''Create, list and delete users.
@@ -58,4 +69,4 @@ class UsersCommands:
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            self.__user_list(stmt)
+            self.__user_list(stmt)  # pyright: ignore[reportAttributeAccessIssue]  # self isn't _Shell on a mixin, see plan

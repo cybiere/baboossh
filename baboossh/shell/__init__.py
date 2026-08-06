@@ -16,11 +16,18 @@ top-level `yes_no()`/`main()` helpers.
 """
 
 import os
+
 import cmd2
+
 from baboossh.utils import WORKSPACES_DIR
 from baboossh.version import BABOOSSH_VERSION
 from baboossh.extensions import Extensions
 from baboossh.workspace import Workspace
+
+# Must run before the shell.* imports below: several of those modules build
+# their argparse subparsers from Extensions.auths/exports/imports at class-body
+# (i.e. import) time, so those dicts need to already be populated.
+Extensions.load()
 
 from baboossh.shell.helpers import CMD_CAT_WSP
 from baboossh.shell.workspace import WorkspaceCommands
@@ -42,7 +49,7 @@ from baboossh.shell.scope import ScopeCommands
 
 __all__ = ["Shell", "main"]
 
-def yes_no(prompt, default=None, list_val=None):
+def yes_no(prompt: str, default: bool | None = None, list_val: list[object] | None = None) -> bool:
     """Simple Yes/No prompt to ask questions
 
     Args:
@@ -83,8 +90,6 @@ def yes_no(prompt, default=None, list_val=None):
     return answer == "y"
 
 
-Extensions.load()
-
 class Shell(
         WorkspaceCommands,
         HostsCommands,
@@ -120,7 +125,7 @@ class Shell(
 #################################################################
 
     @cmd2.with_category(CMD_CAT_WSP)
-    def do_store(self, arg):
+    def do_store(self, arg: str) -> None:
         for obj_type, objects in self.workspace.store.items():
             print(obj_type)
             for obj_id, obj in objects.items():
@@ -128,19 +133,19 @@ class Shell(
 
 
 
-    def do_exit(self, arg):
+    def do_exit(self, arg: str) -> bool:
         'Close active workspace & quit Baboossh'
 
         self.workspace.close()
         print("Bye !")
         return True
 
-    def do__eof(self, _):
+    def do__eof(self, _: str) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]  # deliberately undecorated, see plan
         'Exit Baboossh on EOF (Ctrl-D or end of piped input)'
 
         return self.do_exit("")
 
-    def __init_prompt(self):
+    def __init_prompt(self) -> None:
         'Build prompt to output currect workspace & active options'
 
         new_prompt = "\033[1;33m"
@@ -168,14 +173,14 @@ class Shell(
             new_prompt = new_prompt+"\033[1;31m("+str(payload)+")\033[0m"
         self.prompt = new_prompt+"\033[1;33m>\033[0m "
 
-    def postcmd(self, stop, line):
+    def postcmd(self, stop: bool, statement: "cmd2.Statement | str") -> bool:
         'Refresh promt after each command to reflect parameters changes'
 
         self.__init_prompt()
         return stop
 
 
-    def __init__(self):
+    def __init__(self) -> None:
         'Init BabooSSH shell & cmd2.Cmd, create (if needed) & open default workspace.'
 
         super().__init__()
@@ -210,5 +215,5 @@ Welcome to BabooSSH v\033[1;32m'''+BABOOSSH_VERSION+'''\033[0m. To start, use "h
         #TODO remove debug
         self.debug = True
 
-def main():
+def main() -> None:
     Shell().cmdloop()

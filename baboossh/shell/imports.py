@@ -1,5 +1,6 @@
 import tabulate
 import cmd2
+
 from baboossh.extensions import Extensions
 from baboossh.shell.helpers import CMD_CAT_WSP
 
@@ -16,7 +17,7 @@ class ImportsCommands:
         __parser_method.set_defaults(importer=__key)
         __importer.buildParser(__parser_method)
 
-    @cmd2.with_argparser(__parser_import)
+    @cmd2.with_argparser(__parser_import)  # pyright: ignore[reportArgumentType]  # self isn't cmd2.Cmd on a mixin, see plan
     @cmd2.with_category(CMD_CAT_WSP)
     def do_import(self, stmt):
         '''Import workspace info'''
@@ -33,4 +34,4 @@ class ImportsCommands:
         except Exception as exc:
             print("Error: "+str(exc))
             return
-        importer.run(stmt, self.workspace)
+        importer.run(stmt, self.workspace)  # pyright: ignore[reportAttributeAccessIssue]  # self isn't _Shell on a mixin, see plan

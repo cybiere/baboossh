@@ -1,15 +1,26 @@
+import argparse
+from typing import TYPE_CHECKING, Protocol, cast
+
 import tabulate
 import cmd2
+
+from baboossh import Connection
 from baboossh.shell.helpers import CMD_CAT_OBJ, get_option_connection
+
+if TYPE_CHECKING:
+    from baboossh.workspace import Workspace
+
+    class _Shell(Protocol):
+        workspace: Workspace
 
 
 class ConnectionsCommands:
     """`Shell` commands for listing, closing and deleting working connections."""
 
-    def __connection_list(self, stmt):
+    def __connection_list(self: "_Shell", stmt: argparse.Namespace) -> bool:
         print("Available connections:")
         show_all = getattr(stmt, 'all', False)
-        connections = self.workspace.get_objects(connections=True, scope=None if show_all else True)
+        connections = cast("list[Connection]", self.workspace.get_objects(connections=True, scope=None if show_all else True))
         if not connections:
             print("No connections in current workspace")
             return True
@@ -22,14 +33,17 @@ class ConnectionsCommands:
         print(tabulate.tabulate(data, headers=["Endpoint", "User", "Creds", "Open"]))
         return True
 
-    def __connection_close(self, stmt):
+    def __connection_close(self: "_Shell", stmt: argparse.Namespace) -> "bool | None":
         connection = getattr(stmt, "connection", None)
-        return self.workspace.connection_close(connection)
+        if connection is None:
+            print("No connection specified.")
+            return False
+        return self.workspace.connection_close(connection)  # pyright: ignore[reportAttributeAccessIssue]  # cross-package Protocol resolution artifact, see plan
 
 
-    def __connection_del(self, stmt):
+    def __connection_del(self: "_Shell", stmt: argparse.Namespace) -> bool:
         connection = getattr(stmt, "connection", None)
-        return self.workspace.connection_del(connection)
+        return self.workspace.connection_del(connection)  # pyright: ignore[reportAttributeAccessIssue]  # cross-package Protocol resolution artifact, see plan
 
     __parser_connection = cmd2.Cmd2ArgumentParser(prog="connection")
     __subparser_connection = __parser_connection.add_subparsers(title='Actions', help='Available actions')
@@ -44,7 +58,7 @@ class ConnectionsCommands:
     __parser_connection_close.set_defaults(func=__connection_close)
     __parser_connection_del.set_defaults(func=__connection_del)
 
-    @cmd2.with_argparser(__parser_connection)
+    @cmd2.with_argparser(__parser_connection)  # pyright: ignore[reportArgumentType]  # self isn't cmd2.Cmd on a mixin, see plan
     @cmd2.with_category(CMD_CAT_OBJ)
     def do_connection(self, stmt):
         '''List and delete working connections.
@@ -58,4 +72,4 @@ class ConnectionsCommands:
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            self.__connection_list(stmt)
+            self.__connection_list(stmt)  # pyright: ignore[reportAttributeAccessIssue]  # self isn't _Shell on a mixin, see plan

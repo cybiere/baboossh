@@ -1,22 +1,33 @@
+import argparse
+from typing import TYPE_CHECKING, Protocol, cast
+
 import tabulate
 import cmd2
+
+from baboossh import Creds
 from baboossh.extensions import Extensions
 from baboossh.shell.helpers import CMD_CAT_OBJ, get_option_creds
+
+if TYPE_CHECKING:
+    from baboossh.workspace import Workspace
+
+    class _Shell(Protocol):
+        workspace: Workspace
 
 
 class CredsCommands:
     """`Shell` commands for creating, listing, showing, editing and deleting credentials."""
 
-    def __creds_types(self, stmt):
+    def __creds_types(self, stmt: argparse.Namespace) -> None:
         print("Supported credential types:")
         data = []
         for key in Extensions.auths:
             data.append([key, Extensions.auths[key].descr()])
         print(tabulate.tabulate(data, headers=["Key", "Description"]))
 
-    def __creds_list(self, stmt):
+    def __creds_list(self: "_Shell", stmt: argparse.Namespace) -> None:
         show_all = getattr(stmt, 'all', False)
-        creds = self.workspace.get_objects(creds=True, scope=None if show_all else True)
+        creds = cast("list[Creds]", self.workspace.get_objects(creds=True, scope=None if show_all else True))
         if not creds:
             print("No creds in current workspace")
             return
@@ -26,19 +37,19 @@ class CredsCommands:
             data.append([scope, "#"+str(cred.id), cred.obj.getKey(), cred.obj.toList()])
         print(tabulate.tabulate(data, headers=["", "ID", "Type", "Value"]))
 
-    def __creds_show(self, stmt):
+    def __creds_show(self: "_Shell", stmt: argparse.Namespace) -> None:
         creds_id = vars(stmt)['id']
         self.workspace.creds_show(creds_id)
 
-    def __creds_edit(self, stmt):
+    def __creds_edit(self: "_Shell", stmt: argparse.Namespace) -> None:
         creds_id = vars(stmt)['id']
         self.workspace.creds_edit(creds_id)
 
-    def __creds_del(self, stmt):
+    def __creds_del(self: "_Shell", stmt: argparse.Namespace) -> None:
         creds_id = vars(stmt)['id']
         self.workspace.creds_del(creds_id)
 
-    def __creds_add(self, stmt):
+    def __creds_add(self: "_Shell", stmt: argparse.Namespace) -> None:
         creds_type = vars(stmt)['type']
         try:
             creds_id = self.workspace.creds_add(creds_type, stmt)
@@ -73,7 +84,7 @@ class CredsCommands:
     __parser_creds_add.set_defaults(func=__creds_add)
     __parser_creds_del.set_defaults(func=__creds_del)
 
-    @cmd2.with_argparser(__parser_creds)
+    @cmd2.with_argparser(__parser_creds)  # pyright: ignore[reportArgumentType]  # self isn't cmd2.Cmd on a mixin, see plan
     @cmd2.with_category(CMD_CAT_OBJ)
     def do_creds(self, stmt):
         '''Create, list, edit and delete credentials.
@@ -89,4 +100,4 @@ class CredsCommands:
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            self.__creds_list(stmt)
+            self.__creds_list(stmt)  # pyright: ignore[reportAttributeAccessIssue]  # self isn't _Shell on a mixin, see plan

@@ -1,12 +1,24 @@
+import argparse
+from typing import TYPE_CHECKING, Protocol, cast
+
 import tabulate
 import cmd2
+
+from baboossh import Host
 from baboossh.shell.helpers import CMD_CAT_OBJ, get_option_host, get_search_fields_host, get_tag
+
+if TYPE_CHECKING:
+    from baboossh.workspace import Workspace
+
+    class _Shell(Protocol):
+        workspace: Workspace
 
 
 class HostsCommands:
     """`Shell` commands for listing, searching, tagging and deleting hosts."""
 
-    def __host_print(self, hosts):
+    @staticmethod
+    def __host_print(hosts: "list[Host]") -> None:
         data = []
         for host in hosts:
             endpoints = ""
@@ -19,16 +31,16 @@ class HostsCommands:
             data.append([scope, host.name, host.distance, endpoints])
         print(tabulate.tabulate(data, headers=["", "Name", "Dist", "Endpoints"]))
 
-    def __host_list(self, stmt):
+    def __host_list(self: "_Shell", stmt: argparse.Namespace) -> None:
         print("Current hosts in workspace:")
         show_all = getattr(stmt, 'all', False)
-        hosts = self.workspace.get_objects(hosts=True, scope=None if show_all else True)
+        hosts = cast("list[Host]", self.workspace.get_objects(hosts=True, scope=None if show_all else True))
         if not hosts:
             print("No hosts in current workspace")
             return
-        self.__host_print(hosts)
+        HostsCommands.__host_print(hosts)
 
-    def __host_search(self, stmt):
+    def __host_search(self: "_Shell", stmt: argparse.Namespace) -> None:
         show_all = getattr(stmt, 'all', False)
         tag = getattr(stmt, 'tag', None)
         field = vars(stmt)['field']
@@ -42,18 +54,18 @@ class HostsCommands:
         if not hosts:
             print("No results")
             return
-        self.__host_print(hosts)
+        HostsCommands.__host_print(hosts)
 
-    def __host_del(self, stmt):
-        host = getattr(stmt, 'host', None)
+    def __host_del(self: "_Shell", stmt: argparse.Namespace) -> None:
+        host = vars(stmt)['host']
         self.workspace.host_del(host)
 
-    def __host_tag(self, stmt):
+    def __host_tag(self: "_Shell", stmt: argparse.Namespace) -> None:
         host = vars(stmt)['host']
         tagname = vars(stmt)['tagname']
         self.workspace.host_tag(host, tagname)
 
-    def __host_untag(self, stmt):
+    def __host_untag(self: "_Shell", stmt: argparse.Namespace) -> None:
         host = vars(stmt)['host']
         tagname = vars(stmt)['tagname']
         self.workspace.host_untag(host, tagname)
@@ -81,7 +93,7 @@ class HostsCommands:
     __parser_host_tag.set_defaults(func=__host_tag)
     __parser_host_untag.set_defaults(func=__host_untag)
 
-    @cmd2.with_argparser(__parser_host)
+    @cmd2.with_argparser(__parser_host)  # pyright: ignore[reportArgumentType]  # self isn't cmd2.Cmd on a mixin, see plan
     @cmd2.with_category(CMD_CAT_OBJ)
     def do_host(self, stmt):
         '''Search, list and delete hosts.
@@ -95,4 +107,4 @@ class HostsCommands:
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            self.__host_list(stmt)
+            self.__host_list(stmt)  # pyright: ignore[reportAttributeAccessIssue]  # self isn't _Shell on a mixin, see plan

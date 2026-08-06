@@ -1,15 +1,26 @@
+import argparse
+from typing import TYPE_CHECKING, Protocol, cast
+
 import tabulate
 import cmd2
+
+from baboossh import Path
 from baboossh.shell.helpers import CMD_CAT_OBJ, get_endpoint_or_host, get_host_or_local, get_option_endpoint
+
+if TYPE_CHECKING:
+    from baboossh.workspace import Workspace
+
+    class _Shell(Protocol):
+        workspace: Workspace
 
 
 class PathsCommands:
     """`Shell` commands for listing, adding, getting and deleting paths."""
 
-    def __path_list(self, stmt):
+    def __path_list(self: "_Shell", stmt: argparse.Namespace) -> None:
         print("Current paths in workspace:")
         show_all = getattr(stmt, 'all', False)
-        paths = self.workspace.get_objects(paths=True)
+        paths = cast("list[Path]", self.workspace.get_objects(paths=True))
         if not paths:
             print("No paths in current workspace")
             return
@@ -17,23 +28,23 @@ class PathsCommands:
         for path in paths:
             if not path.scope and not show_all:
                 continue
-            src = path.src
+            src: object = path.src
             if src is None:
                 src = "Local"
             data.append([src, path.dst])
         print(tabulate.tabulate(data, headers=["Source", "Destination"]))
 
-    def __path_get(self, stmt):
+    def __path_get(self: "_Shell", stmt: argparse.Namespace) -> None:
         endpoint = vars(stmt)['endpoint']
         as_ip = getattr(stmt, "numeric", False)
         self.workspace.path_find_existing(endpoint, as_ip)
 
-    def __path_add(self, stmt):
+    def __path_add(self: "_Shell", stmt: argparse.Namespace) -> None:
         src = vars(stmt)['src']
         dst = vars(stmt)['dst']
         self.workspace.path_add(src, dst)
 
-    def __path_del(self, stmt):
+    def __path_del(self: "_Shell", stmt: argparse.Namespace) -> None:
         src = vars(stmt)['src']
         dst = vars(stmt)['dst']
         self.workspace.path_del(src, dst)
@@ -57,7 +68,7 @@ class PathsCommands:
     __parser_path_add.set_defaults(func=__path_add)
     __parser_path_del.set_defaults(func=__path_del)
 
-    @cmd2.with_argparser(__parser_path)
+    @cmd2.with_argparser(__parser_path)  # pyright: ignore[reportArgumentType]  # self isn't cmd2.Cmd on a mixin, see plan
     @cmd2.with_category(CMD_CAT_OBJ)
     def do_path(self, stmt):
         '''Manage paths'''
@@ -66,4 +77,4 @@ class PathsCommands:
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            self.__path_list(stmt)
+            self.__path_list(stmt)  # pyright: ignore[reportAttributeAccessIssue]  # self isn't _Shell on a mixin, see plan

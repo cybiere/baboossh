@@ -1,5 +1,10 @@
+import argparse
+from typing import TYPE_CHECKING, Protocol, cast
+
 import tabulate
 import cmd2
+
+from baboossh import Endpoint
 from baboossh.shell.helpers import (
     CMD_CAT_OBJ,
     get_option_endpoint,
@@ -8,11 +13,18 @@ from baboossh.shell.helpers import (
     get_tag,
 )
 
+if TYPE_CHECKING:
+    from baboossh.workspace import Workspace
+
+    class _Shell(Protocol):
+        workspace: Workspace
+
 
 class EndpointsCommands:
     """`Shell` commands for creating, listing, searching, tagging and deleting endpoints."""
 
-    def __endpoint_print(self, endpoints):
+    @staticmethod
+    def __endpoint_print(endpoints: "list[Endpoint]") -> None:
         data = []
         for endpoint in endpoints:
             scope = "o" if endpoint.scope else ""
@@ -39,12 +51,12 @@ class EndpointsCommands:
             data.append([scope, endpoint, host, reachable, distance, conn, taglist])
         print(tabulate.tabulate(data, headers=["", "Endpoint", "Host", "Reachable", "Dist", "Working connection", "Tags"]))
 
-    def __endpoint_list(self, stmt):
+    def __endpoint_list(self: "_Shell", stmt: argparse.Namespace) -> None:
         print("Current endpoints in workspace:")
         show_all = getattr(stmt, 'all', False)
         reachable = getattr(stmt, 'reachable', None)
         conn = getattr(stmt, 'conn', None)
-        endpoints = self.workspace.get_objects(endpoints=True, scope=None if show_all else True)
+        endpoints = cast("list[Endpoint]", self.workspace.get_objects(endpoints=True, scope=None if show_all else True))
         if not endpoints:
             print("No endpoints in current workspace")
             return
@@ -60,9 +72,9 @@ class EndpointsCommands:
                 if (endpoint.connection is None) == flag_conn:
                     continue
             endpoint_list.append(endpoint)
-        self.__endpoint_print(endpoint_list)
+        EndpointsCommands.__endpoint_print(endpoint_list)
 
-    def __endpoint_add(self, stmt):
+    def __endpoint_add(self: "_Shell", stmt: argparse.Namespace) -> None:
         ip_add = vars(stmt)['ip']
         port = str(vars(stmt)['port'])
         try:
@@ -72,22 +84,22 @@ class EndpointsCommands:
         else:
             print("Endpoint "+ip_add+":"+port+" added.")
 
-    def __endpoint_del(self, stmt):
+    def __endpoint_del(self: "_Shell", stmt: argparse.Namespace) -> None:
         endpoint = vars(stmt)['endpoint']
         self.workspace.endpoint_del(endpoint)
 
-    def __endpoint_tag(self, stmt):
+    def __endpoint_tag(self: "_Shell", stmt: argparse.Namespace) -> None:
         endpoint = vars(stmt)['endpoint']
         tagname = vars(stmt)['tagname']
         self.workspace.endpoint_tag(endpoint, tagname)
 
-    def __endpoint_untag(self, stmt):
+    def __endpoint_untag(self: "_Shell", stmt: argparse.Namespace) -> None:
         endpoint = vars(stmt)['endpoint']
         tagname = vars(stmt)['tagname']
         self.workspace.endpoint_untag(endpoint, tagname)
 
 
-    def __endpoint_search(self, stmt):
+    def __endpoint_search(self: "_Shell", stmt: argparse.Namespace) -> None:
         show_all = getattr(stmt, 'all', False)
         tag = getattr(stmt, 'tag', None)
         field = vars(stmt)['field']
@@ -101,7 +113,7 @@ class EndpointsCommands:
         if not endpoints:
             print("No results")
             return
-        self.__endpoint_print(endpoints)
+        EndpointsCommands.__endpoint_print(endpoints)
 
 
     __parser_endpoint = cmd2.Cmd2ArgumentParser(prog="endpoint")
@@ -134,7 +146,7 @@ class EndpointsCommands:
     __parser_endpoint_tag.set_defaults(func=__endpoint_tag)
     __parser_endpoint_untag.set_defaults(func=__endpoint_untag)
 
-    @cmd2.with_argparser(__parser_endpoint)
+    @cmd2.with_argparser(__parser_endpoint)  # pyright: ignore[reportArgumentType]  # self isn't cmd2.Cmd on a mixin, see plan
     @cmd2.with_category(CMD_CAT_OBJ)
     def do_endpoint(self, stmt):
         '''Create, list, search and delete endpoints.
@@ -148,4 +160,4 @@ class EndpointsCommands:
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            self.__endpoint_list(stmt)
+            self.__endpoint_list(stmt)  # pyright: ignore[reportAttributeAccessIssue]  # self isn't _Shell on a mixin, see plan

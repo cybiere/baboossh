@@ -1,12 +1,22 @@
+import argparse
+from typing import TYPE_CHECKING, Protocol
+
 import tabulate
 import cmd2
+
 from baboossh.shell.helpers import CMD_CAT_OBJ, get_tag
+
+if TYPE_CHECKING:
+    from baboossh.workspace import Workspace
+
+    class _Shell(Protocol):
+        workspace: Workspace
 
 
 class TagsCommands:
     """`Shell` commands for listing, showing and deleting tags."""
 
-    def __tag_list(self, stmt):
+    def __tag_list(self: "_Shell", stmt: argparse.Namespace) -> None:
         print("Current tags in workspace:")
         tags = self.workspace.get_objects(tags=True)
         if not tags:
@@ -17,11 +27,11 @@ class TagsCommands:
             data.append([tag])
         print(tabulate.tabulate(data, headers=["Tag name"]))
 
-    def __tag_show(self, stmt):
+    def __tag_show(self: "_Shell", stmt: argparse.Namespace) -> None:
         name = vars(stmt)['tagname']
         self.workspace.tag_show(name)
 
-    def __tag_del(self, stmt):
+    def __tag_del(self: "_Shell", stmt: argparse.Namespace) -> None:
         name = vars(stmt)['tagname']
         self.workspace.tag_del(name)
 
@@ -37,7 +47,7 @@ class TagsCommands:
     __parser_tag_show.set_defaults(func=__tag_show)
     __parser_tag_del.set_defaults(func=__tag_del)
 
-    @cmd2.with_argparser(__parser_tag)
+    @cmd2.with_argparser(__parser_tag)  # pyright: ignore[reportArgumentType]  # self isn't cmd2.Cmd on a mixin, see plan
     @cmd2.with_category(CMD_CAT_OBJ)
     def do_tag(self, stmt):
         '''Manage tags'''
@@ -46,4 +56,4 @@ class TagsCommands:
             # Call whatever subcommand function was selected
             func(self, stmt)
         else:
-            self.__tag_list(stmt)
+            self.__tag_list(stmt)  # pyright: ignore[reportAttributeAccessIssue]  # self isn't _Shell on a mixin, see plan

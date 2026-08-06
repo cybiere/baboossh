@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from baboossh import Workspace
+from baboossh.shell import Shell
 
 DOCKER_COMPOSE_FILE = Path(__file__).parent / "docker" / "compose.yml"
 
@@ -28,6 +29,20 @@ def workspace(tmp_path, monkeypatch):
     ws = Workspace.create("testws")
     yield ws
     ws.close()
+
+
+@pytest.fixture
+def shell(tmp_path, monkeypatch):
+    monkeypatch.setattr("baboossh.utils.WORKSPACES_DIR", str(tmp_path))
+    monkeypatch.setattr("baboossh.db.WORKSPACES_DIR", str(tmp_path))
+    monkeypatch.setattr("baboossh.workspace.WORKSPACES_DIR", str(tmp_path))
+    monkeypatch.setattr("baboossh.shell.WORKSPACES_DIR", str(tmp_path))
+    monkeypatch.setattr("baboossh.shell.workspace.WORKSPACES_DIR", str(tmp_path))
+    monkeypatch.setattr("baboossh.shell.helpers.WORKSPACES_DIR", str(tmp_path))
+    app = Shell()
+    yield app
+    if Workspace.active is not None:
+        app.workspace.close()
 
 
 def pytest_addoption(parser):

@@ -1,5 +1,6 @@
 import tabulate
 import cmd2
+
 from baboossh.extensions import Extensions
 from baboossh.shell.helpers import CMD_CAT_WSP
 
@@ -16,7 +17,7 @@ class ExportsCommands:
         __parser_method.set_defaults(exporter=__key)
         __export.buildParser(__parser_method)
 
-    @cmd2.with_argparser(__parser_export)
+    @cmd2.with_argparser(__parser_export)  # pyright: ignore[reportArgumentType]  # self isn't cmd2.Cmd on a mixin, see plan
     @cmd2.with_category(CMD_CAT_WSP)
     def do_export(self, stmt):
         '''Export workspace info'''
@@ -33,4 +34,4 @@ class ExportsCommands:
         except Exception as exc:
             print("Error: "+str(exc))
             return
-        exporter.run(stmt, self.workspace)
+        exporter.run(stmt, self.workspace)  # pyright: ignore[reportAttributeAccessIssue]  # self isn't _Shell on a mixin, see plan
