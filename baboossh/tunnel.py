@@ -6,14 +6,20 @@ import threading
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    import paramiko
     from baboossh import Connection
 
 __all__ = ["Tunnel"]
 
+class TunnelServer(ThreadingTCPServer):
+    output: "paramiko.Transport | None"
+    server_address: tuple[str, int]  # pyright: ignore[reportIncompatibleVariableOverride]  # always IPv4 here, narrower than TCPServer's IPv4|IPv6 union
+
 class SocksProxy(StreamRequestHandler):
     SOCKS_VERSION = 5
+    server: TunnelServer  # pyright: ignore[reportIncompatibleVariableOverride]  # SocksProxy is only ever used with a TunnelServer, see Tunnel.__init__
 
-    def handle(self):
+    def handle(self) -> None:
         # greeting header
         # read and unpack 2 bytes from a client
         header = self.connection.recv(2)
@@ -54,8 +60,10 @@ class SocksProxy(StreamRequestHandler):
         port = struct.unpack('!H', self.connection.recv(2))[0]
 
         # reply
+        remote: "paramiko.Channel | None" = None
         try:
             if cmd == 1:  # CONNECT
+                assert self.server.output is not None
                 remote = self.server.output.open_channel(
                     kind="direct-tcpip",
                     dest_addr=(address, port),
@@ -78,20 +86,21 @@ class SocksProxy(StreamRequestHandler):
 
         # establish data exchange
         if reply[1] == 0 and cmd == 1:
+            assert remote is not None
             self.exchange_loop(self.connection, remote)
 
         self.server.close_request(self.request)
 
-    def get_available_methods(self, n):
+    def get_available_methods(self, n: int) -> list[int]:
         methods = []
         for i in range(n):
             methods.append(ord(self.connection.recv(1)))
         return methods
 
-    def generate_failed_reply(self, address_type, error_number):
+    def generate_failed_reply(self, address_type: int, error_number: int) -> bytes:
         return struct.pack("!BBBBIH", self.SOCKS_VERSION, error_number, 0, address_type, 0, 0)
 
-    def exchange_loop(self, client, remote):
+    def exchange_loop(self, client, remote: "paramiko.Channel") -> None:
         while True:
             # wait until client or remote is available for read
             r, w, e = select.select([client, remote], [], [])
@@ -124,7 +133,7 @@ class Tunnel():
             port = 0
         self.connection.open()
         self.connection.used_by_tunnels.append(self)
-        self.server = ThreadingTCPServer(('127.0.0.1', port), SocksProxy)
+        self.server = TunnelServer(('127.0.0.1', port), SocksProxy)
         self.server.output = self.connection.transport
         ip, newport = self.server.server_address
         self.port = newport
