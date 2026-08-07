@@ -1,23 +1,33 @@
 import os
+from typing import Any, Protocol, TypeVar
 
 from baboossh.version import BABOOSSH_VERSION
 
 WORKSPACES_DIR = os.path.join(os.path.expanduser("~"), ".baboossh")
 
+class _UniqueInstance(Protocol):
+    @classmethod
+    def get_id(cls, *args: Any, **kwargs: Any) -> str: ...
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
+
+_T = TypeVar("_T", bound=_UniqueInstance)
+
 class Unique(type):
-    def __call__(cls, *args, **kwargs):
+    def __call__(cls: type[_T], *args: Any, **kwargs: Any) -> _T:
         from baboossh.workspace import Workspace
         if Workspace.active is None:
             raise ValueError("Cannot create an object out of a workspace")
         workspace = Workspace.active
         obj_id = cls.get_id(*args, **kwargs)
-        if obj_id not in workspace.store[cls.__name__]:
-            self = cls.__new__(cls, *args, **kwargs)
-            cls.__init__(self, *args, **kwargs)
-            workspace.store[cls.__name__][obj_id] = self
-        return workspace.store[cls.__name__][obj_id]
+        cached = workspace.store[cls.__name__].get(obj_id)
+        if cached is None:
+            cached = cls.__new__(cls)
+            cls.__init__(cached, *args, **kwargs)
+            workspace.store[cls.__name__][obj_id] = cached
+        assert isinstance(cached, cls)
+        return cached
 
-    def __init__(cls, name, bases, attributes):
+    def __init__(cls, name: str, bases: tuple[type, ...], attributes: dict[str, object]) -> None:
         super().__init__(name, bases, attributes)
 
 def unstore_targets_merge(original: dict[str, list[str]], new_data: dict[str, list[str]]) -> None:
