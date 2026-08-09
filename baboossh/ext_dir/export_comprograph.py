@@ -81,8 +81,12 @@ class BaboosshExt(object,metaclass=ExtStr):
             else:
                 dotcode = dotcode + '"node_'+str(endpoint.found.id)+'" -> "node_'+str(endpoint.id)+'"\n'
         dotcode = dotcode + '}'
-        with open(outfile,"w") as f:
-            f.write(dotcode)
+        try:
+            with open(outfile,"w") as f:
+                f.write(dotcode)
+        except OSError as e:
+            print("Error : "+str(e))
+            return False
         print("Export saved as "+outfile)
         return True
     

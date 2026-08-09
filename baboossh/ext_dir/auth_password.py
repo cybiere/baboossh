@@ -1,4 +1,8 @@
-class BaboosshExt():
+class ExtStr(type):
+    def __str__(cls):
+        return cls.getKey()
+
+class BaboosshExt(object, metaclass=ExtStr):
     @classmethod
     def getModType(cls):
         return "auth"

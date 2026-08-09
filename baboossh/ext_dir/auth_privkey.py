@@ -3,7 +3,11 @@ from os import remove, path
 import cmd2
 import paramiko
 
-class BaboosshExt():
+class ExtStr(type):
+    def __str__(cls):
+        return cls.getKey()
+
+class BaboosshExt(object, metaclass=ExtStr):
     _KEY_CLASSES = (paramiko.RSAKey, paramiko.ECDSAKey, paramiko.Ed25519Key)
 
     @classmethod

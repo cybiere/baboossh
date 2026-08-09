@@ -21,7 +21,7 @@ class BaboosshExt(object,metaclass=ExtStr):
     def descr(cls):
         return "Import endpoints from NMAP XML output file"
 
-    def params_parser_from(self):
+    def params_parser_from(shell):
         all_hosts = Host.find_all()
         ret = []
         for host in all_hosts:
@@ -49,6 +49,9 @@ class BaboosshExt(object,metaclass=ExtStr):
             host = Host.find_one(name=from_host)
             if host is None:
                 print("No host corresponding.")
+                return False
+            if host.distance is None:
+                print("Host "+from_host+" has not been probed yet, cannot compute distance.")
                 return False
             src = host
             distance = src.distance + 1

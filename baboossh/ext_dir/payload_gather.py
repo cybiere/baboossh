@@ -65,7 +65,6 @@ class BaboosshExt(object,metaclass=ExtStr):
         try:
             g.gather()
         except Exception as e:
-            raise e
             print("Error : "+str(e))
             return False
         return True
@@ -195,7 +194,10 @@ class BaboosshExt(object,metaclass=ExtStr):
                 curHost = {}
                 curHost["name"] = line.split()[1]
             else:
-                [key,val] = line.strip().split(' ',1)
+                try:
+                    [key,val] = line.strip().split(' ',1)
+                except ValueError:
+                    continue
                 key = key.lower()
                 if key == "user":
                     curHost['user'] = val

@@ -51,6 +51,7 @@ class BaboosshExt(object,metaclass=ExtStr):
             return False
         print("Done")
         print("File saved as "+filedest)
+        return True
 
         #sftp.put(localpath,filepath)
 

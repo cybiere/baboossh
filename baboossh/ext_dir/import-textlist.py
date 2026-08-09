@@ -30,7 +30,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         userfile = getattr(stmt,'userfile')
         
         if object_type not in ['user', 'password', 'endpoint']:
-            print("Invalid object type: "+str(e))
+            print("Invalid object type: "+str(object_type))
             return False
 
         try:

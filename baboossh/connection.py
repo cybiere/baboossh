@@ -294,13 +294,10 @@ class Connection(metaclass=Unique):
             print(serverKey.asbytes())
             c,result = self.exec_command("hostname")
             if c != 0:
-                nextId = Host.getNextId()
-                name = "host"+str(nextId)
-                print("\t>Unable to get hostname - using \""+name+"\". You can change it using \"host edit "+name+"\".")
+                print("\t>Unable to get hostname. You can change the host name later using \"host edit\".")
                 hostname = ""
             else:
-                name = result.rstrip()
-                hostname = name
+                hostname = result.rstrip()
             c,result = self.exec_command("uname -a")
             uname = result.rstrip()
             c,result = self.exec_command("cat /etc/issue")
@@ -353,7 +350,7 @@ class Connection(metaclass=Unique):
                 gateway = Connection.find_one(gateway_to=self.endpoint)
         try:
             sock, transport, gateway = self.open_transport(gateway=gateway);
-        except (TimeoutError, OSError, ConnectionRefusedError) as err:
+        except (TimeoutError, OSError, ConnectionRefusedError, ConnectionClosedError) as err:
             return False
         self.endpoint.reachable = True
         new_distance = 1 if gateway is None else gateway.endpoint.distance + 1
@@ -366,20 +363,22 @@ class Connection(metaclass=Unique):
 
     def exec_command(self, command: str) -> tuple[int, str]:
         if self.transport is None:
-            raise ConnectionClosedError
+            raise ConnectionClosedError("Connection is closed, cannot execute command")
         try:
             chan = self.transport.open_session()
             chan.get_pty()
             chan.exec_command(command)
             output = ""
             while True:
-                return_code = chan.recv_exit_status()
+                if chan.recv_ready():
+                    output = output+chan.recv(1024).decode("utf-8")
+                    continue
                 if chan.exit_status_ready():
-                    output = output+chan.recv(1024).decode("utf-8")
+                    while chan.recv_ready():
+                        output = output+chan.recv(1024).decode("utf-8")
                     break
-                rl, wl, xl = select.select([chan], [], [], 0.0)
-                if len(rl) > 0:
-                    output = output+chan.recv(1024).decode("utf-8")
+                select.select([chan], [], [], 0.1)
+            return_code = chan.recv_exit_status()
         except Exception as e:
             raise
         return (return_code,output)
@@ -420,9 +419,9 @@ class Connection(metaclass=Unique):
             if target:
                 print("\033[1;31mKO\033[0m. Authentication failed.")
             return False
-        except paramiko.SSHException as err: 
+        except paramiko.SSHException as err:
             if target:
-                print("\033[1;31mKO\033[0m. Network error: ", err)
+                print("\033[1;31mKO\033[0m. Network error: "+str(err))
             return False
 
         if target:
@@ -437,7 +436,7 @@ class Connection(metaclass=Unique):
             if gateway.endpoint.host is not None:
                 path_src = gateway.endpoint.host
             else:
-                raise NoHostError
+                raise NoHostError("Gateway "+str(gateway)+" has no identified Host")
         path = Path(path_src, self.endpoint)
         path.save()
         self.save()
@@ -468,9 +467,9 @@ class Connection(metaclass=Unique):
             connection.close()
         self.transport.close()
         self.transport = None
-        assert self.sock is not None
-        self.sock.close()
-        self.sock = None
+        if self.sock is not None:
+            self.sock.close()
+            self.sock = None
         print("Closed "+str(self))
 
     def __str__(self) -> str:

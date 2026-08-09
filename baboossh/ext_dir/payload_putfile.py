@@ -46,5 +46,6 @@ class BaboosshExt(object,metaclass=ExtStr):
             return False
         print("Done")
         print("File pushed as ~/"+filename)
+        return True
 
 
