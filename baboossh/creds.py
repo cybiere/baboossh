@@ -129,7 +129,7 @@ class Creds(metaclass=Unique):
         return ret
 
     @classmethod
-    def find_one(cls, creds_id: int | str) -> Self | None:
+    def find_one(cls, creds_id: int | str | None = None) -> Self | None:
         """Find a `Creds` by its id
 
         Args:
@@ -139,6 +139,8 @@ class Creds(metaclass=Unique):
             A single `Creds` or `None`.
         """
 
+        if creds_id is None:
+            return None
         cursor = Db.get().cursor()
         cursor.execute('''SELECT type, content FROM creds WHERE id=?''', (creds_id, ))
         row = cursor.fetchone()

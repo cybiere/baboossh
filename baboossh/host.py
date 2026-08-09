@@ -94,23 +94,31 @@ class Host(metaclass=Unique):
             endpoint.save()
 
     @property
-    def distance(self) -> int:
-        """Returns the `Host` 's number of hops from `"Local"`"""
+    def distance(self) -> int | None:
+        """Returns the `Host` 's number of hops from `"Local"`, or `None` if the `Host` has no `Endpoint`"""
 
         cursor = Db.get().cursor()
         cursor.execute('SELECT distance FROM endpoints WHERE host=? ORDER BY distance ASC', (self.id, ))
         row = cursor.fetchone()
         cursor.close()
+        if row is None:
+            return None
         return row[0]
 
     @property
     def closest_endpoint(self) -> "Endpoint":
-        """Returns the `Host` 's closest :class:`Endpoint`"""
+        """Returns the `Host` 's closest :class:`Endpoint`
+
+        Raises:
+            ValueError: if the `Host` has no `Endpoint`
+        """
 
         cursor = Db.get().cursor()
         cursor.execute('SELECT ip, port FROM endpoints WHERE host=? ORDER BY distance ASC', (self.id, ))
         row = cursor.fetchone()
         cursor.close()
+        if row is None:
+            raise ValueError(f"Host {self.name!r} has no endpoints")
         from baboossh import Endpoint
         return Endpoint(row[0], row[1])
 
@@ -182,7 +190,6 @@ class Host(metaclass=Unique):
         Args:
             scope (bool): whether to return only `Host`s in scope (`True`),
                 out of scope (`False`) or both (`None`)
-            name (str): the `Host` s' name to match
 
         Returns:
             the `List` of `Host` s
@@ -223,9 +230,16 @@ class Host(metaclass=Unique):
                 if path.src is None:
                     #Direct path found, we can stop here
                     return None
-                if smallest_distance is None or path.src.distance < smallest_distance:
+                distance = path.src.distance
+                if closest is None:
+                    #Always keep the first candidate as a fallback, even with an
+                    #unknown (None) distance, so a lone pivot with no known distance
+                    #is still usable
                     closest = path.src
-                    smallest_distance = path.src.distance
+                    smallest_distance = distance
+                elif distance is not None and (smallest_distance is None or distance < smallest_distance):
+                    closest = path.src
+                    smallest_distance = distance
             if closest is None:
                 raise NoPathError
             return closest

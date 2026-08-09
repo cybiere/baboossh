@@ -34,7 +34,10 @@ class Endpoint(metaclass=Unique):
     def __init__(self, ip: str, port: "int | str") -> None:
         #check if ip is actually an IP
         ipaddress.ip_address(ip)
-        if not isinstance(port, int) and not port.isdigit():
+        if isinstance(port, int):
+            if port < 0:
+                raise ValueError("The port is not a positive integer")
+        elif not port.isdigit():
             raise ValueError("The port is not a positive integer")
 
         self.ip = ip

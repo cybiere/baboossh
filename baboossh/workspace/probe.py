@@ -65,8 +65,11 @@ class ProbeMixin:
             if not working:
                 if verbose:
                     print("\nTrying from every Host from closest to furthest...")
+                def sort_key(candidate: "Host") -> float:
+                    candidate_distance = candidate.distance
+                    return candidate_distance if candidate_distance is not None else float("inf")
                 hosts = Host.find_all(scope=True)
-                hosts.sort(key=lambda h: h.distance)
+                hosts.sort(key=sort_key)
                 working = False
                 for host in hosts:
                     gateway_endpoint = host.closest_endpoint

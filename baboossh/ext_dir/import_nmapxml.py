@@ -50,11 +50,12 @@ class BaboosshExt(object,metaclass=ExtStr):
             if host is None:
                 print("No host corresponding.")
                 return False
-            if host.distance is None:
+            host_distance = host.distance
+            if host_distance is None:
                 print("Host "+from_host+" has not been probed yet, cannot compute distance.")
                 return False
             src = host
-            distance = src.distance + 1
+            distance = host_distance + 1
         try:
             report = NmapParser.parse_fromfile(nmapfile)
         except Exception as e:
