@@ -51,3 +51,8 @@ Documentation
 +++++++++++++
 
 The documentation is under redaction and some things might be missing, but you can find it there: `<https://baboossh.cybiere.fr>`_ .
+
+Known limitations
++++++++++++++++++
+
+- No ChaCha20-Poly1305 support: `baboossh` relies on `paramiko <https://www.paramiko.org/>`_ for its SSH backend, which doesn't implement the ``chacha20-poly1305@openssh.com`` cipher. Servers that only offer this cipher (e.g. a stock `TinySSH <https://tinyssh.org/>`_ install) can't be reached — `probe`/`connect` will return `KO`.

@@ -341,7 +341,11 @@ class Connection(metaclass=Unique):
             sock.connect((self.endpoint.ip,self.endpoint.port))
 
         transport = paramiko.Transport(sock)
-        transport.start_client()
+        try:
+            transport.start_client()
+        except Exception:
+            sock.close()
+            raise
         return (sock,transport, gateway)
 
     def probe(self, gateway: "Literal['auto'] | Connection | None" = "auto", verbose: bool = True) -> bool:
@@ -350,7 +354,7 @@ class Connection(metaclass=Unique):
                 gateway = Connection.find_one(gateway_to=self.endpoint)
         try:
             sock, transport, gateway = self.open_transport(gateway=gateway);
-        except (TimeoutError, OSError, ConnectionRefusedError, ConnectionClosedError) as err:
+        except (TimeoutError, OSError, ConnectionRefusedError, ConnectionClosedError, paramiko.SSHException) as err:
             return False
         self.endpoint.reachable = True
         if gateway is None:
@@ -412,7 +416,11 @@ class Connection(metaclass=Unique):
                 print("\033[1;31mKO\033[0m.")
                 print(err, "- Please try probe-ing another path")
             return False
-        
+        except paramiko.SSHException as err:
+            if target:
+                print("\033[1;31mKO\033[0m. Network error: "+str(err))
+            return False
+
         assert self.user is not None and self.creds is not None
         try:
             self.creds.auth(username=self.user.name, transport=transport)

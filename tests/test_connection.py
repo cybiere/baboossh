@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
 import paramiko
+from paramiko import ssh_exception
 import pytest
 
 from baboossh import Connection, Creds, Endpoint, Host, User
@@ -138,6 +139,23 @@ def test_open_transport_gateway_fails_to_open_raises_connectionclosederror(works
         conn.open_transport(gateway=gateway_conn)
 
 
+def test_open_transport_closes_socket_on_handshake_failure(workspace, monkeypatch):
+    """Regression: a socket/channel opened by open_transport() was never closed if
+    paramiko.Transport's handshake (start_client()) failed - e.g. an incompatible peer -
+    leaking the underlying connection instead of cleaning it up before re-raising."""
+    conn = make_connection()
+    fake_sock = MagicMock()
+    monkeypatch.setattr("baboossh.connection.socket.socket", MagicMock(return_value=fake_sock))
+    fake_transport = MagicMock()
+    fake_transport.start_client.side_effect = paramiko.SSHException("incompatible peer")
+    monkeypatch.setattr("baboossh.connection.paramiko.Transport", MagicMock(return_value=fake_transport))
+
+    with pytest.raises(paramiko.SSHException):
+        conn.open_transport(gateway=None)
+
+    fake_sock.close.assert_called_once()
+
+
 # --- probe() ---
 
 def test_probe_success_marks_endpoint_reachable(workspace, monkeypatch):
@@ -162,6 +180,17 @@ def test_probe_gateway_connectionclosederror_returns_false_not_uncaught(workspac
     def raise_closed(self, gateway=None):
         raise ConnectionClosedError("gateway is down")
     monkeypatch.setattr(Connection, "open_transport", raise_closed)
+    assert conn.probe(gateway=None) is False
+
+
+def test_probe_incompatible_peer_returns_false(workspace, monkeypatch):
+    """Regression: probe() previously didn't catch paramiko.SSHException (e.g.
+    IncompatiblePeer, raised against a ChaCha20-only server) - it propagated as an
+    uncaught traceback instead of a clean False like every other connection failure."""
+    conn = make_connection()
+    def raise_incompatible(self, gateway=None):
+        raise ssh_exception.IncompatiblePeer("no matching cipher")
+    monkeypatch.setattr(Connection, "open_transport", raise_incompatible)
     assert conn.probe(gateway=None) is False
 
 
@@ -210,6 +239,18 @@ def test_open_ssh_exception_returns_false_with_clean_message(workspace, monkeypa
     out = capsys.readouterr().out
     assert "Network error: boom" in out
     assert "Network error:  boom" not in out  # regression: no doubled space
+
+
+def test_open_incompatible_peer_during_transport_returns_false(workspace, monkeypatch, capsys):
+    """Regression: open()'s open_transport() call previously didn't catch
+    paramiko.SSHException (e.g. IncompatiblePeer) - only the later auth-phase call did -
+    so connecting to a ChaCha20-only server crashed with an uncaught traceback."""
+    conn = make_connection()
+    def raise_incompatible(self, gateway="auto"):
+        raise ssh_exception.IncompatiblePeer("no matching cipher")
+    monkeypatch.setattr(Connection, "open_transport", raise_incompatible)
+    assert conn.open(target=True) is False
+    assert "Network error:" in capsys.readouterr().out
 
 
 def test_open_success_saves_connection_and_sets_transport(workspace, monkeypatch):
