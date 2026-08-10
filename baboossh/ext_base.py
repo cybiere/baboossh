@@ -73,6 +73,7 @@ class BaboosshExtBase(metaclass=BaboosshExtMeta):
 class BaboosshAuthBase(BaboosshExtBase):
     """Base for auth_password.py / auth_privkey.py."""
 
+    @abstractmethod
     def __init__(self, creds: str) -> None:
         raise NotImplementedError
 
