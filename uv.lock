@@ -38,6 +38,7 @@ dependencies = [
 dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "types-paramiko" },
 ]
 docs = [
     { name = "sphinx", version = "9.0.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -57,6 +58,7 @@ requires-dist = [
 dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "types-paramiko" },
 ]
 docs = [
     { name = "sphinx" },
@@ -1044,6 +1046,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/12/64/da524626d3b9cc40c168a13da8335fe1c51be12c0a63685cc6db7308daae/tomli-2.4.1-cp314-cp314t-win_amd64.whl", hash = "sha256:2c1c351919aca02858f740c6d33adea0c5deea37f9ecca1cc1ef9e884a619d26", size = 121196, upload-time = "2026-03-25T20:22:01.169Z" },
     { url = "https://files.pythonhosted.org/packages/5a/cd/e80b62269fc78fc36c9af5a6b89c835baa8af28ff5ad28c7028d60860320/tomli-2.4.1-cp314-cp314t-win_arm64.whl", hash = "sha256:eab21f45c7f66c13f2a9e0e1535309cee140182a9cdae1e041d02e47291e8396", size = 100393, upload-time = "2026-03-25T20:22:02.137Z" },
     { url = "https://files.pythonhosted.org/packages/7b/61/cceae43728b7de99d9b847560c262873a1f6c98202171fd5ed62640b494b/tomli-2.4.1-py3-none-any.whl", hash = "sha256:0d85819802132122da43cb86656f8d1f8c6587d54ae7dcaf30e90533028b49fe", size = 14583, upload-time = "2026-03-25T20:22:03.012Z" },
+]
+
+[[package]]
+name = "types-paramiko"
+version = "5.0.0.20260724"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/66/c2/445549ed6f0944352f2b91d88d16bbdc3993a4d6dbbedb81c557b3cad85a/types_paramiko-5.0.0.20260724.tar.gz", hash = "sha256:37e7f3f2196cf187c89649ad836621c675bc318369d80fa78051507a4ae770c9", size = 28548, upload-time = "2026-07-24T04:59:59.889Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4c/16/fca52784f979821e2205ff514322d0e83452536acc4807a79ddb2085bbb2/types_paramiko-5.0.0.20260724-py3-none-any.whl", hash = "sha256:40c7083803a5a28ab7a8d2fe4cd9b7746d0a03538598582ce68f60967a2ad272", size = 37125, upload-time = "2026-07-24T04:59:58.955Z" },
 ]
 
 [[package]]

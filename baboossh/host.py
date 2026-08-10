@@ -59,16 +59,17 @@ class Host(metaclass=Unique):
                 name = "host"
                 incr = 1
 
-            self.name = None
-            while self.name is None:
+            found_name: str | None = None
+            while found_name is None:
                 fullname = name if incr == 0 else name+"_"+str(incr)
                 cursor = Db.get().cursor()
                 cursor.execute('SELECT id FROM hosts WHERE name=?', (fullname, ))
                 if cursor.fetchone() is not None:
                     incr = incr + 1
                 else:
-                    self.name = fullname
+                    found_name = fullname
                 cursor.close()
+            self.name = found_name
 
 
     @classmethod

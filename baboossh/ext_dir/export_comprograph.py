@@ -1,11 +1,8 @@
 import cmd2
 from baboossh import Endpoint, Creds, User
+from baboossh.ext_base import BaboosshImportExportBase
 
-class ExtStr(type):
-    def __str__(self):
-        return self.getKey()
-
-class BaboosshExt(object,metaclass=ExtStr):
+class BaboosshExt(BaboosshImportExportBase):
     @classmethod
     def getModType(cls):
         return "export"
@@ -29,6 +26,7 @@ class BaboosshExt(object,metaclass=ExtStr):
         findings = getattr(stmt,'findings',False)
         dotcode = 'digraph compromission_graph {\nnode [shape=plain,fontname="monospace"];\nrankdir="LR";\n'
         for endpoint in workspace.get_objects(endpoints=True,scope=True):
+            assert isinstance(endpoint, Endpoint)
             label = "<table cellborder='1' cellspacing='0'><tr><td>"+str(endpoint)+"</td></tr>"
             if endpoint.host is not None:
                 label = label + '<tr><td>'+str(endpoint.host)+'</td></tr>'

@@ -3,12 +3,9 @@ from os import mkdir
 import sys
 from baboossh.exceptions import ConnectionClosedError
 from paramiko import SFTPClient
+from baboossh.ext_base import BaboosshPayloadBase
 
-class ExtStr(type):
-    def __str__(self):
-        return self.getKey()
-
-class BaboosshExt(object,metaclass=ExtStr):
+class BaboosshExt(BaboosshPayloadBase):
     @classmethod
     def getModType(cls):
         return "payload"
@@ -42,6 +39,8 @@ class BaboosshExt(object,metaclass=ExtStr):
         
         #TODO err management
         sftp = SFTPClient.from_transport(connection.transport)
+        if sftp is None:
+            raise ConnectionClosedError
         print("Retreiving file "+filepath+"... ",end="")
         sys.stdout.flush()
         try:

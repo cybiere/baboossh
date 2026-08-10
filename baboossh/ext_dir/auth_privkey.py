@@ -2,12 +2,10 @@ import json
 from os import remove, path
 import cmd2
 import paramiko
+from paramiko import ssh_exception
+from baboossh.ext_base import BaboosshAuthBase
 
-class ExtStr(type):
-    def __str__(cls):
-        return cls.getKey()
-
-class BaboosshExt(object, metaclass=ExtStr):
+class BaboosshExt(BaboosshAuthBase):
     _KEY_CLASSES = (paramiko.RSAKey, paramiko.ECDSAKey, paramiko.Ed25519Key)
 
     @classmethod
@@ -39,9 +37,9 @@ class BaboosshExt(object, metaclass=ExtStr):
         for keyClass in cls._KEY_CLASSES:
             try:
                 k = keyClass.from_private_key_file(filepath)
-            except paramiko.ssh_exception.PasswordRequiredException:
+            except ssh_exception.PasswordRequiredException:
                 return True, True
-            except paramiko.ssh_exception.SSHException:
+            except ssh_exception.SSHException:
                 continue
             else:
                 return True, False
@@ -52,7 +50,7 @@ class BaboosshExt(object, metaclass=ExtStr):
         for keyClass in cls._KEY_CLASSES:
             try:
                 k = keyClass.from_private_key_file(filepath,password=passphrase)
-            except paramiko.ssh_exception.SSHException:
+            except ssh_exception.SSHException:
                 continue
             else:
                 return True
@@ -111,7 +109,7 @@ class BaboosshExt(object, metaclass=ExtStr):
         for keyClass in self._KEY_CLASSES:
             try:
                 key = keyClass.from_private_key_file(self.keypath,password=passphrase)
-            except paramiko.ssh_exception.SSHException:
+            except ssh_exception.SSHException:
                 continue
             else:
                 break

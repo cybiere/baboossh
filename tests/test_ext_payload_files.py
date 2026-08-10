@@ -38,6 +38,18 @@ def test_getfile_raises_when_connection_closed():
         PayloadGetfile.run(connection, "/tmp/wspace", make_stmt("/etc/passwd"))
 
 
+def test_getfile_raises_when_sftp_none(tmp_path):
+    """Regression: SFTPClient.from_transport() can genuinely return None if the
+    transport has no active session - previously unguarded, would crash with
+    AttributeError on the first sftp.get() call instead of failing cleanly."""
+    (tmp_path / "loot").mkdir()
+    connection = make_connection()
+    with patch("baboossh.ext_dir.payload_getfile.SFTPClient") as sftp_client:
+        sftp_client.from_transport.return_value = None
+        with pytest.raises(ConnectionClosedError):
+            PayloadGetfile.run(connection, str(tmp_path), make_stmt("/etc/passwd"))
+
+
 def test_getfile_missing_file_arg(tmp_path, capsys):
     (tmp_path / "loot").mkdir()
     connection = make_connection()
@@ -84,6 +96,17 @@ def test_putfile_getters():
 
 def test_putfile_extstr():
     assert str(PayloadPutfile) == "putfile"
+
+
+def test_putfile_raises_when_sftp_none(tmp_path):
+    """Regression: same SFTPClient.from_transport()-returns-None guard as getfile."""
+    local_file = tmp_path / "myfile.txt"
+    local_file.write_text("data")
+    connection = make_connection()
+    with patch("baboossh.ext_dir.payload_putfile.SFTPClient") as sftp_client:
+        sftp_client.from_transport.return_value = None
+        with pytest.raises(ConnectionClosedError):
+            PayloadPutfile.run(connection, "/tmp/wspace", make_stmt(str(local_file)))
 
 
 def test_putfile_raises_when_connection_closed():

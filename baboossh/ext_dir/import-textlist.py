@@ -1,11 +1,8 @@
 import cmd2
 from baboossh import User, Creds, Endpoint
+from baboossh.ext_base import BaboosshImportExportBase
 
-class ExtStr(type):
-    def __str__(self):
-        return self.getKey()
-
-class BaboosshExt(object,metaclass=ExtStr):
+class BaboosshExt(BaboosshImportExportBase):
     @classmethod
     def getModType(cls):
         return "import"

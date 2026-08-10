@@ -1,14 +1,28 @@
+from typing import TYPE_CHECKING
+
 import cmd2
 from libnmap.parser import NmapParser, NmapParserException
 from baboossh.host import Host
 from baboossh.endpoint import Endpoint
 from baboossh.path import Path
+from baboossh.ext_base import BaboosshImportExportBase
 
-class ExtStr(type):
-    def __str__(self):
-        return self.getKey()
+if TYPE_CHECKING:
+    from typing import Protocol
 
-class BaboosshExt(object,metaclass=ExtStr):
+    class _NmapService(Protocol):
+        service: str
+        port: int
+        def open(self) -> bool: ...
+
+    class _NmapHost(Protocol):
+        address: str
+        services: list["_NmapService"]
+
+    class _NmapReport(Protocol):
+        hosts: list["_NmapHost"]
+
+class BaboosshExt(BaboosshImportExportBase):
     @classmethod
     def getModType(cls):
         return "import"
@@ -21,6 +35,7 @@ class BaboosshExt(object,metaclass=ExtStr):
     def descr(cls):
         return "Import endpoints from NMAP XML output file"
 
+    @staticmethod
     def params_parser_from(shell):
         all_hosts = Host.find_all()
         ret = []
@@ -41,6 +56,7 @@ class BaboosshExt(object,metaclass=ExtStr):
 
         if from_host is None:
             print("No source host specified, ignoring paths")
+            src = None
             distance = None
         elif from_host == "Local":
             src = None
@@ -57,7 +73,7 @@ class BaboosshExt(object,metaclass=ExtStr):
             src = host
             distance = host_distance + 1
         try:
-            report = NmapParser.parse_fromfile(nmapfile)
+            report: "_NmapReport" = NmapParser.parse_fromfile(nmapfile)  # pyright: ignore[reportAssignmentType]  # libnmap has no type stubs; this is the documented real return shape
         except Exception as e:
             print("Failed to read source file: "+str(e))
             return False

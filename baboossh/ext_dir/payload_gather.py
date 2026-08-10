@@ -14,12 +14,9 @@ from baboossh.exceptions import ConnectionClosedError
 from paramiko.util import u
 from paramiko import SFTPClient
 import socket
+from baboossh.ext_base import BaboosshPayloadBase
 
-class ExtStr(type):
-    def __str__(self):
-        return self.getKey()
-
-class BaboosshExt(object,metaclass=ExtStr):
+class BaboosshExt(BaboosshPayloadBase):
 
     def __init__(self, connection, wspaceFolder):
         self.connection = connection
@@ -32,13 +29,16 @@ class BaboosshExt(object,metaclass=ExtStr):
         for c in Creds.find_all():
             if c.creds_type != "privkey":
                 continue
-            path = c.obj.keypath
+            path = c.obj.keypath  # pyright: ignore[reportAttributeAccessIssue]  # keypath is auth_privkey-specific, guarded by the creds_type check above
             p = subprocess.run(["sha1sum",path], stdout=subprocess.PIPE)
             out = p.stdout.decode("utf-8")
             h = out.split(" ",1)[0]
             self.keysHash[h] = path
 
-        self.sftp = SFTPClient.from_transport(self.connection.transport)
+        sftp = SFTPClient.from_transport(self.connection.transport)
+        if sftp is None:
+            raise ConnectionClosedError
+        self.sftp: SFTPClient = sftp
 
 
     @classmethod
@@ -194,6 +194,8 @@ class BaboosshExt(object,metaclass=ExtStr):
                 curHost = {}
                 curHost["name"] = line.split()[1]
             else:
+                if curHost is None:
+                    continue
                 try:
                     [key,val] = line.strip().split(' ',1)
                 except ValueError:
@@ -290,7 +292,7 @@ class BaboosshExt(object,metaclass=ExtStr):
             if filepath != self.keysHash[output]:
                 os.remove(filepath)
             return None
-        valid,haspass = Extensions.auths["privkey"].checkKeyfile(filepath)
+        valid,haspass = Extensions.auths["privkey"].checkKeyfile(filepath)  # pyright: ignore[reportAttributeAccessIssue]  # checkKeyfile is auth_privkey-specific, not part of the shared BaboosshAuthBase surface
         if valid:
             self.keysHash[output] = filepath
             c= { "passphrase":"","keypath":filepath,"haspass":haspass}
@@ -331,6 +333,7 @@ class BaboosshExt(object,metaclass=ExtStr):
                 option = ""
                 words = line.split()
                 host = False
+                hostname = None
                 port = None
                 user = None
                 identity = None

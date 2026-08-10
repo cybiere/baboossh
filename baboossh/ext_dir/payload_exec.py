@@ -1,14 +1,9 @@
 from baboossh.exceptions import ConnectionClosedError
 from paramiko import SSHException
 import socket
+from baboossh.ext_base import BaboosshPayloadBase
 
-
-
-class ExtStr(type):
-    def __str__(self):
-        return self.getKey()
-
-class BaboosshExt(object,metaclass=ExtStr):
+class BaboosshExt(BaboosshPayloadBase):
     @classmethod
     def getModType(cls):
         return "payload"

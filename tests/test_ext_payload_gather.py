@@ -68,6 +68,19 @@ def test_init_builds_keys_hash_and_sftp(tmp_path):
     sftp_cls.from_transport.assert_called_once_with(connection.transport)
 
 
+def test_init_raises_when_sftp_none(tmp_path):
+    """Regression: SFTPClient.from_transport() can genuinely return None if the
+    transport has no active session - previously unguarded, would crash on the
+    first self.sftp.* call instead of failing cleanly."""
+    connection = MagicMock()
+    with patch("baboossh.ext_dir.payload_gather.Creds") as creds_cls, \
+         patch("baboossh.ext_dir.payload_gather.SFTPClient") as sftp_cls:
+        creds_cls.find_all.return_value = []
+        sftp_cls.from_transport.return_value = None
+        with pytest.raises(ConnectionClosedError):
+            PayloadGather(connection, str(tmp_path))
+
+
 # --- hostnameToIP ---
 
 def test_hostnameToIP_direct_ip_new_endpoint(tmp_path):

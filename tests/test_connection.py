@@ -165,6 +165,19 @@ def test_probe_gateway_connectionclosederror_returns_false_not_uncaught(workspac
     assert conn.probe(gateway=None) is False
 
 
+def test_probe_via_gateway_with_unknown_distance_does_not_crash(workspace, monkeypatch):
+    """Regression: gateway.endpoint.distance can be None if the gateway was connected-to
+    but never itself probed (e.g. via `connect`); probe() through it previously crashed
+    with TypeError on `None + 1` instead of leaving the target's distance unset."""
+    conn = make_connection()
+    gateway_conn = make_connection(endpoint=make_endpoint(ip="9.9.9.9"))
+    gateway_conn.endpoint.distance = None
+    fake_transport = MagicMock()
+    monkeypatch.setattr(Connection, "open_transport", lambda self, gateway=None: (MagicMock(), fake_transport, gateway_conn))
+    assert conn.probe(gateway=gateway_conn) is True
+    assert conn.endpoint.distance is None
+
+
 # --- open() ---
 
 def test_open_already_active_returns_true(workspace):

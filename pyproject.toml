@@ -48,7 +48,7 @@ namespaces = true
 
 [dependency-groups]
 docs = ["sphinx", "sphinx_rtd_theme"]
-dev = ["pytest", "pytest-cov"]
+dev = ["pytest", "pytest-cov", "types-paramiko"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

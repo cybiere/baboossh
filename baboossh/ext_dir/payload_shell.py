@@ -5,14 +5,9 @@ import termios
 import tty
 import sys
 import socket
+from baboossh.ext_base import BaboosshPayloadBase
 
-
-
-class ExtStr(type):
-    def __str__(self):
-        return self.getKey()
-
-class BaboosshExt(object,metaclass=ExtStr):
+class BaboosshExt(BaboosshPayloadBase):
     @classmethod
     def getModType(cls):
         return "payload"
@@ -63,7 +58,7 @@ class BaboosshExt(object,metaclass=ExtStr):
                     x = sys.stdin.read(1)
                     if len(x) == 0:
                         break
-                    chan.send(x)
+                    chan.send(x.encode())
         
         finally:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, oldtty)

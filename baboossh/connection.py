@@ -353,8 +353,13 @@ class Connection(metaclass=Unique):
         except (TimeoutError, OSError, ConnectionRefusedError, ConnectionClosedError) as err:
             return False
         self.endpoint.reachable = True
-        new_distance = 1 if gateway is None else gateway.endpoint.distance + 1
-        if self.endpoint.distance is None or self.endpoint.distance > new_distance:
+        if gateway is None:
+            new_distance: int | None = 1
+        elif gateway.endpoint.distance is not None:
+            new_distance = gateway.endpoint.distance + 1
+        else:
+            new_distance = None
+        if new_distance is not None and (self.endpoint.distance is None or self.endpoint.distance > new_distance):
             self.endpoint.distance = new_distance
         self.endpoint.save()
         transport.close()

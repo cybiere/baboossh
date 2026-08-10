@@ -2,15 +2,17 @@ import importlib
 import inspect
 import os
 
+from baboossh.ext_base import BaboosshAuthBase, BaboosshExtBase, BaboosshImportExportBase, BaboosshPayloadBase
+
 __all__ = ["Extensions"]
 
 class Extensions():
     """Load and access available extensions"""
 
-    auths: dict[str, type] = {}
-    payloads: dict[str, type] = {}
-    exports: dict[str, type] = {}
-    imports: dict[str, type] = {}
+    auths: dict[str, type[BaboosshAuthBase]] = {}
+    payloads: dict[str, type[BaboosshPayloadBase]] = {}
+    exports: dict[str, type[BaboosshImportExportBase]] = {}
+    imports: dict[str, type[BaboosshImportExportBase]] = {}
 
     @classmethod
     def load(cls) -> None:
@@ -39,22 +41,33 @@ class Extensions():
                         continue
                     if name != "BaboosshExt":
                         continue
+                    if not issubclass(data, BaboosshExtBase):
+                        print(mod+"> BaboosshExt doesn't implement BaboosshExtBase")
+                        continue
 
                     module_type = data.getModType()
-                    if module_type == "auth":
-                        dico = cls.auths
-                    elif module_type == "payload":
-                        dico = cls.payloads
-                    elif module_type == "export":
-                        dico = cls.exports
-                    elif module_type == "import":
-                        dico = cls.imports
+                    if module_type == "auth" and issubclass(data, BaboosshAuthBase):
+                        if data.getKey() in cls.auths.keys():
+                            print(mod+"> "+module_type+' method "'+data.getKey()+'" already registered')
+                            continue
+                        cls.auths[data.getKey()] = data
+                    elif module_type == "payload" and issubclass(data, BaboosshPayloadBase):
+                        if data.getKey() in cls.payloads.keys():
+                            print(mod+"> "+module_type+' method "'+data.getKey()+'" already registered')
+                            continue
+                        cls.payloads[data.getKey()] = data
+                    elif module_type == "export" and issubclass(data, BaboosshImportExportBase):
+                        if data.getKey() in cls.exports.keys():
+                            print(mod+"> "+module_type+' method "'+data.getKey()+'" already registered')
+                            continue
+                        cls.exports[data.getKey()] = data
+                    elif module_type == "import" and issubclass(data, BaboosshImportExportBase):
+                        if data.getKey() in cls.imports.keys():
+                            print(mod+"> "+module_type+' method "'+data.getKey()+'" already registered')
+                            continue
+                        cls.imports[data.getKey()] = data
                     else:
                         print(mod+"> module type Invalid")
                         continue
-                    if data.getKey() in dico.keys():
-                        print(mod+"> "+module_type+' method "'+data.getKey()+'" already registered')
-                        continue
-                    dico[data.getKey()] = data
                     nb_ext = nb_ext+1
         print(str(nb_ext)+" extensions loaded.")
