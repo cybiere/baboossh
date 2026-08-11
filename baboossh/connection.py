@@ -5,12 +5,15 @@ import paramiko
 from baboossh import Db, Endpoint, User, Creds, Path, Host, Tag, Tunnel
 from baboossh.exceptions import *
 from baboossh.utils import Unique
+import re
 import select
 
 __all__ = ["Connection"]
 
 DIRECT_TIMEOUT = 3
 RELAY_TIMEOUT = 8
+MACHINE_ID_RE = re.compile(r'^[0-9a-f]{32}$')
+MAC_RE = re.compile(r'^[0-9a-f]{2}(:[0-9a-f]{2}){5}$')
 
 class Connection(metaclass=Unique):
     """A :class:`User` and :class:`Creds` to authenticate on an :class:`Endpoint`
@@ -289,27 +292,44 @@ class Connection(metaclass=Unique):
             raise ValueError("No working connection for supplied endpoint")
         return connection
     
+    def _identify_field(self, command: str) -> str:
+        """Run an identification command, returning "" if it failed.
+
+        stderr is redirected because exec_command() allocates a PTY, which merges
+        it into stdout — without this, a failing command's error message would be
+        indistinguishable from real output.
+        """
+        code, result = self.exec_command(command + " 2>/dev/null")
+        if code != 0:
+            return ""
+        return result.replace("\r\n", "\n").strip()
+
     def identify(self) -> bool:
         """Identify the host"""
         assert self.transport is not None
         try:
-            serverKey = self.transport.get_remote_server_key()
-            print(serverKey.asbytes())
-            c,result = self.exec_command("hostname")
-            if c != 0:
+            self.transport.get_remote_server_key()
+            hostname = self._identify_field("hostname")
+            if hostname == "":
                 print("\t>Unable to get hostname. You can change the host name later using \"host edit\".")
-                hostname = ""
-            else:
-                hostname = result.rstrip()
-            c,result = self.exec_command("uname -a")
-            uname = result.rstrip()
-            c,result = self.exec_command("cat /etc/issue")
-            issue = result.rstrip()
-            c,result = self.exec_command("cat /etc/machine-id")
-            machine_id = result.rstrip()
-            c,result = self.exec_command("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done")
-            mac_str = result.rstrip()
-            macs = mac_str.split()
+            uname = self._identify_field("uname -a")
+            issue = self._identify_field("cat /etc/issue")
+            machine_id = self._identify_field("cat /etc/machine-id")
+            if machine_id == "":
+                machine_id = self._identify_field("cat /var/lib/dbus/machine-id")
+            if not MACHINE_ID_RE.match(machine_id):
+                machine_id = ""
+            # Exit code is unusable here: this is a shell `for` loop, so its status
+            # is whatever its *last* iteration returned (e.g. non-zero if the last
+            # interface has no "ether" line), which would discard every already
+            # -captured MAC, not just the last. Only stderr is suppressed; output
+            # is validated below regardless of exit code.
+            _, mac_str = self.exec_command("for i in `ls -l /sys/class/net/ | grep -v virtual | grep 'devices' | tr -s '[:blank:]' | cut -d ' ' -f 9 | sort`; do ip l show $i | grep ether | tr -s '[:blank:]' | cut -d ' ' -f 3; done 2>/dev/null")
+            mac_str = mac_str.replace("\r\n", "\n").strip()
+            macs = sorted({
+                mac.lower() for mac in mac_str.split()
+                if MAC_RE.match(mac.lower()) and mac.lower() != "00:00:00:00:00:00"
+            })
         except Exception as exc:
             print("Error trying to identify: "+str(exc))
             return False

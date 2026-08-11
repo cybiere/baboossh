@@ -50,12 +50,7 @@ def test_identify_systemd_host(docker_workspace):
     int(ep.host.machine_id, 16)  # a real machine-id is a hex UUID with no dashes
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="todo.md: identify() stores shell error text instead of treating a "
-    "failed 'cat /etc/machine-id' as absent",
-)
-def test_identify_missing_machine_id_is_a_known_bug(docker_workspace):
+def test_identify_absent_machine_id_is_empty(docker_workspace):
     ws = docker_workspace
     user = User("tester")
     user.save()

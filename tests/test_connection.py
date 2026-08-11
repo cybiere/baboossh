@@ -371,7 +371,7 @@ def test_identify_hostname_failure_falls_back_to_host_init_naming(workspace):
     conn.transport.get_remote_server_key.return_value.asbytes.return_value = b"key"
 
     def fake_exec_command(command):
-        if command == "hostname":
+        if command.startswith("hostname"):
             return (1, "")  # non-zero exit: hostname command failed
         return (0, "")
     conn.exec_command = fake_exec_command
@@ -390,7 +390,7 @@ def test_identify_success_creates_host(workspace):
         "hostname": (0, "myhost"),
         "uname -a": (0, "Linux myhost 6.0"),
         "cat /etc/issue": (0, "Debian"),
-        "cat /etc/machine-id": (0, "abc123"),
+        "cat /etc/machine-id": (0, "0123456789abcdef0123456789abcdef"),
     }
     def fake_exec_command(command):
         for key, value in responses.items():
@@ -402,6 +402,89 @@ def test_identify_success_creates_host(workspace):
     assert conn.identify() is True
     assert conn.endpoint.host is not None
     assert conn.endpoint.host.name == "myhost"
+    assert conn.endpoint.host.machine_id == "0123456789abcdef0123456789abcdef"
+
+
+def test_identify_failed_machine_id_stores_empty_not_error_text(workspace):
+    """Regression: a failing `cat /etc/machine-id` used to store its stderr text
+    (e.g. "cat: /etc/machine-id: No such file or directory") as Host.machine_id
+    instead of being treated as absent."""
+    conn = make_connection()
+    conn.transport = MagicMock()
+    conn.transport.get_remote_server_key.return_value.asbytes.return_value = b"key"
+
+    def fake_exec_command(command):
+        if command.startswith("cat /etc/machine-id") or command.startswith("cat /var/lib/dbus/machine-id"):
+            return (1, "cat: /etc/machine-id: No such file or directory\n")
+        if command.startswith("hostname"):
+            return (0, "myhost")
+        return (0, "")
+    conn.exec_command = fake_exec_command
+
+    assert conn.identify() is True
+    assert conn.endpoint.host is not None
+    assert conn.endpoint.host.machine_id == ""
+
+
+def test_identify_falls_back_to_dbus_machine_id(workspace):
+    conn = make_connection()
+    conn.transport = MagicMock()
+    conn.transport.get_remote_server_key.return_value.asbytes.return_value = b"key"
+
+    def fake_exec_command(command):
+        if command.startswith("cat /etc/machine-id"):
+            return (1, "cat: /etc/machine-id: No such file or directory\n")
+        if command.startswith("cat /var/lib/dbus/machine-id"):
+            return (0, "fedcba9876543210fedcba9876543210")
+        if command.startswith("hostname"):
+            return (0, "myhost")
+        return (0, "")
+    conn.exec_command = fake_exec_command
+
+    assert conn.identify() is True
+    assert conn.endpoint.host is not None
+    assert conn.endpoint.host.machine_id == "fedcba9876543210fedcba9876543210"
+
+
+def test_identify_filters_invalid_macs_and_sorts_valid_ones(workspace):
+    conn = make_connection()
+    conn.transport = MagicMock()
+    conn.transport.get_remote_server_key.return_value.asbytes.return_value = b"key"
+
+    def fake_exec_command(command):
+        if command.startswith("for i in"):
+            # unsorted, with a duplicate, an all-zero MAC and garbage stderr-ish text
+            return (0, "bb:bb:bb:bb:bb:bb\naa:aa:aa:aa:aa:aa\n00:00:00:00:00:00\naa:aa:aa:aa:aa:aa\nnotamac\n")
+        if command.startswith("hostname"):
+            return (0, "myhost")
+        return (0, "")
+    conn.exec_command = fake_exec_command
+
+    assert conn.identify() is True
+    assert conn.endpoint.host is not None
+    assert conn.endpoint.host.macs == ["aa:aa:aa:aa:aa:aa", "bb:bb:bb:bb:bb:bb"]
+
+
+def test_identify_keeps_macs_despite_nonzero_exit_code(workspace):
+    """Regression: the MAC-gathering command is a shell `for` loop, so its exit
+    code is whatever its *last* iteration returned (e.g. non-zero if the last
+    interface has no "ether" line). That must not discard MACs already captured
+    from earlier interfaces in the same output."""
+    conn = make_connection()
+    conn.transport = MagicMock()
+    conn.transport.get_remote_server_key.return_value.asbytes.return_value = b"key"
+
+    def fake_exec_command(command):
+        if command.startswith("for i in"):
+            return (1, "aa:aa:aa:aa:aa:aa\n")  # non-zero exit, but real output captured
+        if command.startswith("hostname"):
+            return (0, "myhost")
+        return (0, "")
+    conn.exec_command = fake_exec_command
+
+    assert conn.identify() is True
+    assert conn.endpoint.host is not None
+    assert conn.endpoint.host.macs == ["aa:aa:aa:aa:aa:aa"]
 
 
 # --- close() ---
