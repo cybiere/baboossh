@@ -9,6 +9,9 @@ import select
 
 __all__ = ["Connection"]
 
+DIRECT_TIMEOUT = 3
+RELAY_TIMEOUT = 8
+
 class Connection(metaclass=Unique):
     """A :class:`User` and :class:`Creds` to authenticate on an :class:`Endpoint`
 
@@ -334,10 +337,10 @@ class Connection(metaclass=Unique):
             if not gateway.open(verbose=False):
                 raise ConnectionClosedError("Could not open gateway "+str(gateway))
             assert gateway.transport is not None
-            sock = gateway.transport.open_channel('direct-tcpip', (self.endpoint.ip, self.endpoint.port), ('', 0));
+            sock = gateway.transport.open_channel('direct-tcpip', (self.endpoint.ip, self.endpoint.port), ('', 0), timeout=RELAY_TIMEOUT);
         else:
             sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-            sock.settimeout(3)
+            sock.settimeout(DIRECT_TIMEOUT)
             sock.connect((self.endpoint.ip,self.endpoint.port))
 
         transport = paramiko.Transport(sock)

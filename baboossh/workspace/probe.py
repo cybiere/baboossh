@@ -15,6 +15,7 @@ class ProbeMixin:
 
     def probe(self: "_Workspace", targets: "list[Endpoint]", gateway: str = "auto",
             verbose: bool = False, find_new: bool = False) -> None:
+        dead_gateways: "set[int]" = set()
         for endpoint in targets:
             print("Probing \033[1;34m"+str(endpoint)+"\033[0m > ", end="", flush=True)
             if verbose:
@@ -74,9 +75,13 @@ class ProbeMixin:
                 for host in hosts:
                     gateway_endpoint = host.closest_endpoint
                     loop_gateway = Connection.find_one(endpoint=gateway_endpoint)
+                    if loop_gateway is None or id(loop_gateway) in dead_gateways:
+                        continue
                     working = conn.probe(gateway=loop_gateway, verbose=verbose)
                     if working:
                         break
+                    if not loop_gateway.transport:
+                        dead_gateways.add(id(loop_gateway))
 
             if working:
                 path = Path(host, endpoint)

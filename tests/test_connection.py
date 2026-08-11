@@ -5,6 +5,7 @@ from paramiko import ssh_exception
 import pytest
 
 from baboossh import Connection, Creds, Endpoint, Host, User
+from baboossh.connection import DIRECT_TIMEOUT, RELAY_TIMEOUT
 from baboossh.exceptions import ConnectionClosedError, NoHostError
 
 
@@ -128,6 +129,36 @@ def test_open_transport_via_gateway_uses_gateway_channel(workspace, monkeypatch)
     assert sock is fake_channel
     assert gateway is gateway_conn
     gateway_conn.transport.open_channel.assert_called_once()
+
+
+def test_open_transport_via_gateway_passes_relay_timeout(workspace, monkeypatch):
+    """A gateway-relayed channel-open must be bounded by RELAY_TIMEOUT, since
+    paramiko's own default (channel_timeout, 1 hour) leaves it unbounded when a
+    target is filtered/dropped rather than actively refused."""
+    conn = make_connection()
+    gateway_conn = make_connection(endpoint=make_endpoint(ip="9.9.9.9"))
+    gateway_conn.transport = MagicMock()
+    fake_channel = MagicMock()
+    gateway_conn.transport.open_channel.return_value = fake_channel
+    monkeypatch.setattr(Connection, "open", MagicMock(return_value=True))
+    fake_transport = MagicMock()
+    monkeypatch.setattr("baboossh.connection.paramiko.Transport", MagicMock(return_value=fake_transport))
+
+    conn.open_transport(gateway=gateway_conn)
+
+    _, kwargs = gateway_conn.transport.open_channel.call_args
+    assert kwargs["timeout"] == RELAY_TIMEOUT
+
+
+def test_open_transport_direct_passes_direct_timeout(workspace, monkeypatch):
+    conn = make_connection()
+    fake_sock = MagicMock()
+    monkeypatch.setattr("baboossh.connection.socket.socket", MagicMock(return_value=fake_sock))
+    monkeypatch.setattr("baboossh.connection.paramiko.Transport", MagicMock(return_value=MagicMock()))
+
+    conn.open_transport(gateway=None)
+
+    fake_sock.settimeout.assert_called_once_with(DIRECT_TIMEOUT)
 
 
 def test_open_transport_gateway_fails_to_open_raises_connectionclosederror(workspace, monkeypatch):
